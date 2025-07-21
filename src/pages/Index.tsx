@@ -1,17 +1,23 @@
-import { Link, Navigate } from 'react-router-dom';
-import { 
-  GraduationCap, 
-  BookOpen, 
-  Users, 
-  Award, 
-  Video, 
+import { Link, Navigate } from "react-router-dom";
+import {
+  GraduationCap,
+  BookOpen,
+  Users,
+  Award,
+  Video,
   MessageSquare,
   ArrowRight,
-  CheckCircle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+  CheckCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { isAuthenticated } = useAuth();
@@ -24,41 +30,47 @@ const Index = () => {
   const features = [
     {
       icon: BookOpen,
-      title: 'Course Management',
-      description: 'Create, organize, and deliver courses with rich content and interactive materials.',
+      title: "Course Management",
+      description:
+        "Create, organize, and deliver courses with rich content and interactive materials.",
     },
     {
       icon: Users,
-      title: 'Multi-Role Access',
-      description: 'Students, lecturers, and admins each have tailored experiences and permissions.',
+      title: "Multi-Role Access",
+      description:
+        "Students, lecturers, and admins each have tailored experiences and permissions.",
     },
     {
       icon: Award,
-      title: 'Assessment & Grading',
-      description: 'Comprehensive grading system with automated result computation and approval workflow.',
+      title: "Assessment & Grading",
+      description:
+        "Comprehensive grading system with automated result computation and approval workflow.",
     },
     {
       icon: Video,
-      title: 'Virtual Classrooms',
-      description: 'Integrated video meetings, live classes, and real-time collaboration tools.',
+      title: "Virtual Classrooms",
+      description:
+        "Integrated video meetings, live classes, and real-time collaboration tools.",
     },
     {
       icon: MessageSquare,
-      title: 'Communication Hub',
-      description: 'Discussion forums, chat rooms, Q&A boards, and notification system.',
+      title: "Communication Hub",
+      description:
+        "Discussion forums, chat rooms, Q&A boards, and notification system.",
     },
     {
       icon: CheckCircle,
-      title: 'Analytics & Reports',
-      description: 'Detailed analytics for students, courses, and system performance metrics.',
+      title: "Analytics & Reports",
+      description:
+        "Detailed analytics for students, courses, and system performance metrics.",
     },
   ];
 
   const stats = [
-    { label: 'Active Students', value: '10,000+' },
-    { label: 'Expert Lecturers', value: '500+' },
-    { label: 'Courses Available', value: '200+' },
-    { label: 'Success Rate', value: '98%' },
+    { label: "Active Students", value: "10,000+" },
+    { label: "Expert Lecturers", value: "500+" },
+    { label: "Courses Available", value: "200+" },
+    { label: "Success Rate", value: "98%" },
   ];
 
   return (
@@ -72,10 +84,12 @@ const Index = () => {
             </div>
             <span className="font-bold text-xl">LearnHub</span>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             <Button variant="ghost" asChild>
-              <Link to="/login">Sign In</Link>
+              <Link className="" to="/login">
+                Sign In
+              </Link>
             </Button>
             <Button asChild className="bg-gradient-primary hover:opacity-90">
               <Link to="/register">Get Started</Link>
@@ -91,18 +105,28 @@ const Index = () => {
             Transform Your Learning Experience
           </h1>
           <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            A comprehensive learning platform designed for students, lecturers, and administrators. 
-            Engage, learn, and succeed with our modern educational tools.
+            A comprehensive learning platform designed for students, lecturers,
+            and administrators. Engage, learn, and succeed with our modern
+            educational tools.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90">
+            <Button
+              size="lg"
+              asChild
+              className="bg-white text-primary hover:bg-white/90"
+            >
               <Link to="/register">
                 Start Learning Today
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" asChild className="border-white text-white hover:bg-white hover:text-primary">
+            <Button
+              size="lg"
+              variant="outline"
+              asChild
+              className="border-white text-primary hover:bg-white hover:text-primary"
+            >
               <Link to="/login">Sign In</Link>
             </Button>
           </div>
@@ -124,7 +148,9 @@ const Index = () => {
                 <p className="text-xs opacity-80">admin@demo.com</p>
               </div>
             </div>
-            <p className="text-xs mt-2 opacity-80">Password for all demo accounts: password123</p>
+            <p className="text-xs mt-2 opacity-80">
+              Password for all demo accounts: password123
+            </p>
           </div>
         </div>
       </section>
@@ -135,7 +161,9 @@ const Index = () => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             {stats.map((stat, index) => (
               <div key={index}>
-                <div className="text-3xl font-bold text-primary mb-2">{stat.value}</div>
+                <div className="text-3xl font-bold text-primary mb-2">
+                  {stat.value}
+                </div>
                 <div className="text-muted-foreground">{stat.label}</div>
               </div>
             ))}
@@ -147,16 +175,21 @@ const Index = () => {
       <section className="py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold mb-4">Everything You Need to Succeed</h2>
+            <h2 className="text-3xl font-bold mb-4">
+              Everything You Need to Succeed
+            </h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Our platform provides comprehensive tools for modern education, 
+              Our platform provides comprehensive tools for modern education,
               supporting every aspect of the learning journey.
             </p>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
-              <Card key={index} className="border-0 shadow-soft hover:shadow-medium transition-shadow">
+              <Card
+                key={index}
+                className="border-0 shadow-soft hover:shadow-medium transition-shadow"
+              >
                 <CardHeader>
                   <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center mb-4">
                     <feature.icon className="h-6 w-6 text-white" />
@@ -181,7 +214,11 @@ const Index = () => {
           <p className="text-xl text-white/80 mb-8">
             Join thousands of students and educators already using our platform.
           </p>
-          <Button size="lg" asChild className="bg-white text-primary hover:bg-white/90">
+          <Button
+            size="lg"
+            asChild
+            className="bg-white text-primary hover:bg-white/90"
+          >
             <Link to="/register">
               Create Your Account
               <ArrowRight className="ml-2 h-4 w-4" />
