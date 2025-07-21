@@ -1,6 +1,8 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { StatsCard } from '@/components/dashboard/StatsCard';
+import { QuickActions } from '@/components/dashboard/QuickActions';
+import { AnalyticsChart } from '@/components/dashboard/AnalyticsChart';
 import { 
   BookOpen, 
   Users, 
@@ -9,7 +11,11 @@ import {
   TrendingUp, 
   Calendar,
   Bell,
-  Activity
+  Activity,
+  Clock,
+  Target,
+  CheckCircle,
+  AlertTriangle
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -32,24 +38,138 @@ const Dashboard = () => {
     switch (user?.role) {
       case 'student':
         return [
-          { title: 'Enrolled Courses', value: '6', icon: BookOpen, color: 'text-student' },
-          { title: 'Assignments Due', value: '3', icon: FileText, color: 'text-warning' },
-          { title: 'Current GPA', value: '3.8', icon: Award, color: 'text-success' },
-          { title: 'Study Hours', value: '24h', icon: Activity, color: 'text-primary' },
+          { 
+            title: 'Enrolled Courses', 
+            value: '6', 
+            icon: BookOpen, 
+            color: 'text-primary',
+            trend: { value: '+1', isPositive: true }
+          },
+          { 
+            title: 'Assignments Due', 
+            value: '3', 
+            icon: Clock, 
+            color: 'text-warning',
+            trend: { value: '-2', isPositive: true }
+          },
+          { 
+            title: 'Current GPA', 
+            value: '3.8', 
+            icon: Award, 
+            color: 'text-success',
+            trend: { value: '+0.2', isPositive: true }
+          },
+          { 
+            title: 'Study Hours (Week)', 
+            value: '24h', 
+            icon: Activity, 
+            color: 'text-accent',
+            trend: { value: '+4h', isPositive: true }
+          },
+          { 
+            title: 'Completed Tasks', 
+            value: '18', 
+            icon: CheckCircle, 
+            color: 'text-success',
+            trend: { value: '+5', isPositive: true }
+          },
+          { 
+            title: 'Course Progress', 
+            value: '78%', 
+            icon: Target, 
+            color: 'text-primary',
+            trend: { value: '+12%', isPositive: true }
+          },
         ];
       case 'lecturer':
         return [
-          { title: 'Courses Teaching', value: '4', icon: BookOpen, color: 'text-lecturer' },
-          { title: 'Total Students', value: '156', icon: Users, color: 'text-primary' },
-          { title: 'Pending Reviews', value: '12', icon: FileText, color: 'text-warning' },
-          { title: 'Avg Class Rating', value: '4.8', icon: Award, color: 'text-success' },
+          { 
+            title: 'Courses Teaching', 
+            value: '4', 
+            icon: BookOpen, 
+            color: 'text-primary',
+            trend: { value: '+1', isPositive: true }
+          },
+          { 
+            title: 'Total Students', 
+            value: '156', 
+            icon: Users, 
+            color: 'text-secondary',
+            trend: { value: '+12', isPositive: true }
+          },
+          { 
+            title: 'Pending Reviews', 
+            value: '12', 
+            icon: FileText, 
+            color: 'text-warning',
+            trend: { value: '-8', isPositive: true }
+          },
+          { 
+            title: 'Avg Class Rating', 
+            value: '4.8', 
+            icon: Award, 
+            color: 'text-success',
+            trend: { value: '+0.3', isPositive: true }
+          },
+          { 
+            title: 'Attendance Rate', 
+            value: '94%', 
+            icon: CheckCircle, 
+            color: 'text-success',
+            trend: { value: '+2%', isPositive: true }
+          },
+          { 
+            title: 'Active Discussions', 
+            value: '28', 
+            icon: Activity, 
+            color: 'text-accent',
+            trend: { value: '+7', isPositive: true }
+          },
         ];
       case 'admin':
         return [
-          { title: 'Total Users', value: '1,234', icon: Users, color: 'text-admin' },
-          { title: 'Active Courses', value: '89', icon: BookOpen, color: 'text-primary' },
-          { title: 'System Load', value: '78%', icon: TrendingUp, color: 'text-warning' },
-          { title: 'Support Tickets', value: '5', icon: Bell, color: 'text-destructive' },
+          { 
+            title: 'Total Users', 
+            value: '1,234', 
+            icon: Users, 
+            color: 'text-primary',
+            trend: { value: '+87', isPositive: true }
+          },
+          { 
+            title: 'Active Courses', 
+            value: '89', 
+            icon: BookOpen, 
+            color: 'text-secondary',
+            trend: { value: '+5', isPositive: true }
+          },
+          { 
+            title: 'System Load', 
+            value: '78%', 
+            icon: TrendingUp, 
+            color: 'text-warning',
+            trend: { value: '+5%', isPositive: false }
+          },
+          { 
+            title: 'Support Tickets', 
+            value: '5', 
+            icon: AlertTriangle, 
+            color: 'text-destructive',
+            trend: { value: '-3', isPositive: true }
+          },
+          { 
+            title: 'Revenue (Month)', 
+            value: '$24.5k', 
+            icon: Award, 
+            color: 'text-success',
+            trend: { value: '+12%', isPositive: true }
+          },
+          { 
+            title: 'Server Uptime', 
+            value: '99.9%', 
+            icon: CheckCircle, 
+            color: 'text-success',
+            trend: { value: '0%', isPositive: true }
+          },
         ];
       default:
         return [];
@@ -100,21 +220,21 @@ const Dashboard = () => {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat, index) => (
-          <Card key={index} className="hover:shadow-medium transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-            </CardContent>
-          </Card>
+          <StatsCard
+            key={index}
+            title={stat.title}
+            value={stat.value}
+            icon={stat.icon}
+            color={stat.color}
+            trend={stat.trend}
+          />
         ))}
       </div>
+
+      {/* Analytics Charts */}
+      <AnalyticsChart userRole={user?.role || 'student'} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -140,78 +260,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>
-              Frequently used features
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {user?.role === 'student' && (
-                <>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <BookOpen className="h-5 w-5" />
-                    <span className="text-xs">Browse Courses</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <FileText className="h-5 w-5" />
-                    <span className="text-xs">Submit Assignment</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Calendar className="h-5 w-5" />
-                    <span className="text-xs">View Schedule</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Award className="h-5 w-5" />
-                    <span className="text-xs">Check Grades</span>
-                  </Button>
-                </>
-              )}
-              {user?.role === 'lecturer' && (
-                <>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <FileText className="h-5 w-5" />
-                    <span className="text-xs">Upload Content</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Grade Students</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Calendar className="h-5 w-5" />
-                    <span className="text-xs">Schedule Meeting</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <span className="text-xs">View Analytics</span>
-                  </Button>
-                </>
-              )}
-              {user?.role === 'admin' && (
-                <>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Users className="h-5 w-5" />
-                    <span className="text-xs">Manage Users</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <BookOpen className="h-5 w-5" />
-                    <span className="text-xs">Course Management</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <span className="text-xs">System Analytics</span>
-                  </Button>
-                  <Button variant="outline" className="h-auto p-4 flex flex-col items-center space-y-2">
-                    <Award className="h-5 w-5" />
-                    <span className="text-xs">Approve Results</span>
-                  </Button>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <QuickActions userRole={user?.role || 'student'} />
       </div>
     </div>
   );
