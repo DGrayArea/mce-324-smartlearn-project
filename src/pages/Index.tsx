@@ -201,7 +201,7 @@ const Index = () => {
               <span className="font-bold text-xl">LearnHub</span>
             </div>
             <p className="text-muted-foreground text-center md:text-right">
-              © 2024 LearnHub. Empowering education through technology.
+              © 2025 LearnHub. Empowering education through technology.
             </p>
           </div>
         </div>
