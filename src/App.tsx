@@ -13,6 +13,13 @@ import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Courses from "./pages/dashboard/Courses";
+import Assignments from "./pages/dashboard/Assignments";
+import Meetings from "./pages/dashboard/Meetings";
+import Messages from "./pages/dashboard/Messages";
+import Grades from "./pages/dashboard/Grades";
+import Profile from "./pages/dashboard/Profile";
+import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,21 +48,21 @@ const App = () => (
               }
             >
               <Route index element={<Dashboard />} />
-              <Route path="courses" element={<div className="p-8 text-center text-muted-foreground">Courses feature coming soon...</div>} />
-              <Route path="assignments" element={<div className="p-8 text-center text-muted-foreground">Assignments feature coming soon...</div>} />
-              <Route path="meetings" element={<div className="p-8 text-center text-muted-foreground">Virtual Meetings feature coming soon...</div>} />
-              <Route path="messages" element={<div className="p-8 text-center text-muted-foreground">Messages & Forums feature coming soon...</div>} />
-              <Route path="grades" element={<div className="p-8 text-center text-muted-foreground">Grades & Results feature coming soon...</div>} />
+              <Route path="courses" element={<Courses />} />
+              <Route path="assignments" element={<Assignments />} />
+              <Route path="meetings" element={<Meetings />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="grades" element={<Grades />} />
               <Route path="content" element={<div className="p-8 text-center text-muted-foreground">Content Library feature coming soon...</div>} />
               <Route path="analytics" element={<div className="p-8 text-center text-muted-foreground">Analytics feature coming soon...</div>} />
               <Route path="users" element={<div className="p-8 text-center text-muted-foreground">User Management feature coming soon...</div>} />
               <Route path="result-approval" element={<div className="p-8 text-center text-muted-foreground">Result Approval feature coming soon...</div>} />
               <Route path="system-analytics" element={<div className="p-8 text-center text-muted-foreground">System Analytics feature coming soon...</div>} />
-              <Route path="course-management" element={<div className="p-8 text-center text-muted-foreground">Course Management feature coming soon...</div>} />
+              <Route path="course-management" element={<Courses />} />
               <Route path="calendar" element={<div className="p-8 text-center text-muted-foreground">Calendar feature coming soon...</div>} />
               <Route path="support" element={<div className="p-8 text-center text-muted-foreground">Help & Support feature coming soon...</div>} />
-              <Route path="profile" element={<div className="p-8 text-center text-muted-foreground">Profile feature coming soon...</div>} />
-              <Route path="settings" element={<div className="p-8 text-center text-muted-foreground">Settings feature coming soon...</div>} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="settings" element={<Settings />} />
             </Route>
 
             {/* Catch-all routes */}
