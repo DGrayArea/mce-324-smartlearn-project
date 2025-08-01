@@ -25,6 +25,11 @@ import Notifications from "./pages/dashboard/Notifications";
 import Support from "./pages/dashboard/Support";
 import Calendar from "./pages/dashboard/Calendar";
 import Chatrooms from "./pages/dashboard/Chatrooms";
+import ContentLibrary from "./pages/dashboard/ContentLibrary";
+import Analytics from "./pages/dashboard/Analytics";
+import UserManagement from "./pages/dashboard/UserManagement";
+import ResultApproval from "./pages/dashboard/ResultApproval";
+import SystemAnalytics from "./pages/dashboard/SystemAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -57,11 +62,11 @@ const App = () => (
               <Route path="meetings" element={<Meetings />} />
               <Route path="messages" element={<Messages />} />
               <Route path="grades" element={<Grades />} />
-              <Route path="content" element={<div className="p-8 text-center text-muted-foreground">Content Library feature coming soon...</div>} />
-              <Route path="analytics" element={<div className="p-8 text-center text-muted-foreground">Analytics feature coming soon...</div>} />
-              <Route path="users" element={<div className="p-8 text-center text-muted-foreground">User Management feature coming soon...</div>} />
-              <Route path="result-approval" element={<div className="p-8 text-center text-muted-foreground">Result Approval feature coming soon...</div>} />
-              <Route path="system-analytics" element={<div className="p-8 text-center text-muted-foreground">System Analytics feature coming soon...</div>} />
+              <Route path="content" element={<ContentLibrary />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="users" element={<UserManagement />} />
+              <Route path="result-approval" element={<ResultApproval />} />
+              <Route path="system-analytics" element={<SystemAnalytics />} />
               <Route path="course-management" element={<Courses />} />
               <Route path="calendar" element={<Calendar />} />
               <Route path="support" element={<Support />} />
