@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { BookOpen, Calendar, Clock, Bookmark, Users, Plus } from 'lucide-react';
+import CourseFeedback from '@/components/dashboard/CourseFeedback';
 
 const Courses = () => {
   const { user } = useAuth();
@@ -99,10 +100,15 @@ const Courses = () => {
             </CardContent>
             
             <CardFooter className="border-t p-4 flex justify-between">
-              <Button variant="outline" size="sm">
-                <BookOpen className="h-4 w-4 mr-2" />
-                {user?.role === 'student' ? 'View Content' : 'Manage'}
-              </Button>
+              <div className="flex space-x-2">
+                <Button variant="outline" size="sm">
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  {user?.role === 'student' ? 'View Content' : 'Manage'}
+                </Button>
+                {user?.role === 'student' && (
+                  <CourseFeedback course={course} />
+                )}
+              </div>
               {user?.role !== 'admin' && (
                 <Button variant="ghost" size="sm">
                   <Bookmark className="h-4 w-4" />

@@ -21,6 +21,10 @@ import Grades from "./pages/dashboard/Grades";
 import Profile from "./pages/dashboard/Profile";
 import Settings from "./pages/dashboard/Settings";
 import NotFound from "./pages/NotFound";
+import Notifications from "./pages/dashboard/Notifications";
+import Support from "./pages/dashboard/Support";
+import Calendar from "./pages/dashboard/Calendar";
+import Chatrooms from "./pages/dashboard/Chatrooms";
 
 const queryClient = new QueryClient();
 
@@ -59,8 +63,10 @@ const App = () => (
               <Route path="result-approval" element={<div className="p-8 text-center text-muted-foreground">Result Approval feature coming soon...</div>} />
               <Route path="system-analytics" element={<div className="p-8 text-center text-muted-foreground">System Analytics feature coming soon...</div>} />
               <Route path="course-management" element={<Courses />} />
-              <Route path="calendar" element={<div className="p-8 text-center text-muted-foreground">Calendar feature coming soon...</div>} />
-              <Route path="support" element={<div className="p-8 text-center text-muted-foreground">Help & Support feature coming soon...</div>} />
+              <Route path="calendar" element={<Calendar />} />
+              <Route path="support" element={<Support />} />
+              <Route path="notifications" element={<Notifications />} />
+              <Route path="chatrooms" element={<Chatrooms />} />
               <Route path="profile" element={<Profile />} />
               <Route path="settings" element={<Settings />} />
             </Route>

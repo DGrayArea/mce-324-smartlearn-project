@@ -13,7 +13,8 @@ import {
   ClipboardCheck,
   Award,
   UserCheck,
-  HelpCircle
+  HelpCircle,
+  Bell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -108,6 +109,18 @@ const navigationItems: NavItem[] = [
     title: 'Help & Support',
     href: '/dashboard/support',
     icon: HelpCircle,
+    roles: ['student', 'lecturer', 'admin'],
+  },
+  {
+    title: 'Notifications',
+    href: '/dashboard/notifications',
+    icon: Bell,
+    roles: ['student', 'lecturer', 'admin'],
+  },
+  {
+    title: 'Chat Rooms',
+    href: '/dashboard/chatrooms',
+    icon: MessageSquare,
     roles: ['student', 'lecturer', 'admin'],
   },
 ];
