@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { studentAssignments, lecturerAssignments } from '@/lib/dummyData';
+import { useToast } from '@/hooks/use-toast';
 import { 
   Card, 
   CardContent, 
@@ -16,8 +17,30 @@ import { format } from 'date-fns';
 
 const Assignments = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   
   const assignments = user?.role === 'lecturer' ? lecturerAssignments : studentAssignments;
+  
+  const handleCreateAssignment = () => {
+    toast({
+      title: "Create Assignment",
+      description: "Assignment creation form opened (demo mode)",
+    });
+  };
+  
+  const handleSubmit = (assignmentId: string) => {
+    toast({
+      title: "Assignment Submitted",
+      description: "Your assignment has been submitted successfully (demo mode)",
+    });
+  };
+  
+  const handleDownload = (assignmentTitle: string) => {
+    toast({
+      title: "Download Started",
+      description: `Downloading ${assignmentTitle} (demo mode)`,
+    });
+  };
   
   const getStatusColor = (status: string) => {
     switch(status) {
@@ -42,7 +65,7 @@ const Assignments = () => {
           </p>
         </div>
         {user?.role === 'lecturer' && (
-          <Button>
+          <Button onClick={handleCreateAssignment}>
             <Plus className="mr-2 h-4 w-4" />
             Create Assignment
           </Button>
@@ -96,12 +119,12 @@ const Assignments = () => {
             <div className="border-t p-4 flex justify-between">
               {user?.role === 'student' ? (
                 <>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleDownload(assignment.title)}>
                     <Download className="h-4 w-4 mr-2" />
                     Download
                   </Button>
                   {assignment.status === 'pending' && (
-                    <Button size="sm">
+                    <Button size="sm" onClick={() => handleSubmit(assignment.id)}>
                       <Upload className="h-4 w-4 mr-2" />
                       Submit
                     </Button>
@@ -109,11 +132,11 @@ const Assignments = () => {
                 </>
               ) : (
                 <>
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => handleDownload(assignment.title)}>
                     <FileText className="h-4 w-4 mr-2" />
                     View Details
                   </Button>
-                  <Button size="sm">
+                  <Button size="sm" onClick={() => toast({ title: "Grade Submissions", description: "Grading interface opened (demo mode)" })}>
                     Grade Submissions
                   </Button>
                 </>

@@ -154,6 +154,14 @@ const ContentLibrary = () => {
     });
   };
 
+  const handlePreview = (item: ContentItem) => {
+    // Simulate file preview
+    toast({
+      title: "Preview",
+      description: `Opening preview for ${item.title} (demo mode)`,
+    });
+  };
+
   const courses = Array.from(new Set(contentLibrary.map(item => item.course)));
 
   return (
@@ -326,7 +334,7 @@ const ContentLibrary = () => {
                   <Download className="h-4 w-4 mr-2" />
                   Download
                 </Button>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={() => handlePreview(item)}>
                   <Eye className="h-4 w-4" />
                 </Button>
               </div>

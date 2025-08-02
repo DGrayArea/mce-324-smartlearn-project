@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageSquare, Users, Plus, Send, Hash, Lock, Globe, Search } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatRoom {
   id: string;
@@ -106,6 +107,7 @@ const sampleMessages: ChatMessage[] = [
 
 const Chatrooms = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(chatRooms[0]);
   const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -141,13 +143,29 @@ const Chatrooms = () => {
   const handleSendMessage = () => {
     if (message.trim() && selectedRoom) {
       // Simulate sending message
+      toast({
+        title: "Message Sent",
+        description: `Your message was sent to ${selectedRoom.name} (demo mode)`,
+      });
       setMessage('');
     }
   };
 
   const handleJoinRoom = (roomId: string) => {
     // Simulate joining room
-    console.log(`Joining room ${roomId}`);
+    const room = chatRooms.find(r => r.id === roomId);
+    toast({
+      title: "Joined Room",
+      description: `You've joined ${room?.name || 'the room'} (demo mode)`,
+    });
+  };
+
+  const handleCreateRoom = () => {
+    toast({
+      title: "Room Created",
+      description: "New chat room has been created successfully (demo mode)",
+    });
+    setIsCreateRoomOpen(false);
   };
 
   return (
@@ -184,7 +202,7 @@ const Chatrooms = () => {
                 <Button variant="outline" onClick={() => setIsCreateRoomOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={() => setIsCreateRoomOpen(false)}>
+                <Button onClick={handleCreateRoom}>
                   Create Room
                 </Button>
               </div>
@@ -193,9 +211,9 @@ const Chatrooms = () => {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[400px] sm:h-[500px] lg:h-[600px]">
         {/* Room List */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-4 max-h-full overflow-hidden">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -207,13 +225,13 @@ const Chatrooms = () => {
           </div>
 
           <Tabs defaultValue="joined" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="joined">My Rooms</TabsTrigger>
-              <TabsTrigger value="available">Browse</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 h-auto">
+              <TabsTrigger value="joined" className="text-sm py-2">My Rooms</TabsTrigger>
+              <TabsTrigger value="available" className="text-sm py-2">Browse</TabsTrigger>
             </TabsList>
             
             <TabsContent value="joined" className="mt-4">
-              <ScrollArea className="h-[450px]">
+              <ScrollArea className="h-[280px] sm:h-[350px] lg:h-[450px]">
                 <div className="space-y-2">
                   {joinedRooms.map((room) => (
                     <Card 
@@ -253,7 +271,7 @@ const Chatrooms = () => {
             </TabsContent>
 
             <TabsContent value="available" className="mt-4">
-              <ScrollArea className="h-[450px]">
+              <ScrollArea className="h-[280px] sm:h-[350px] lg:h-[450px]">
                 <div className="space-y-2">
                   {availableRooms.map((room) => (
                     <Card key={room.id} className="hover:bg-muted/50 transition-colors">
