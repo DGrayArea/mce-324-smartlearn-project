@@ -46,10 +46,10 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            
+
             {/* Protected dashboard routes */}
-            <Route 
-              path="/dashboard" 
+            <Route
+              path="/dashboard"
               element={
                 <ProtectedRoute>
                   <DashboardLayout />
@@ -77,7 +77,17 @@ const App = () => (
             </Route>
 
             {/* Catch-all routes */}
-            <Route path="/unauthorized" element={<div className="min-h-screen flex items-center justify-center"><div className="text-center"><h1 className="text-2xl font-bold mb-4">Unauthorized</h1><p>You don't have permission to access this page.</p></div></div>} />
+            <Route
+              path="/unauthorized"
+              element={
+                <div className="min-h-screen flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold mb-4">Unauthorized</h1>
+                    <p>You don't have permission to access this page.</p>
+                  </div>
+                </div>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

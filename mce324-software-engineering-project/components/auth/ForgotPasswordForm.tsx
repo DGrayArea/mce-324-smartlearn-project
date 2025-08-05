@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Mail, ArrowLeft, GraduationCap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { Mail, ArrowLeft, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import Link from "next/link";
 
 export const ForgotPasswordForm = () => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { resetPassword } = useAuth();
@@ -24,7 +30,8 @@ export const ForgotPasswordForm = () => {
         setIsSubmitted(true);
         toast({
           title: "Password reset successful",
-          description: "Your password has been reset to 'newpassword123'. Please log in and change it.",
+          description:
+            "Your password has been reset to 'newpassword123'. Please log in and change it.",
         });
       } else {
         toast({
@@ -67,23 +74,29 @@ export const ForgotPasswordForm = () => {
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted-foreground">
                   For demo purposes, your password has been reset to: <br />
-                  <code className="bg-muted px-2 py-1 rounded text-sm font-mono">newpassword123</code>
+                  <code className="bg-muted px-2 py-1 rounded text-sm font-mono">
+                    newpassword123
+                  </code>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Please log in with this temporary password and change it immediately.
+                  Please log in with this temporary password and change it
+                  immediately.
                 </p>
               </div>
 
               <div className="space-y-3">
-                <Button asChild className="w-full bg-gradient-primary hover:opacity-90">
-                  <Link to="/login">Back to Login</Link>
+                <Button
+                  asChild
+                  className="w-full bg-gradient-primary hover:opacity-90"
+                >
+                  <Link href="/login">Back to Login</Link>
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full"
                   onClick={() => {
                     setIsSubmitted(false);
-                    setEmail('');
+                    setEmail("");
                   }}
                 >
                   Reset Another Account
@@ -104,7 +117,9 @@ export const ForgotPasswordForm = () => {
             <GraduationCap className="h-6 w-6 text-primary" />
           </div>
           <h1 className="text-3xl font-bold text-white">Reset Password</h1>
-          <p className="text-white/80">Enter your email to reset your password</p>
+          <p className="text-white/80">
+            Enter your email to reset your password
+          </p>
         </div>
 
         <Card className="shadow-large border-0">
@@ -137,13 +152,13 @@ export const ForgotPasswordForm = () => {
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? 'Sending...' : 'Send Reset Instructions'}
+                {isLoading ? "Sending..." : "Send Reset Instructions"}
               </Button>
             </form>
 
             <div className="text-center">
               <Link
-                to="/login"
+                href="/login"
                 className="inline-flex items-center text-sm text-primary hover:underline"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" />

@@ -1,20 +1,27 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, GraduationCap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { useState } from "react";
+import { Eye, EyeOff, Mail, Lock, GraduationCap } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export const LoginForm = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +35,7 @@ export const LoginForm = () => {
           description: "Welcome back to the learning platform!",
         });
         // Redirect to dashboard after successful login
-        navigate('/dashboard');
+        router.push("/dashboard");
       } else {
         toast({
           title: "Login failed",
@@ -49,17 +56,17 @@ export const LoginForm = () => {
 
   const fillDemoCredentials = (role: string) => {
     switch (role) {
-      case 'student':
-        setEmail('student@demo.com');
-        setPassword('password123');
+      case "student":
+        setEmail("student@demo.com");
+        setPassword("password123");
         break;
-      case 'lecturer':
-        setEmail('lecturer@demo.com');
-        setPassword('password123');
+      case "lecturer":
+        setEmail("lecturer@demo.com");
+        setPassword("password123");
         break;
-      case 'admin':
-        setEmail('admin@demo.com');
-        setPassword('password123');
+      case "admin":
+        setEmail("admin@demo.com");
+        setPassword("password123");
         break;
     }
   };
@@ -106,7 +113,7 @@ export const LoginForm = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -131,7 +138,7 @@ export const LoginForm = () => {
 
               <div className="flex items-center justify-between">
                 <Link
-                  to="/forgot-password"
+                  href="/forgot-password"
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
@@ -143,7 +150,7 @@ export const LoginForm = () => {
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? 'Signing in...' : 'Sign In'}
+                {isLoading ? "Signing in..." : "Sign In"}
               </Button>
             </form>
 
@@ -156,7 +163,7 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials('student')}
+                  onClick={() => fillDemoCredentials("student")}
                   className="text-xs"
                 >
                   Student
@@ -165,7 +172,7 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials('lecturer')}
+                  onClick={() => fillDemoCredentials("lecturer")}
                   className="text-xs"
                 >
                   Lecturer
@@ -174,7 +181,7 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials('admin')}
+                  onClick={() => fillDemoCredentials("admin")}
                   className="text-xs"
                 >
                   Admin
@@ -184,8 +191,8 @@ export const LoginForm = () => {
 
             <div className="text-center">
               <span className="text-sm text-muted-foreground">
-                Don't have an account?{' '}
-                <Link to="/register" className="text-primary hover:underline">
+                Don't have an account?{" "}
+                <Link href="/register" className="text-primary hover:underline">
                   Sign up
                 </Link>
               </span>

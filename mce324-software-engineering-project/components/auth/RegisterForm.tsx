@@ -1,42 +1,62 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, GraduationCap, Building2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/hooks/use-toast';
-import { UserRole } from '@/lib/auth';
+import { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  GraduationCap,
+  Building2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
+import { UserRole } from "@/lib/auth";
+import Link from "next/link";
 
 export const RegisterForm = () => {
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: '' as UserRole | '',
-    department: '',
-    studentId: '',
-    staffId: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "" as UserRole | "",
+    department: "",
+    studentId: "",
+    staffId: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { register } = useAuth();
 
   const departments = [
-    'Computer Science',
-    'Mathematics',
-    'Physics',
-    'Chemistry',
-    'Biology',
-    'English',
-    'History',
-    'Psychology',
-    'Business Administration',
-    'Engineering',
+    "Computer Science",
+    "Mathematics",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "English",
+    "History",
+    "Psychology",
+    "Business Administration",
+    "Engineering",
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,8 +81,8 @@ export const RegisterForm = () => {
         password: formData.password,
         role: formData.role as UserRole,
         department: formData.department,
-        ...(formData.role === 'student' && { studentId: formData.studentId }),
-        ...(formData.role !== 'student' && { staffId: formData.staffId }),
+        ...(formData.role === "student" && { studentId: formData.studentId }),
+        ...(formData.role !== "student" && { staffId: formData.staffId }),
       };
 
       const result = await register(userData);
@@ -90,7 +110,7 @@ export const RegisterForm = () => {
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
@@ -125,7 +145,9 @@ export const RegisterForm = () => {
                       id="firstName"
                       placeholder="First name"
                       value={formData.firstName}
-                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("firstName", e.target.value)
+                      }
                       className="pl-10"
                       required
                     />
@@ -138,7 +160,9 @@ export const RegisterForm = () => {
                     id="lastName"
                     placeholder="Last name"
                     value={formData.lastName}
-                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("lastName", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -153,7 +177,7 @@ export const RegisterForm = () => {
                     type="email"
                     placeholder="Enter your email"
                     value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    onChange={(e) => handleInputChange("email", e.target.value)}
                     className="pl-10"
                     required
                   />
@@ -162,7 +186,10 @@ export const RegisterForm = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="role">Role</Label>
-                <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => handleInputChange("role", value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
@@ -178,40 +205,51 @@ export const RegisterForm = () => {
                 <Label htmlFor="department">Department</Label>
                 <div className="relative">
                   <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Select value={formData.department} onValueChange={(value) => handleInputChange('department', value)}>
+                  <Select
+                    value={formData.department}
+                    onValueChange={(value) =>
+                      handleInputChange("department", value)
+                    }
+                  >
                     <SelectTrigger className="pl-10">
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map(dept => (
-                        <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept} value={dept}>
+                          {dept}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {formData.role === 'student' && (
+              {formData.role === "student" && (
                 <div className="space-y-2">
                   <Label htmlFor="studentId">Student ID</Label>
                   <Input
                     id="studentId"
                     placeholder="Enter student ID"
                     value={formData.studentId}
-                    onChange={(e) => handleInputChange('studentId', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("studentId", e.target.value)
+                    }
                     required
                   />
                 </div>
               )}
 
-              {formData.role && formData.role !== 'student' && (
+              {formData.role && formData.role !== "student" && (
                 <div className="space-y-2">
                   <Label htmlFor="staffId">Staff ID</Label>
                   <Input
                     id="staffId"
                     placeholder="Enter staff ID"
                     value={formData.staffId}
-                    onChange={(e) => handleInputChange('staffId', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("staffId", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -223,10 +261,12 @@ export const RegisterForm = () => {
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Create password"
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
                     className="pl-10 pr-10"
                     required
                   />
@@ -255,7 +295,9 @@ export const RegisterForm = () => {
                     type="password"
                     placeholder="Confirm password"
                     value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("confirmPassword", e.target.value)
+                    }
                     className="pl-10"
                     required
                   />
@@ -267,14 +309,14 @@ export const RegisterForm = () => {
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity"
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating account...' : 'Create Account'}
+                {isLoading ? "Creating account..." : "Create Account"}
               </Button>
             </form>
 
             <div className="text-center">
               <span className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Link to="/login" className="text-primary hover:underline">
+                Already have an account?{" "}
+                <Link href="/login" className="text-primary hover:underline">
                   Sign in
                 </Link>
               </span>
