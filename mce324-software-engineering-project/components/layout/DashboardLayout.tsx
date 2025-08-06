@@ -56,7 +56,7 @@ export const DashboardLayout = ({
     <div className="min-h-screen bg-muted/20">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex h-16 items-center px-4 gap-4">
+        <div className="flex h-16 items-center px-4 gap-4 w-full justify-between">
           {/* Mobile menu trigger */}
           <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
             <SheetTrigger asChild>
