@@ -1,5 +1,5 @@
 // Authentication and user management with localStorage
-export type UserRole = 'student' | 'lecturer' | 'admin';
+export type UserRole = "student" | "lecturer" | "admin";
 
 export interface User {
   id: string;
@@ -22,8 +22,8 @@ export interface AuthState {
 }
 
 class AuthService {
-  private static readonly USERS_KEY = 'learning_platform_users';
-  private static readonly CURRENT_USER_KEY = 'learning_platform_current_user';
+  private static readonly USERS_KEY = "learning_platform_users";
+  private static readonly CURRENT_USER_KEY = "learning_platform_current_user";
 
   // Initialize with dummy data
   static initializeDummyData() {
@@ -31,37 +31,37 @@ class AuthService {
     if (existingUsers.length === 0) {
       const dummyUsers: User[] = [
         {
-          id: '1',
-          email: 'student@demo.com',
-          password: 'password123',
-          firstName: 'Alice',
-          lastName: 'Johnson',
-          role: 'student',
-          department: 'Computer Science',
-          studentId: 'CS2024001',
+          id: "1",
+          email: "student@demo.com",
+          password: "password123",
+          firstName: "Alice",
+          lastName: "Johnson",
+          role: "student",
+          department: "Computer Science",
+          studentId: "CS2024001",
           isVerified: true,
           createdAt: new Date().toISOString(),
         },
         {
-          id: '2',
-          email: 'lecturer@demo.com',
-          password: 'password123',
-          firstName: 'Dr. Robert',
-          lastName: 'Smith',
-          role: 'lecturer',
-          department: 'Computer Science',
-          staffId: 'LEC001',
+          id: "2",
+          email: "lecturer@demo.com",
+          password: "password123",
+          firstName: "Dr. Robert",
+          lastName: "Smith",
+          role: "lecturer",
+          department: "Computer Science",
+          staffId: "LEC001",
           isVerified: true,
           createdAt: new Date().toISOString(),
         },
         {
-          id: '3',
-          email: 'admin@demo.com',
-          password: 'password123',
-          firstName: 'Sarah',
-          lastName: 'Wilson',
-          role: 'admin',
-          staffId: 'ADM001',
+          id: "3",
+          email: "admin@demo.com",
+          password: "password123",
+          firstName: "Sarah",
+          lastName: "Wilson",
+          role: "admin",
+          staffId: "ADM001",
           isVerified: true,
           createdAt: new Date().toISOString(),
         },
@@ -92,29 +92,36 @@ class AuthService {
     }
   }
 
-  static async login(email: string, password: string): Promise<{ success: boolean; user?: User; error?: string }> {
+  static async login(
+    email: string,
+    password: string
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
     const users = this.getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
-    
+    const user = users.find(
+      (u) => u.email === email && u.password === password
+    );
+
     if (user) {
       // Update last login
       user.lastLogin = new Date().toISOString();
-      const updatedUsers = users.map(u => u.id === user.id ? user : u);
+      const updatedUsers = users.map((u) => (u.id === user.id ? user : u));
       this.saveUsers(updatedUsers);
       this.setCurrentUser(user);
-      
+
       return { success: true, user };
     }
-    
-    return { success: false, error: 'Invalid email or password' };
+
+    return { success: false, error: "Invalid email or password" };
   }
 
-  static async register(userData: Omit<User, 'id' | 'createdAt' | 'isVerified'>): Promise<{ success: boolean; user?: User; error?: string }> {
+  static async register(
+    userData: Omit<User, "id" | "createdAt" | "isVerified">
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
     const users = this.getUsers();
-    
+
     // Check if email already exists
-    if (users.find(u => u.email === userData.email)) {
-      return { success: false, error: 'Email already exists' };
+    if (users.find((u) => u.email === userData.email)) {
+      return { success: false, error: "Email already exists" };
     }
 
     const newUser: User = {
@@ -126,44 +133,50 @@ class AuthService {
 
     users.push(newUser);
     this.saveUsers(users);
-    
+
     return { success: true, user: newUser };
   }
 
-  static async resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
+  static async resetPassword(
+    email: string
+  ): Promise<{ success: boolean; error?: string }> {
     const users = this.getUsers();
-    const user = users.find(u => u.email === email);
-    
+    const user = users.find((u) => u.email === email);
+
     if (!user) {
-      return { success: false, error: 'Email not found' };
+      return { success: false, error: "Email not found" };
     }
 
     // In a real app, this would send an email
     // For demo purposes, we'll just reset to a default password
-    user.password = 'newpassword123';
-    const updatedUsers = users.map(u => u.id === user.id ? user : u);
+    user.password = "newpassword123";
+    const updatedUsers = users.map((u) => (u.id === user.id ? user : u));
     this.saveUsers(updatedUsers);
-    
+
     return { success: true };
   }
 
-  static async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<{ success: boolean; error?: string }> {
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<{ success: boolean; error?: string }> {
     const users = this.getUsers();
-    const user = users.find(u => u.id === userId);
-    
+    const user = users.find((u) => u.id === userId);
+
     if (!user) {
-      return { success: false, error: 'User not found' };
+      return { success: false, error: "User not found" };
     }
 
     if (user.password !== currentPassword) {
-      return { success: false, error: 'Current password is incorrect' };
+      return { success: false, error: "Current password is incorrect" };
     }
 
     user.password = newPassword;
-    const updatedUsers = users.map(u => u.id === user.id ? user : u);
+    const updatedUsers = users.map((u) => (u.id === user.id ? user : u));
     this.saveUsers(updatedUsers);
     this.setCurrentUser(user);
-    
+
     return { success: true };
   }
 

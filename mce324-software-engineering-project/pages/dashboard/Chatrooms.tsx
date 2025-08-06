@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -22,6 +22,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   MessageSquare,
   Users,
@@ -139,6 +146,13 @@ const Chatrooms = () => {
   const [message, setMessage] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreateRoomOpen, setIsCreateRoomOpen] = useState(false);
+  const [messages, setMessages] = useState(sampleMessages);
+  const [newRoom, setNewRoom] = useState({
+    name: "",
+    description: "",
+    type: "public" as "public" | "private" | "course",
+  });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getRoomIcon = (type: string) => {
     switch (type) {
@@ -174,33 +188,80 @@ const Chatrooms = () => {
   const joinedRooms = filteredRooms.filter((room) => room.isJoined);
   const availableRooms = filteredRooms.filter((room) => !room.isJoined);
 
-  const handleSendMessage = () => {
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  const handleSendMessage = useCallback(() => {
     if (message.trim() && selectedRoom) {
-      // Simulate sending message
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        sender: user ? `${user.firstName} ${user.lastName}` : "Current User",
+        content: message,
+        timestamp: new Date().toLocaleTimeString(),
+        avatar: user ? `${user.firstName[0]}${user.lastName[0]}` : "U",
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+      setMessage("");
+
       toast({
         title: "Message Sent",
-        description: `Your message was sent to ${selectedRoom.name} (demo mode)`,
+        description: `Your message was sent to ${selectedRoom.name}`,
       });
-      setMessage("");
     }
-  };
+  }, [message, selectedRoom, user, toast]);
 
-  const handleJoinRoom = (roomId: string) => {
-    // Simulate joining room
-    const room = chatRooms.find((r) => r.id === roomId);
-    toast({
-      title: "Joined Room",
-      description: `You've joined ${room?.name || "the room"} (demo mode)`,
-    });
-  };
+  const handleJoinRoom = useCallback(
+    (roomId: string) => {
+      const room = chatRooms.find((r) => r.id === roomId);
+      if (room) {
+        // Simulate joining room
+        room.isJoined = true;
+        room.memberCount += 1;
 
-  const handleCreateRoom = () => {
-    toast({
-      title: "Room Created",
-      description: "New chat room has been created successfully (demo mode)",
-    });
-    setIsCreateRoomOpen(false);
-  };
+        toast({
+          title: "Joined Room",
+          description: `You've joined ${room.name}`,
+        });
+      }
+    },
+    [toast]
+  );
+
+  const handleCreateRoom = useCallback(() => {
+    if (newRoom.name.trim() && newRoom.description.trim()) {
+      const room: ChatRoom = {
+        id: Date.now().toString(),
+        name: newRoom.name,
+        description: newRoom.description,
+        type: newRoom.type,
+        memberCount: 1,
+        isJoined: true,
+        lastActivity: new Date().toLocaleString(),
+      };
+
+      chatRooms.unshift(room);
+
+      toast({
+        title: "Room Created",
+        description: `Chat room "${newRoom.name}" has been created successfully`,
+      });
+
+      setNewRoom({ name: "", description: "", type: "public" });
+      setIsCreateRoomOpen(false);
+    } else {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in both name and description fields.",
+        variant: "destructive",
+      });
+    }
+  }, [newRoom, toast]);
 
   return (
     <div className="space-y-6">
@@ -228,14 +289,49 @@ const Chatrooms = () => {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="room-name">Room Name</Label>
-                <Input id="room-name" placeholder="Enter room name" />
+                <Input
+                  id="room-name"
+                  placeholder="Enter room name"
+                  value={newRoom.name}
+                  onChange={(e) =>
+                    setNewRoom((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="room-description">Description</Label>
                 <Textarea
                   id="room-description"
                   placeholder="Describe the purpose of this room"
+                  value={newRoom.description}
+                  onChange={(e) =>
+                    setNewRoom((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="room-type">Room Type</Label>
+                <Select
+                  value={newRoom.type}
+                  onValueChange={(value) =>
+                    setNewRoom((prev) => ({
+                      ...prev,
+                      type: value as "public" | "private" | "course",
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="course">Course</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button
@@ -244,16 +340,21 @@ const Chatrooms = () => {
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateRoom}>Create Room</Button>
+                <Button
+                  onClick={handleCreateRoom}
+                  disabled={!newRoom.name.trim() || !newRoom.description.trim()}
+                >
+                  Create Room
+                </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[400px] sm:h-[500px] lg:h-[600px]">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[500px] sm:h-[600px] lg:h-[700px]">
         {/* Room List */}
-        <div className="lg:col-span-1 space-y-4 max-h-full overflow-hidden">
+        <div className="lg:col-span-1 space-y-4 max-h-full overflow-hidden order-2 lg:order-1">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -266,16 +367,24 @@ const Chatrooms = () => {
 
           <Tabs defaultValue="joined" className="w-full">
             <TabsList className="grid w-full grid-cols-2 h-auto">
-              <TabsTrigger value="joined" className="text-sm py-2">
-                My Rooms
+              <TabsTrigger
+                value="joined"
+                className="text-xs sm:text-sm py-2 px-2 sm:px-4"
+              >
+                <span className="hidden sm:inline">My Rooms</span>
+                <span className="sm:hidden">My</span>
               </TabsTrigger>
-              <TabsTrigger value="available" className="text-sm py-2">
-                Browse
+              <TabsTrigger
+                value="available"
+                className="text-xs sm:text-sm py-2 px-2 sm:px-4"
+              >
+                <span className="hidden sm:inline">Browse</span>
+                <span className="sm:hidden">Browse</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="joined" className="mt-4">
-              <ScrollArea className="h-[280px] sm:h-[350px] lg:h-[450px]">
+              <ScrollArea className="h-[250px] sm:h-[320px] lg:h-[480px]">
                 <div className="space-y-2">
                   {joinedRooms.map((room) => (
                     <Card
@@ -317,7 +426,7 @@ const Chatrooms = () => {
             </TabsContent>
 
             <TabsContent value="available" className="mt-4">
-              <ScrollArea className="h-[280px] sm:h-[350px] lg:h-[450px]">
+              <ScrollArea className="h-[250px] sm:h-[320px] lg:h-[480px]">
                 <div className="space-y-2">
                   {availableRooms.map((room) => (
                     <Card
@@ -358,7 +467,7 @@ const Chatrooms = () => {
         </div>
 
         {/* Chat Area */}
-        <div className="lg:col-span-3">
+        <div className="lg:col-span-3 order-1 lg:order-2">
           {selectedRoom ? (
             <Card className="h-full flex flex-col">
               <CardHeader className="border-b">
@@ -386,7 +495,7 @@ const Chatrooms = () => {
                 {/* Messages */}
                 <ScrollArea className="flex-1 p-4">
                   <div className="space-y-4">
-                    {sampleMessages.map((msg) => (
+                    {messages.map((msg) => (
                       <div key={msg.id} className="flex items-start space-x-3">
                         <Avatar className="h-8 w-8">
                           <AvatarImage src={msg.avatar} />
@@ -407,12 +516,11 @@ const Chatrooms = () => {
                               {msg.timestamp}
                             </span>
                           </div>
-                          <p className="text-sm text-muted-foreground">
-                            {msg.content}
-                          </p>
+                          <p className="text-sm">{msg.content}</p>
                         </div>
                       </div>
                     ))}
+                    <div ref={messagesEndRef} />
                   </div>
                 </ScrollArea>
 
@@ -427,7 +535,10 @@ const Chatrooms = () => {
                         e.key === "Enter" && handleSendMessage()
                       }
                     />
-                    <Button onClick={handleSendMessage}>
+                    <Button
+                      onClick={handleSendMessage}
+                      disabled={!message.trim()}
+                    >
                       <Send className="h-4 w-4" />
                     </Button>
                   </div>
