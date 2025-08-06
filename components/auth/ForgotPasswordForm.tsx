@@ -67,7 +67,8 @@ export const ForgotPasswordForm = () => {
             <CardHeader className="text-center">
               <CardTitle>Password Reset Sent</CardTitle>
               <CardDescription>
-                We've sent password reset instructions to your email address.
+                We&apos;ve sent password reset instructions to your email
+                address.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -126,7 +127,7 @@ export const ForgotPasswordForm = () => {
           <CardHeader className="text-center">
             <CardTitle>Forgot Password</CardTitle>
             <CardDescription>
-              We'll send you instructions to reset your password
+              We&apos;ll send you instructions to reset your password
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

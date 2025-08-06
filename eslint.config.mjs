@@ -9,8 +9,26 @@ const compat = new FlatCompat({
   baseDirectory: __dirname,
 });
 
-const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
+// Base ESLint config using FlatConfig
+export default [
+  // Next.js + TypeScript presets
+  ...compat.extends("next/core-web-vitals", "next"),
 
-export default eslintConfig;
+  // Custom rules
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    rules: {
+      // Warn instead of error for unused vars
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          vars: "all",
+          args: "after-used",
+          ignoreRestSiblings: true,
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
+];

@@ -220,7 +220,7 @@ const Dashboard = () => {
       <div className="bg-gradient-hero rounded-lg p-6 text-white">
         <h1 className="text-2xl font-bold mb-2">{getWelcomeMessage()}</h1>
         <p className="text-white/80">
-          Here's what's happening in your learning environment today.
+          Here&apos;s what&apos;s happening in your learning environment today.
         </p>
       </div>
 
