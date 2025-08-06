@@ -1,16 +1,46 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { CheckCircle, Clock, AlertCircle, Search, Filter, Download, Award, FileText, User } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Search,
+  Filter,
+  Download,
+  Award,
+  FileText,
+  User,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 interface ResultApproval {
   id: string;
@@ -22,7 +52,7 @@ interface ResultApproval {
   maxGrade: number;
   submissionDate: string;
   gradedBy: string;
-  status: 'pending' | 'approved' | 'rejected' | 'under-review';
+  status: "pending" | "approved" | "rejected" | "under-review";
   submittedBy: string;
   reviewNotes?: string;
   approvedBy?: string;
@@ -31,114 +61,129 @@ interface ResultApproval {
 
 const resultApprovals: ResultApproval[] = [
   {
-    id: '1',
-    studentName: 'Alice Johnson',
-    studentId: 'ST001',
-    course: 'CS101',
-    assignment: 'Programming Basics Quiz',
+    id: "1",
+    studentName: "Alice Johnson",
+    studentId: "ST001",
+    course: "CS101",
+    assignment: "Programming Basics Quiz",
     submittedGrade: 88,
     maxGrade: 100,
-    submissionDate: '2024-01-15',
-    gradedBy: 'Dr. Robert Smith',
-    status: 'pending',
-    submittedBy: 'Dr. Robert Smith'
+    submissionDate: "2024-01-15",
+    gradedBy: "Dr. Robert Smith",
+    status: "pending",
+    submittedBy: "Dr. Robert Smith",
   },
   {
-    id: '2',
-    studentName: 'Bob Smith',
-    studentId: 'ST002',
-    course: 'CS201',
-    assignment: 'Data Structures Project',
+    id: "2",
+    studentName: "Bob Smith",
+    studentId: "ST002",
+    course: "CS201",
+    assignment: "Data Structures Project",
     submittedGrade: 92,
     maxGrade: 100,
-    submissionDate: '2024-01-10',
-    gradedBy: 'Dr. Emily Johnson',
-    status: 'approved',
-    submittedBy: 'Dr. Emily Johnson',
-    approvedBy: 'Dr. Sarah Wilson',
-    approvalDate: '2024-01-18'
+    submissionDate: "2024-01-10",
+    gradedBy: "Dr. Emily Johnson",
+    status: "approved",
+    submittedBy: "Dr. Emily Johnson",
+    approvedBy: "Dr. Sarah Wilson",
+    approvalDate: "2024-01-18",
   },
   {
-    id: '3',
-    studentName: 'Carol Williams',
-    studentId: 'ST003',
-    course: 'CS301',
-    assignment: 'Database Design Project',
+    id: "3",
+    studentName: "Carol Williams",
+    studentId: "ST003",
+    course: "CS301",
+    assignment: "Database Design Project",
     submittedGrade: 95,
     maxGrade: 100,
-    submissionDate: '2024-01-12',
-    gradedBy: 'Dr. Michael Brown',
-    status: 'under-review',
-    submittedBy: 'Dr. Michael Brown',
-    reviewNotes: 'Exceptional work, considering for honors recognition'
+    submissionDate: "2024-01-12",
+    gradedBy: "Dr. Michael Brown",
+    status: "under-review",
+    submittedBy: "Dr. Michael Brown",
+    reviewNotes: "Exceptional work, considering for honors recognition",
   },
   {
-    id: '4',
-    studentName: 'David Brown',
-    studentId: 'ST004',
-    course: 'CS302',
-    assignment: 'Web Development Project',
+    id: "4",
+    studentName: "David Brown",
+    studentId: "ST004",
+    course: "CS302",
+    assignment: "Web Development Project",
     submittedGrade: 65,
     maxGrade: 100,
-    submissionDate: '2024-01-08',
-    gradedBy: 'Dr. Sarah Wilson',
-    status: 'rejected',
-    submittedBy: 'Dr. Sarah Wilson',
-    reviewNotes: 'Grade seems too low for the quality of work submitted. Please review.'
-  }
+    submissionDate: "2024-01-08",
+    gradedBy: "Dr. Sarah Wilson",
+    status: "rejected",
+    submittedBy: "Dr. Sarah Wilson",
+    reviewNotes:
+      "Grade seems too low for the quality of work submitted. Please review.",
+  },
 ];
 
 const ResultApproval = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedCourse, setSelectedCourse] = useState('all');
-  const [reviewNotes, setReviewNotes] = useState('');
-  const [selectedResult, setSelectedResult] = useState<ResultApproval | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedCourse, setSelectedCourse] = useState("all");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [selectedResult, setSelectedResult] = useState<ResultApproval | null>(
+    null
+  );
   const [isReviewOpen, setIsReviewOpen] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      'pending': 'default',
-      'approved': 'outline',
-      'rejected': 'destructive',
-      'under-review': 'secondary'
+      pending: "default",
+      approved: "outline",
+      rejected: "destructive",
+      "under-review": "secondary",
     } as const;
-    
-    return <Badge variant={variants[status as keyof typeof variants]}>{status}</Badge>;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants]}>
+        {status}
+      </Badge>
+    );
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'approved': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'rejected': return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'under-review': return <AlertCircle className="h-4 w-4 text-blue-500" />;
-      default: return <Clock className="h-4 w-4 text-muted-foreground" />;
+      case "pending":
+        return <Clock className="h-4 w-4 text-yellow-500" />;
+      case "approved":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "rejected":
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+      case "under-review":
+        return <AlertCircle className="h-4 w-4 text-blue-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
   const getGradeColor = (grade: number, maxGrade: number) => {
     const percentage = (grade / maxGrade) * 100;
-    if (percentage >= 90) return 'text-green-600';
-    if (percentage >= 80) return 'text-blue-600';
-    if (percentage >= 70) return 'text-yellow-600';
-    if (percentage >= 60) return 'text-orange-600';
-    return 'text-red-600';
+    if (percentage >= 90) return "text-green-600";
+    if (percentage >= 80) return "text-blue-600";
+    if (percentage >= 70) return "text-yellow-600";
+    if (percentage >= 60) return "text-orange-600";
+    return "text-red-600";
   };
 
-  const filteredResults = resultApprovals.filter(result => {
-    const matchesSearch = result.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         result.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         result.assignment.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || result.status === selectedStatus;
-    const matchesCourse = selectedCourse === 'all' || result.course === selectedCourse;
-    
+  const filteredResults = resultApprovals.filter((result) => {
+    const matchesSearch =
+      result.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      result.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      result.assignment.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "all" || result.status === selectedStatus;
+    const matchesCourse =
+      selectedCourse === "all" || result.course === selectedCourse;
+
     return matchesSearch && matchesStatus && matchesCourse;
   });
 
-  const courses = Array.from(new Set(resultApprovals.map(r => r.course)));
+  const courses = Array.from(new Set(resultApprovals.map((r) => r.course)));
 
   const handleApprove = (resultId: string) => {
     toast({
@@ -151,7 +196,7 @@ const ResultApproval = () => {
     toast({
       title: "Result Rejected",
       description: "The grade has been rejected and sent back for review.",
-      variant: "destructive"
+      variant: "destructive",
     });
   };
 
@@ -162,21 +207,30 @@ const ResultApproval = () => {
 
   const handleSubmitReview = () => {
     if (!selectedResult) return;
-    
+
     toast({
       title: "Review Submitted",
-      description: "Your review has been recorded and the lecturer has been notified.",
+      description:
+        "Your review has been recorded and the lecturer has been notified.",
     });
-    
+
     setIsReviewOpen(false);
     setSelectedResult(null);
-    setReviewNotes('');
+    setReviewNotes("");
   };
 
-  const pendingCount = resultApprovals.filter(r => r.status === 'pending').length;
-  const approvedCount = resultApprovals.filter(r => r.status === 'approved').length;
-  const rejectedCount = resultApprovals.filter(r => r.status === 'rejected').length;
-  const underReviewCount = resultApprovals.filter(r => r.status === 'under-review').length;
+  const pendingCount = resultApprovals.filter(
+    (r) => r.status === "pending"
+  ).length;
+  const approvedCount = resultApprovals.filter(
+    (r) => r.status === "approved"
+  ).length;
+  const rejectedCount = resultApprovals.filter(
+    (r) => r.status === "rejected"
+  ).length;
+  const underReviewCount = resultApprovals.filter(
+    (r) => r.status === "under-review"
+  ).length;
 
   return (
     <div className="space-y-6">
@@ -199,7 +253,9 @@ const ResultApproval = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Approval</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Pending Approval
+            </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -271,8 +327,10 @@ const ResultApproval = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Courses</SelectItem>
-            {courses.map(course => (
-              <SelectItem key={course} value={course}>{course}</SelectItem>
+            {courses.map((course) => (
+              <SelectItem key={course} value={course}>
+                {course}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -288,13 +346,19 @@ const ResultApproval = () => {
                   <div className="flex items-center space-x-2">
                     {getStatusIcon(result.status)}
                     <div>
-                      <h3 className="font-semibold text-lg">{result.studentName}</h3>
-                      <p className="text-muted-foreground">ID: {result.studentId}</p>
+                      <h3 className="font-semibold text-lg">
+                        {result.studentName}
+                      </h3>
+                      <p className="text-muted-foreground">
+                        ID: {result.studentId}
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className={`text-lg font-bold ${getGradeColor(result.submittedGrade, result.maxGrade)}`}>
+                  <span
+                    className={`text-lg font-bold ${getGradeColor(result.submittedGrade, result.maxGrade)}`}
+                  >
                     {result.submittedGrade}/{result.maxGrade}
                   </span>
                   {getStatusBadge(result.status)}
@@ -315,7 +379,9 @@ const ResultApproval = () => {
                   <p className="font-medium">{result.gradedBy}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Submission Date</p>
+                  <p className="text-sm text-muted-foreground">
+                    Submission Date
+                  </p>
                   <p className="font-medium">{result.submissionDate}</p>
                 </div>
               </div>
@@ -323,7 +389,9 @@ const ResultApproval = () => {
               {result.reviewNotes && (
                 <div className="mb-4 p-3 bg-muted rounded-lg">
                   <p className="text-sm font-medium mb-1">Review Notes:</p>
-                  <p className="text-sm text-muted-foreground">{result.reviewNotes}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {result.reviewNotes}
+                  </p>
                 </div>
               )}
 
@@ -334,35 +402,32 @@ const ResultApproval = () => {
               )}
 
               <div className="flex justify-end space-x-2">
-                {result.status === 'pending' && (
+                {result.status === "pending" && (
                   <>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       onClick={() => handleReview(result)}
                     >
                       <FileText className="h-4 w-4 mr-2" />
                       Review
                     </Button>
-                    <Button 
-                      variant="destructive" 
+                    <Button
+                      variant="destructive"
                       size="sm"
                       onClick={() => handleReject(result.id)}
                     >
                       Reject
                     </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => handleApprove(result.id)}
-                    >
+                    <Button size="sm" onClick={() => handleApprove(result.id)}>
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Approve
                     </Button>
                   </>
                 )}
-                {result.status === 'under-review' && (
-                  <Button 
-                    variant="outline" 
+                {result.status === "under-review" && (
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => handleReview(result)}
                   >
@@ -382,7 +447,8 @@ const ResultApproval = () => {
           <DialogHeader>
             <DialogTitle>Review Grade</DialogTitle>
             <DialogDescription>
-              {selectedResult && `${selectedResult.studentName} - ${selectedResult.assignment}`}
+              {selectedResult &&
+                `${selectedResult.studentName} - ${selectedResult.assignment}`}
             </DialogDescription>
           </DialogHeader>
           {selectedResult && (
@@ -390,11 +456,15 @@ const ResultApproval = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label>Student</Label>
-                  <p className="text-sm font-medium">{selectedResult.studentName}</p>
+                  <p className="text-sm font-medium">
+                    {selectedResult.studentName}
+                  </p>
                 </div>
                 <div>
                   <Label>Grade</Label>
-                  <p className={`text-sm font-bold ${getGradeColor(selectedResult.submittedGrade, selectedResult.maxGrade)}`}>
+                  <p
+                    className={`text-sm font-bold ${getGradeColor(selectedResult.submittedGrade, selectedResult.maxGrade)}`}
+                  >
                     {selectedResult.submittedGrade}/{selectedResult.maxGrade}
                   </p>
                 </div>
@@ -410,12 +480,13 @@ const ResultApproval = () => {
                 />
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsReviewOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsReviewOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleSubmitReview}>
-                  Submit Review
-                </Button>
+                <Button onClick={handleSubmitReview}>Submit Review</Button>
               </div>
             </div>
           )}
@@ -425,4 +496,4 @@ const ResultApproval = () => {
   );
 };
 
-export default ResultApproval;
+export default withDashboardLayout(ResultApproval);

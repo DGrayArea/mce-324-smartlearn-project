@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { useLocation } from "react-router-dom";
+import { useRouter } from "next/router";
 
 interface NavItem {
   title: string;
@@ -42,7 +42,7 @@ const navigationItems: NavItem[] = [
   },
   {
     title: "Course Management",
-    href: "/dashboard/course-management",
+    href: "/dashboard/courses",
     icon: BookOpen,
     roles: ["admin"],
   },
@@ -128,7 +128,8 @@ const navigationItems: NavItem[] = [
 
 export const DashboardSidebar = () => {
   const { user } = useAuth();
-  const location = useLocation();
+  const router = useRouter();
+  const { pathname } = router;
 
   const filteredItems = navigationItems.filter((item) =>
     item.roles.includes(user?.role || "")
@@ -188,9 +189,8 @@ export const DashboardSidebar = () => {
       <nav className="flex-1 px-4 py-6 space-y-2">
         {filteredItems.map((item) => {
           const isActive =
-            location.pathname === item.href ||
-            (item.href !== "/dashboard" &&
-              location.pathname.startsWith(item.href));
+            pathname === item.href ||
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
           return (
             <Link
@@ -216,7 +216,7 @@ export const DashboardSidebar = () => {
           href="/dashboard/settings"
           className={cn(
             "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors w-full",
-            location.pathname === "/dashboard/settings"
+            pathname === "/dashboard/settings"
               ? "bg-primary text-primary-foreground"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           )}

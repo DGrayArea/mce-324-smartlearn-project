@@ -1,20 +1,32 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  HelpCircle, 
-  MessageSquare, 
-  BookOpen, 
-  Bot, 
-  Ticket, 
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  HelpCircle,
+  MessageSquare,
+  BookOpen,
+  Bot,
+  Ticket,
   Calendar,
   Plus,
   Search,
@@ -22,15 +34,16 @@ import {
   CheckCircle,
   AlertCircle,
   BarChart3,
-  Send
-} from 'lucide-react';
+  Send,
+} from "lucide-react";
+import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 interface SupportTicket {
   id: string;
   title: string;
   description: string;
-  status: 'open' | 'in-progress' | 'resolved' | 'closed';
-  priority: 'low' | 'medium' | 'high';
+  status: "open" | "in-progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high";
   category: string;
   created: string;
   updated: string;
@@ -46,78 +59,90 @@ interface FAQItem {
 
 const supportTickets: SupportTicket[] = [
   {
-    id: 'T001',
-    title: 'Cannot access course materials',
-    description: 'I am unable to download the lecture slides for CS101.',
-    status: 'open',
-    priority: 'medium',
-    category: 'Technical',
-    created: '2024-01-20 10:30',
-    updated: '2024-01-20 10:30'
+    id: "T001",
+    title: "Cannot access course materials",
+    description: "I am unable to download the lecture slides for CS101.",
+    status: "open",
+    priority: "medium",
+    category: "Technical",
+    created: "2024-01-20 10:30",
+    updated: "2024-01-20 10:30",
   },
   {
-    id: 'T002',
-    title: 'Grade calculation error',
-    description: 'My assignment grade seems to be calculated incorrectly.',
-    status: 'in-progress',
-    priority: 'high',
-    category: 'Academic',
-    created: '2024-01-19 14:15',
-    updated: '2024-01-20 09:00',
-    assignedTo: 'Support Team'
-  }
+    id: "T002",
+    title: "Grade calculation error",
+    description: "My assignment grade seems to be calculated incorrectly.",
+    status: "in-progress",
+    priority: "high",
+    category: "Academic",
+    created: "2024-01-19 14:15",
+    updated: "2024-01-20 09:00",
+    assignedTo: "Support Team",
+  },
 ];
 
 const faqItems: FAQItem[] = [
   {
-    id: '1',
-    question: 'How do I reset my password?',
-    answer: 'You can reset your password by clicking on "Forgot Password" on the login page. Enter your email address and follow the instructions sent to your email.',
-    category: 'Account'
+    id: "1",
+    question: "How do I reset my password?",
+    answer:
+      'You can reset your password by clicking on "Forgot Password" on the login page. Enter your email address and follow the instructions sent to your email.',
+    category: "Account",
   },
   {
-    id: '2',
-    question: 'How do I submit assignments?',
-    answer: 'Navigate to the Assignments page, find your assignment, and click "Submit". You can upload files or enter text directly depending on the assignment type.',
-    category: 'Academic'
+    id: "2",
+    question: "How do I submit assignments?",
+    answer:
+      'Navigate to the Assignments page, find your assignment, and click "Submit". You can upload files or enter text directly depending on the assignment type.',
+    category: "Academic",
   },
   {
-    id: '3',
-    question: 'How do I join virtual meetings?',
-    answer: 'Go to the Meetings page and click "Join Meeting" next to the scheduled meeting. Make sure you have a stable internet connection and proper audio/video setup.',
-    category: 'Technical'
-  }
+    id: "3",
+    question: "How do I join virtual meetings?",
+    answer:
+      'Go to the Meetings page and click "Join Meeting" next to the scheduled meeting. Make sure you have a stable internet connection and proper audio/video setup.',
+    category: "Technical",
+  },
 ];
 
 const Support = () => {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [chatMessage, setChatMessage] = useState('');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [chatMessage, setChatMessage] = useState("");
+
   const getStatusBadge = (status: string) => {
     const variants = {
-      'open': 'default',
-      'in-progress': 'secondary',
-      'resolved': 'outline',
-      'closed': 'outline'
+      open: "default",
+      "in-progress": "secondary",
+      resolved: "outline",
+      closed: "outline",
     } as const;
-    
-    return <Badge variant={variants[status as keyof typeof variants]}>{status}</Badge>;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants]}>
+        {status}
+      </Badge>
+    );
   };
 
   const getPriorityBadge = (priority: string) => {
     const variants = {
-      'high': 'destructive',
-      'medium': 'default',
-      'low': 'secondary'
+      high: "destructive",
+      medium: "default",
+      low: "secondary",
     } as const;
-    
-    return <Badge variant={variants[priority as keyof typeof variants]}>{priority}</Badge>;
+
+    return (
+      <Badge variant={variants[priority as keyof typeof variants]}>
+        {priority}
+      </Badge>
+    );
   };
 
-  const filteredFAQs = faqItems.filter(item =>
-    item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.answer.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredFAQs = faqItems.filter(
+    (item) =>
+      item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -163,7 +188,9 @@ const Support = () => {
               <CardHeader>
                 <BookOpen className="h-8 w-8 text-primary mb-2" />
                 <CardTitle>Getting Started</CardTitle>
-                <CardDescription>Learn the basics of using the platform</CardDescription>
+                <CardDescription>
+                  Learn the basics of using the platform
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
@@ -178,7 +205,9 @@ const Support = () => {
               <CardHeader>
                 <MessageSquare className="h-8 w-8 text-primary mb-2" />
                 <CardTitle>Communication Tools</CardTitle>
-                <CardDescription>Master messaging and virtual meetings</CardDescription>
+                <CardDescription>
+                  Master messaging and virtual meetings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
@@ -193,7 +222,9 @@ const Support = () => {
               <CardHeader>
                 <Ticket className="h-8 w-8 text-primary mb-2" />
                 <CardTitle>Technical Support</CardTitle>
-                <CardDescription>Resolve technical issues quickly</CardDescription>
+                <CardDescription>
+                  Resolve technical issues quickly
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="space-y-2 text-sm text-muted-foreground">
@@ -253,7 +284,10 @@ const Support = () => {
                       <AvatarFallback>AI</AvatarFallback>
                     </Avatar>
                     <div className="bg-secondary rounded-lg p-3 max-w-xs">
-                      <p className="text-sm">Hello! I'm here to help you with any questions about the platform. What can I assist you with today?</p>
+                      <p className="text-sm">
+                        Hello! I'm here to help you with any questions about the
+                        platform. What can I assist you with today?
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -276,7 +310,9 @@ const Support = () => {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-lg font-semibold">My Support Tickets</h3>
-              <p className="text-sm text-muted-foreground">Track your support requests</p>
+              <p className="text-sm text-muted-foreground">
+                Track your support requests
+              </p>
             </div>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
@@ -290,7 +326,9 @@ const Support = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-base">{ticket.title}</CardTitle>
+                      <CardTitle className="text-base">
+                        {ticket.title}
+                      </CardTitle>
                       <CardDescription className="mt-1">
                         Ticket #{ticket.id} • Created {ticket.created}
                       </CardDescription>
@@ -302,7 +340,9 @@ const Support = () => {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">{ticket.description}</p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    {ticket.description}
+                  </p>
                   <div className="flex items-center text-xs text-muted-foreground space-x-4">
                     <span className="flex items-center">
                       <Clock className="h-3 w-3 mr-1" />
@@ -322,12 +362,16 @@ const Support = () => {
           <Card>
             <CardHeader>
               <CardTitle>Support Schedule</CardTitle>
-              <CardDescription>Book a session with our support team</CardDescription>
+              <CardDescription>
+                Book a session with our support team
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="text-center py-8">
                 <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Schedule Support Session</h3>
+                <h3 className="text-lg font-semibold mb-2">
+                  Schedule Support Session
+                </h3>
                 <p className="text-muted-foreground mb-4">
                   Book a one-on-one session with our support team
                 </p>
@@ -344,45 +388,61 @@ const Support = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Open Tickets</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Open Tickets
+                </CardTitle>
                 <AlertCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">12</div>
-                <p className="text-xs text-muted-foreground">+2 from last week</p>
+                <p className="text-xs text-muted-foreground">
+                  +2 from last week
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Resolved Today</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Resolved Today
+                </CardTitle>
                 <CheckCircle className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">8</div>
-                <p className="text-xs text-muted-foreground">Average resolution time: 2.4h</p>
+                <p className="text-xs text-muted-foreground">
+                  Average resolution time: 2.4h
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">User Satisfaction</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  User Satisfaction
+                </CardTitle>
                 <BarChart3 className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">94%</div>
-                <p className="text-xs text-muted-foreground">+5% from last month</p>
+                <p className="text-xs text-muted-foreground">
+                  +5% from last month
+                </p>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Response Time</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Response Time
+                </CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">1.2h</div>
-                <p className="text-xs text-muted-foreground">Average first response</p>
+                <p className="text-xs text-muted-foreground">
+                  Average first response
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -392,4 +452,4 @@ const Support = () => {
   );
 };
 
-export default Support;
+export default withDashboardLayout(Support);

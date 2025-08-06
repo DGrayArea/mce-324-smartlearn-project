@@ -1,40 +1,60 @@
-import React, { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  Users, 
-  UserPlus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  Mail, 
-  Phone, 
+import React, { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Users,
+  UserPlus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Mail,
+  Phone,
   MapPin,
   Calendar,
   Shield,
   CheckCircle,
   XCircle,
-  AlertCircle
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+  AlertCircle,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 interface User {
   id: string;
   name: string;
   email: string;
-  role: 'student' | 'lecturer' | 'admin';
+  role: "student" | "lecturer" | "admin";
   department: string;
   avatar?: string;
-  status: 'active' | 'inactive' | 'suspended';
+  status: "active" | "inactive" | "suspended";
   lastLogin: string;
   enrolledCourses?: string[];
   teachingCourses?: string[];
@@ -45,120 +65,133 @@ interface User {
 
 const users: User[] = [
   {
-    id: '1',
-    name: 'Alice Johnson',
-    email: 'alice@university.edu',
-    role: 'student',
-    department: 'Computer Science',
-    status: 'active',
-    lastLogin: '2024-01-20 14:30',
-    enrolledCourses: ['CS101', 'CS201', 'CS301'],
-    phone: '+1 (555) 123-4567',
-    address: '123 Campus Drive, University City',
-    joinDate: '2023-09-01'
+    id: "1",
+    name: "Alice Johnson",
+    email: "alice@university.edu",
+    role: "student",
+    department: "Computer Science",
+    status: "active",
+    lastLogin: "2024-01-20 14:30",
+    enrolledCourses: ["CS101", "CS201", "CS301"],
+    phone: "+1 (555) 123-4567",
+    address: "123 Campus Drive, University City",
+    joinDate: "2023-09-01",
   },
   {
-    id: '2',
-    name: 'Dr. Robert Smith',
-    email: 'robert@university.edu',
-    role: 'lecturer',
-    department: 'Computer Science',
-    status: 'active',
-    lastLogin: '2024-01-20 09:15',
-    teachingCourses: ['CS101', 'CS401'],
-    phone: '+1 (555) 234-5678',
-    address: '456 Faculty Lane, University City',
-    joinDate: '2020-08-15'
+    id: "2",
+    name: "Dr. Robert Smith",
+    email: "robert@university.edu",
+    role: "lecturer",
+    department: "Computer Science",
+    status: "active",
+    lastLogin: "2024-01-20 09:15",
+    teachingCourses: ["CS101", "CS401"],
+    phone: "+1 (555) 234-5678",
+    address: "456 Faculty Lane, University City",
+    joinDate: "2020-08-15",
   },
   {
-    id: '3',
-    name: 'Sarah Wilson',
-    email: 'sarah@university.edu',
-    role: 'admin',
-    department: 'Administration',
-    status: 'active',
-    lastLogin: '2024-01-20 16:45',
-    phone: '+1 (555) 345-6789',
-    address: '789 Admin Building, University City',
-    joinDate: '2019-01-10'
+    id: "3",
+    name: "Sarah Wilson",
+    email: "sarah@university.edu",
+    role: "admin",
+    department: "Administration",
+    status: "active",
+    lastLogin: "2024-01-20 16:45",
+    phone: "+1 (555) 345-6789",
+    address: "789 Admin Building, University City",
+    joinDate: "2019-01-10",
   },
   {
-    id: '4',
-    name: 'Michael Brown',
-    email: 'michael@university.edu',
-    role: 'student',
-    department: 'Computer Science',
-    status: 'inactive',
-    lastLogin: '2024-01-15 11:20',
-    enrolledCourses: ['CS301'],
-    phone: '+1 (555) 456-7890',
-    address: '321 Student Residence, University City',
-    joinDate: '2023-09-01'
+    id: "4",
+    name: "Michael Brown",
+    email: "michael@university.edu",
+    role: "student",
+    department: "Computer Science",
+    status: "inactive",
+    lastLogin: "2024-01-15 11:20",
+    enrolledCourses: ["CS301"],
+    phone: "+1 (555) 456-7890",
+    address: "321 Student Residence, University City",
+    joinDate: "2023-09-01",
   },
   {
-    id: '5',
-    name: 'Dr. Emily Johnson',
-    email: 'emily@university.edu',
-    role: 'lecturer',
-    department: 'Computer Science',
-    status: 'active',
-    lastLogin: '2024-01-19 13:45',
-    teachingCourses: ['CS201', 'CS350'],
-    phone: '+1 (555) 567-8901',
-    address: '654 Faculty Lane, University City',
-    joinDate: '2021-01-20'
-  }
+    id: "5",
+    name: "Dr. Emily Johnson",
+    email: "emily@university.edu",
+    role: "lecturer",
+    department: "Computer Science",
+    status: "active",
+    lastLogin: "2024-01-19 13:45",
+    teachingCourses: ["CS201", "CS350"],
+    phone: "+1 (555) 567-8901",
+    address: "654 Faculty Lane, University City",
+    joinDate: "2021-01-20",
+  },
 ];
 
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRole, setSelectedRole] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const variants = {
-      'active': 'default',
-      'inactive': 'secondary',
-      'suspended': 'destructive'
+      active: "default",
+      inactive: "secondary",
+      suspended: "destructive",
     } as const;
-    
-    return <Badge variant={variants[status as keyof typeof variants]}>{status}</Badge>;
+
+    return (
+      <Badge variant={variants[status as keyof typeof variants]}>
+        {status}
+      </Badge>
+    );
   };
 
   const getRoleBadge = (role: string) => {
     const variants = {
-      'student': 'outline',
-      'lecturer': 'secondary',
-      'admin': 'default'
+      student: "outline",
+      lecturer: "secondary",
+      admin: "default",
     } as const;
-    
-    return <Badge variant={variants[role as keyof typeof variants]}>{role}</Badge>;
+
+    return (
+      <Badge variant={variants[role as keyof typeof variants]}>{role}</Badge>
+    );
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'active': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'inactive': return <AlertCircle className="h-4 w-4 text-yellow-500" />;
-      case 'suspended': return <XCircle className="h-4 w-4 text-red-500" />;
-      default: return <CheckCircle className="h-4 w-4 text-muted-foreground" />;
+      case "active":
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case "inactive":
+        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+      case "suspended":
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      default:
+        return <CheckCircle className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = selectedRole === 'all' || user.role === selectedRole;
-    const matchesStatus = selectedStatus === 'all' || user.status === selectedStatus;
-    const matchesDepartment = selectedDepartment === 'all' || user.department === selectedDepartment;
-    
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    const matchesStatus =
+      selectedStatus === "all" || user.status === selectedStatus;
+    const matchesDepartment =
+      selectedDepartment === "all" || user.department === selectedDepartment;
+
     return matchesSearch && matchesRole && matchesStatus && matchesDepartment;
   });
 
-  const departments = Array.from(new Set(users.map(u => u.department)));
+  const departments = Array.from(new Set(users.map((u) => u.department)));
 
   const handleCreateUser = () => {
     toast({
@@ -179,12 +212,12 @@ const UserManagement = () => {
     toast({
       title: "User Deleted",
       description: "User has been removed from the system.",
-      variant: "destructive"
+      variant: "destructive",
     });
   };
 
   const handleToggleStatus = (userId: string, currentStatus: string) => {
-    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    const newStatus = currentStatus === "active" ? "inactive" : "active";
     toast({
       title: "Status Updated",
       description: `User status changed to ${newStatus}.`,
@@ -210,7 +243,9 @@ const UserManagement = () => {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
-              <DialogDescription>Add a new user to the system</DialogDescription>
+              <DialogDescription>
+                Add a new user to the system
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -219,7 +254,11 @@ const UserManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user-email">Email</Label>
-                <Input id="user-email" type="email" placeholder="Enter email address" />
+                <Input
+                  id="user-email"
+                  type="email"
+                  placeholder="Enter email address"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="user-role">Role</Label>
@@ -241,10 +280,14 @@ const UserManagement = () => {
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="computer-science">Computer Science</SelectItem>
+                    <SelectItem value="computer-science">
+                      Computer Science
+                    </SelectItem>
                     <SelectItem value="mathematics">Mathematics</SelectItem>
                     <SelectItem value="engineering">Engineering</SelectItem>
-                    <SelectItem value="administration">Administration</SelectItem>
+                    <SelectItem value="administration">
+                      Administration
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -253,12 +296,13 @@ const UserManagement = () => {
                 <Input id="user-phone" placeholder="Enter phone number" />
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateUserOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateUserOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleCreateUser}>
-                  Create User
-                </Button>
+                <Button onClick={handleCreateUser}>Create User</Button>
               </div>
             </div>
           </DialogContent>
@@ -284,7 +328,9 @@ const UserManagement = () => {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.status === 'active').length}</div>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.status === "active").length}
+            </div>
             <p className="text-xs text-muted-foreground">85% of total users</p>
           </CardContent>
         </Card>
@@ -295,7 +341,9 @@ const UserManagement = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.role === 'student').length}</div>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "student").length}
+            </div>
             <p className="text-xs text-muted-foreground">67% of total users</p>
           </CardContent>
         </Card>
@@ -306,7 +354,9 @@ const UserManagement = () => {
             <Shield className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{users.filter(u => u.role === 'lecturer').length}</div>
+            <div className="text-2xl font-bold">
+              {users.filter((u) => u.role === "lecturer").length}
+            </div>
             <p className="text-xs text-muted-foreground">Teaching staff</p>
           </CardContent>
         </Card>
@@ -345,14 +395,19 @@ const UserManagement = () => {
             <SelectItem value="suspended">Suspended</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+        <Select
+          value={selectedDepartment}
+          onValueChange={setSelectedDepartment}
+        >
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Department" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Departments</SelectItem>
-            {departments.map(dept => (
-              <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+            {departments.map((dept) => (
+              <SelectItem key={dept} value={dept}>
+                {dept}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -367,7 +422,12 @@ const UserManagement = () => {
                 <div className="flex items-start space-x-4">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={user.avatar} />
-                    <AvatarFallback>{user.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="space-y-1">
                     <div className="flex items-center space-x-2">
@@ -406,17 +466,33 @@ const UserManagement = () => {
                   <div className="flex flex-wrap gap-2">
                     {user.enrolledCourses && (
                       <div>
-                        <span className="text-sm text-muted-foreground mr-2">Enrolled:</span>
-                        {user.enrolledCourses.map(course => (
-                          <Badge key={course} variant="outline" className="mr-1">{course}</Badge>
+                        <span className="text-sm text-muted-foreground mr-2">
+                          Enrolled:
+                        </span>
+                        {user.enrolledCourses.map((course) => (
+                          <Badge
+                            key={course}
+                            variant="outline"
+                            className="mr-1"
+                          >
+                            {course}
+                          </Badge>
                         ))}
                       </div>
                     )}
                     {user.teachingCourses && (
                       <div>
-                        <span className="text-sm text-muted-foreground mr-2">Teaching:</span>
-                        {user.teachingCourses.map(course => (
-                          <Badge key={course} variant="secondary" className="mr-1">{course}</Badge>
+                        <span className="text-sm text-muted-foreground mr-2">
+                          Teaching:
+                        </span>
+                        {user.teachingCourses.map((course) => (
+                          <Badge
+                            key={course}
+                            variant="secondary"
+                            className="mr-1"
+                          >
+                            {course}
+                          </Badge>
                         ))}
                       </div>
                     )}
@@ -425,23 +501,23 @@ const UserManagement = () => {
               )}
 
               <div className="flex justify-end space-x-2 mt-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleToggleStatus(user.id, user.status)}
                 >
-                  {user.status === 'active' ? 'Deactivate' : 'Activate'}
+                  {user.status === "active" ? "Deactivate" : "Activate"}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleEditUser(user.id)}
                 >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => handleDeleteUser(user.id)}
                 >
@@ -457,4 +533,4 @@ const UserManagement = () => {
   );
 };
 
-export default UserManagement;
+export default withDashboardLayout(UserManagement);

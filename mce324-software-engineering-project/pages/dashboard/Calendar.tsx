@@ -1,16 +1,44 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar as CalendarComponent } from '@/components/ui/calendar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, Clock, MapPin, Users, Plus, Video, FileText } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  Users,
+  Plus,
+  Video,
+  FileText,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 interface CalendarEvent {
   id: string;
@@ -18,7 +46,7 @@ interface CalendarEvent {
   date: string;
   time: string;
   duration: string;
-  type: 'lecture' | 'assignment' | 'exam' | 'meeting' | 'deadline';
+  type: "lecture" | "assignment" | "exam" | "meeting" | "deadline";
   location?: string;
   course?: string;
   description?: string;
@@ -27,100 +55,116 @@ interface CalendarEvent {
 
 const calendarEvents: CalendarEvent[] = [
   {
-    id: '1',
-    title: 'CS101 Introduction Lecture',
-    date: '2024-01-22',
-    time: '10:00',
-    duration: '1h',
-    type: 'lecture',
-    location: 'Room 101',
-    course: 'CS101',
-    description: 'Introduction to Computer Science concepts',
-    attendees: 45
+    id: "1",
+    title: "CS101 Introduction Lecture",
+    date: "2024-01-22",
+    time: "10:00",
+    duration: "1h",
+    type: "lecture",
+    location: "Room 101",
+    course: "CS101",
+    description: "Introduction to Computer Science concepts",
+    attendees: 45,
   },
   {
-    id: '2',
-    title: 'Binary Search Assignment Due',
-    date: '2024-01-24',
-    time: '23:59',
-    duration: '',
-    type: 'deadline',
-    course: 'CS201',
-    description: 'Binary Search Implementation project deadline'
+    id: "2",
+    title: "Binary Search Assignment Due",
+    date: "2024-01-24",
+    time: "23:59",
+    duration: "",
+    type: "deadline",
+    course: "CS201",
+    description: "Binary Search Implementation project deadline",
   },
   {
-    id: '3',
-    title: 'Database Design Workshop',
-    date: '2024-01-25',
-    time: '14:00',
-    duration: '2h',
-    type: 'meeting',
-    location: 'Virtual - Zoom',
-    course: 'CS301',
-    description: 'Hands-on database design workshop',
-    attendees: 30
+    id: "3",
+    title: "Database Design Workshop",
+    date: "2024-01-25",
+    time: "14:00",
+    duration: "2h",
+    type: "meeting",
+    location: "Virtual - Zoom",
+    course: "CS301",
+    description: "Hands-on database design workshop",
+    attendees: 30,
   },
   {
-    id: '4',
-    title: 'Midterm Examination',
-    date: '2024-01-26',
-    time: '09:00',
-    duration: '2h',
-    type: 'exam',
-    location: 'Exam Hall A',
-    course: 'CS201',
-    description: 'Data Structures and Algorithms midterm exam'
-  }
+    id: "4",
+    title: "Midterm Examination",
+    date: "2024-01-26",
+    time: "09:00",
+    duration: "2h",
+    type: "exam",
+    location: "Exam Hall A",
+    course: "CS201",
+    description: "Data Structures and Algorithms midterm exam",
+  },
 ];
 
 const Calendar = () => {
   const { user } = useAuth();
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(
+    new Date()
+  );
   const [isCreateEventOpen, setIsCreateEventOpen] = useState(false);
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
-      case 'lecture': return 'bg-blue-500';
-      case 'assignment': return 'bg-green-500';
-      case 'exam': return 'bg-red-500';
-      case 'meeting': return 'bg-purple-500';
-      case 'deadline': return 'bg-orange-500';
-      default: return 'bg-gray-500';
+      case "lecture":
+        return "bg-blue-500";
+      case "assignment":
+        return "bg-green-500";
+      case "exam":
+        return "bg-red-500";
+      case "meeting":
+        return "bg-purple-500";
+      case "deadline":
+        return "bg-orange-500";
+      default:
+        return "bg-gray-500";
     }
   };
 
   const getEventTypeBadge = (type: string) => {
     const variants = {
-      'lecture': 'default',
-      'assignment': 'secondary',
-      'exam': 'destructive',
-      'meeting': 'outline',
-      'deadline': 'default'
+      lecture: "default",
+      assignment: "secondary",
+      exam: "destructive",
+      meeting: "outline",
+      deadline: "default",
     } as const;
-    
-    return <Badge variant={variants[type as keyof typeof variants]}>{type}</Badge>;
+
+    return (
+      <Badge variant={variants[type as keyof typeof variants]}>{type}</Badge>
+    );
   };
 
   const getEventIcon = (type: string) => {
     switch (type) {
-      case 'lecture': return <Video className="h-4 w-4" />;
-      case 'assignment': return <FileText className="h-4 w-4" />;
-      case 'exam': return <FileText className="h-4 w-4" />;
-      case 'meeting': return <Users className="h-4 w-4" />;
-      case 'deadline': return <Clock className="h-4 w-4" />;
-      default: return <CalendarIcon className="h-4 w-4" />;
+      case "lecture":
+        return <Video className="h-4 w-4" />;
+      case "assignment":
+        return <FileText className="h-4 w-4" />;
+      case "exam":
+        return <FileText className="h-4 w-4" />;
+      case "meeting":
+        return <Users className="h-4 w-4" />;
+      case "deadline":
+        return <Clock className="h-4 w-4" />;
+      default:
+        return <CalendarIcon className="h-4 w-4" />;
     }
   };
 
   const getEventsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return calendarEvents.filter(event => event.date === dateStr);
+    const dateStr = date.toISOString().split("T")[0];
+    return calendarEvents.filter((event) => event.date === dateStr);
   };
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   const upcomingEvents = calendarEvents
-    .filter(event => new Date(event.date) >= new Date())
+    .filter((event) => new Date(event.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .slice(0, 5);
 
@@ -143,7 +187,9 @@ const Calendar = () => {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New Event</DialogTitle>
-              <DialogDescription>Add a new event to your calendar</DialogDescription>
+              <DialogDescription>
+                Add a new event to your calendar
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -177,10 +223,16 @@ const Calendar = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="event-description">Description</Label>
-                <Textarea id="event-description" placeholder="Event description" />
+                <Textarea
+                  id="event-description"
+                  placeholder="Event description"
+                />
               </div>
               <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setIsCreateEventOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateEventOpen(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={() => setIsCreateEventOpen(false)}>
@@ -214,18 +266,25 @@ const Calendar = () => {
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">
-                {selectedDate ? `Events for ${selectedDate.toLocaleDateString()}` : 'Select a Date'}
+                {selectedDate
+                  ? `Events for ${selectedDate.toLocaleDateString()}`
+                  : "Select a Date"}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {selectedDateEvents.length > 0 ? (
                 <div className="space-y-3">
                   {selectedDateEvents.map((event) => (
-                    <div key={event.id} className="flex items-start space-x-3 p-3 rounded-lg border">
-                      <div className={cn(
-                        "p-2 rounded-full text-white",
-                        getEventTypeColor(event.type)
-                      )}>
+                    <div
+                      key={event.id}
+                      className="flex items-start space-x-3 p-3 rounded-lg border"
+                    >
+                      <div
+                        className={cn(
+                          "p-2 rounded-full text-white",
+                          getEventTypeColor(event.type)
+                        )}
+                      >
                         {getEventIcon(event.type)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -249,7 +308,9 @@ const Calendar = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No events scheduled for this date.</p>
+                <p className="text-sm text-muted-foreground">
+                  No events scheduled for this date.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -262,15 +323,23 @@ const Calendar = () => {
             <CardContent>
               <div className="space-y-3">
                 {upcomingEvents.map((event) => (
-                  <div key={event.id} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50">
-                    <div className={cn(
-                      "w-3 h-3 rounded-full",
-                      getEventTypeColor(event.type)
-                    )} />
+                  <div
+                    key={event.id}
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-muted/50"
+                  >
+                    <div
+                      className={cn(
+                        "w-3 h-3 rounded-full",
+                        getEventTypeColor(event.type)
+                      )}
+                    />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{event.title}</p>
+                      <p className="text-sm font-medium truncate">
+                        {event.title}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(event.date).toLocaleDateString()} at {event.time}
+                        {new Date(event.date).toLocaleDateString()} at{" "}
+                        {event.time}
                       </p>
                     </div>
                   </div>
@@ -284,4 +353,4 @@ const Calendar = () => {
   );
 };
 
-export default Calendar;
+export default withDashboardLayout(Calendar);
