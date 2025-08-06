@@ -191,7 +191,7 @@ export const LoginForm = () => {
 
             <div className="text-center">
               <span className="text-sm text-muted-foreground">
-                Don&apos;'t have an account?{" "}
+                Don&apos;t have an account?{" "}
                 <Link href="/register" className="text-primary hover:underline">
                   Sign up
                 </Link>
