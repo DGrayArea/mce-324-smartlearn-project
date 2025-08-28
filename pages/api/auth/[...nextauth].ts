@@ -116,12 +116,11 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
+        // Return only the fields that NextAuth expects
         return {
           id: user.id,
           email: user.email,
           name,
-          role: user.role,
-          isActive: user.isActive,
         };
       },
     }),
@@ -133,9 +132,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        // Store the user ID for later use
         token.id = user.id;
-        token.role = user.role;
-        token.isActive = user.isActive;
+
+        // Fetch additional user data from database
+        const dbUser = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: {
+            role: true,
+            isActive: true,
+          },
+        });
+
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.isActive = dbUser.isActive;
+        }
       }
       return token;
     },

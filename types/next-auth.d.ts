@@ -24,8 +24,8 @@ declare module "next-auth" {
     id: string;
     email: string;
     name: string;
-    role: UserRole;
-    isActive: boolean;
+    role?: UserRole;
+    isActive?: boolean;
   }
 }
 
