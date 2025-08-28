@@ -14,6 +14,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { SeedUsers } from "@/components/SeedUsers";
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -28,18 +30,53 @@ export const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
-      if (result.success) {
+      // Use NextAuth for email/password form
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast({
+          title: "Login failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else if (result?.ok) {
         toast({
           title: "Login successful",
           description: "Welcome back to the learning platform!",
         });
-        // Redirect to dashboard after successful login
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDummyLogin = async (role: string) => {
+    setIsLoading(true);
+
+    try {
+      // Use dummy authentication for demo buttons
+      const dummyResult = await login(email, password);
+      if (dummyResult.success) {
+        toast({
+          title: "Login successful",
+          description: "Welcome back to the learning platform!",
+        });
         router.push("/dashboard");
       } else {
         toast({
           title: "Login failed",
-          description: result.error,
+          description: dummyResult.error,
           variant: "destructive",
         });
       }
@@ -138,7 +175,7 @@ export const LoginForm = () => {
 
               <div className="flex items-center justify-between">
                 <Link
-                  href="/forgot-password"
+                  href="/forgotpassword"
                   className="text-sm text-primary hover:underline"
                 >
                   Forgot password?
@@ -156,15 +193,19 @@ export const LoginForm = () => {
 
             <div className="space-y-3">
               <div className="text-center text-sm text-muted-foreground">
-                Demo Accounts (click to auto-fill)
+                Demo Accounts (click to auto-fill & login)
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials("student")}
+                  onClick={() => {
+                    fillDemoCredentials("student");
+                    setTimeout(() => handleDummyLogin("student"), 100);
+                  }}
                   className="text-xs"
+                  disabled={isLoading}
                 >
                   Student
                 </Button>
@@ -172,8 +213,12 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials("lecturer")}
+                  onClick={() => {
+                    fillDemoCredentials("lecturer");
+                    setTimeout(() => handleDummyLogin("lecturer"), 100);
+                  }}
                   className="text-xs"
+                  disabled={isLoading}
                 >
                   Lecturer
                 </Button>
@@ -181,8 +226,12 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillDemoCredentials("admin")}
+                  onClick={() => {
+                    fillDemoCredentials("admin");
+                    setTimeout(() => handleDummyLogin("admin"), 100);
+                  }}
                   className="text-xs"
+                  disabled={isLoading}
                 >
                   Admin
                 </Button>
@@ -197,6 +246,13 @@ export const LoginForm = () => {
                 </Link>
               </span>
             </div>
+
+            {/* Database Setup Section - Only show in development */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="mt-6">
+                <SeedUsers />
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

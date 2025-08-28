@@ -4,7 +4,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "@/contexts/AuthContext";
-
+import { SessionProvider } from "next-auth/react";
+import { ClientOnly } from "@/components/ClientOnly";
 import type { ReactElement, ReactNode } from "react";
 import type { AppProps } from "next/app";
 import type { NextPage } from "next";
@@ -18,23 +19,30 @@ type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
 };
 
-export default function App({ Component, pageProps }: AppPropsWithLayout) {
+export default function App({
+  Component,
+  pageProps: { session, ...pageProps },
+}: AppPropsWithLayout) {
   const queryClient = new QueryClient();
   const getLayout = Component.getLayout ?? ((page) => page);
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <TooltipProvider>
-          {getLayout(
-            <>
-              <Toaster />
-              <Sonner />
-              <Component {...pageProps} />
-            </>
-          )}
-        </TooltipProvider>
-      </AuthProvider>
+      <SessionProvider session={session}>
+        <ClientOnly>
+          <AuthProvider>
+            <TooltipProvider>
+              {getLayout(
+                <>
+                  <Toaster />
+                  <Sonner />
+                  <Component {...pageProps} />
+                </>
+              )}
+            </TooltipProvider>
+          </AuthProvider>
+        </ClientOnly>
+      </SessionProvider>
     </QueryClientProvider>
   );
 }

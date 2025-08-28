@@ -14,6 +14,7 @@ export interface User {
   isVerified: boolean;
   createdAt: string;
   lastLogin?: string;
+  isActive?: boolean;
 }
 
 export interface AuthState {
