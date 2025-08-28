@@ -67,6 +67,10 @@ export const authOptions: NextAuthOptions = {
           throw new Error("No user found with this email");
         }
 
+        if (!user.email) {
+          throw new Error("User account has no email address");
+        }
+
         if (!user.isActive) {
           throw new Error("Account is deactivated");
         }
@@ -117,10 +121,11 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Return only the fields that NextAuth expects
+        // Ensure we never return null values as NextAuth expects non-null strings
         return {
-          id: user.id,
-          email: user.email,
-          name,
+          id: user.id.toString(),
+          email: user.email || "", // Ensure email is never null
+          name: name || "Unknown User", // Ensure name is never null
         };
       },
     }),
