@@ -154,7 +154,7 @@ export const authOptions: NextAuthOptions = {
         });
 
         if (dbUser) {
-          token.role = dbUser.role;
+          token.role = dbUser.role ?? "STUDENT"; // or another sensible default
           token.isActive = dbUser.isActive;
         }
       }

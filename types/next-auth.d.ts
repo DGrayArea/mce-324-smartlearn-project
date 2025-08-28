@@ -7,7 +7,8 @@ type UserRole =
   | "LECTURER"
   | "DEPARTMENT_ADMIN"
   | "FACULTY_ADMIN"
-  | "SENATE_ADMIN";
+  | "SENATE_ADMIN"
+  | null;
 
 declare module "next-auth" {
   interface Session {
