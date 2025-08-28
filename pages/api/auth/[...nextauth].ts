@@ -76,6 +76,10 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Compare password with bcrypt
+        if (!user.password) {
+          throw new Error("User account has no password set");
+        }
+
         const isValid = await bcrypt.compare(
           credentials.password,
           user.password
