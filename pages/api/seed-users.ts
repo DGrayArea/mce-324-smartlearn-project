@@ -10,6 +10,13 @@ export default async function handler(
     return res.status(405).json({ message: "Method not allowed" });
   }
 
+  // Only allow in development environment
+  if (process.env.NODE_ENV !== "development") {
+    return res
+      .status(403)
+      .json({ message: "This endpoint is only available in development" });
+  }
+
   try {
     // Check if users already exist
     const existingUsers = await prisma.user.findMany({

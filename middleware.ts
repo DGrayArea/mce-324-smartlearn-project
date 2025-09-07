@@ -22,7 +22,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login, register, forgotpassword, 404, index pages
+     * - api/seed-users (development only - should be protected in production)
      */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
+    "/((?!api/auth|api/seed-users|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
   ],
 };
