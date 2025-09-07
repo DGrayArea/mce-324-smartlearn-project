@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import {
   Card,
   CardContent,
@@ -22,11 +23,13 @@ import {
   Target,
   CheckCircle,
   AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { data: dashboardData, loading, error } = useDashboardData();
 
   const getWelcomeMessage = () => {
     switch (user?.role) {
@@ -42,47 +45,51 @@ const Dashboard = () => {
   };
 
   const getQuickStats = () => {
+    if (!dashboardData?.stats) return [];
+
+    const stats = dashboardData.stats;
+
     switch (user?.role) {
       case "student":
         return [
           {
             title: "Enrolled Courses",
-            value: "6",
+            value: stats.enrolledCourses?.toString() || "0",
             icon: BookOpen,
             color: "text-primary",
             trend: { value: "+1", isPositive: true },
           },
           {
             title: "Assignments Due",
-            value: "3",
+            value: stats.pendingAssignments?.toString() || "0",
             icon: Clock,
             color: "text-warning",
             trend: { value: "-2", isPositive: true },
           },
           {
             title: "Current GPA",
-            value: "3.8",
+            value: stats.currentGPA || "0.0",
             icon: Award,
             color: "text-success",
             trend: { value: "+0.2", isPositive: true },
           },
           {
             title: "Study Hours (Week)",
-            value: "24h",
+            value: stats.studyHours || "0h",
             icon: Activity,
             color: "text-accent",
             trend: { value: "+4h", isPositive: true },
           },
           {
             title: "Completed Tasks",
-            value: "18",
+            value: stats.completedTasks?.toString() || "0",
             icon: CheckCircle,
             color: "text-success",
             trend: { value: "+5", isPositive: true },
           },
           {
             title: "Course Progress",
-            value: "78%",
+            value: stats.courseProgress || "0%",
             icon: Target,
             color: "text-primary",
             trend: { value: "+12%", isPositive: true },
@@ -92,87 +99,89 @@ const Dashboard = () => {
         return [
           {
             title: "Courses Teaching",
-            value: "4",
+            value: stats.coursesTeaching?.toString() || "0",
             icon: BookOpen,
             color: "text-primary",
             trend: { value: "+1", isPositive: true },
           },
           {
             title: "Total Students",
-            value: "156",
+            value: stats.totalStudents?.toString() || "0",
             icon: Users,
             color: "text-secondary",
             trend: { value: "+12", isPositive: true },
           },
           {
             title: "Pending Reviews",
-            value: "12",
+            value: stats.pendingReviews?.toString() || "0",
             icon: FileText,
             color: "text-warning",
             trend: { value: "-8", isPositive: true },
           },
           {
             title: "Avg Class Rating",
-            value: "4.8",
+            value: stats.avgClassRating || "0.0",
             icon: Award,
             color: "text-success",
             trend: { value: "+0.3", isPositive: true },
           },
           {
             title: "Attendance Rate",
-            value: "94%",
+            value: stats.attendanceRate || "0%",
             icon: CheckCircle,
             color: "text-success",
             trend: { value: "+2%", isPositive: true },
           },
           {
             title: "Active Discussions",
-            value: "28",
+            value: stats.activeDiscussions?.toString() || "0",
             icon: Activity,
             color: "text-accent",
             trend: { value: "+7", isPositive: true },
           },
         ];
-      case "admin":
+      case "department_admin":
+      case "school_admin":
+      case "senate_admin":
         return [
           {
             title: "Total Users",
-            value: "1,234",
+            value: stats.totalUsers?.toString() || "0",
             icon: Users,
             color: "text-primary",
             trend: { value: "+87", isPositive: true },
           },
           {
             title: "Active Courses",
-            value: "89",
+            value: stats.activeCourses?.toString() || "0",
             icon: BookOpen,
             color: "text-secondary",
             trend: { value: "+5", isPositive: true },
           },
           {
             title: "System Load",
-            value: "78%",
+            value: stats.systemLoad || "0%",
             icon: TrendingUp,
             color: "text-warning",
             trend: { value: "+5%", isPositive: false },
           },
           {
             title: "Support Tickets",
-            value: "5",
+            value: stats.supportTickets?.toString() || "0",
             icon: AlertTriangle,
             color: "text-destructive",
             trend: { value: "-3", isPositive: true },
           },
           {
             title: "Revenue (Month)",
-            value: "$24.5k",
+            value: stats.revenue || "$0k",
             icon: Award,
             color: "text-success",
             trend: { value: "+12%", isPositive: true },
           },
           {
             title: "Server Uptime",
-            value: "99.9%",
+            value: stats.serverUptime || "0%",
             icon: CheckCircle,
             color: "text-success",
             trend: { value: "0%", isPositive: true },
@@ -184,6 +193,12 @@ const Dashboard = () => {
   };
 
   const getRecentActivity = () => {
+    // Use real data from API if available, otherwise fallback to hardcoded
+    if (dashboardData?.recentActivity) {
+      return dashboardData.recentActivity;
+    }
+
+    // Fallback data
     switch (user?.role) {
       case "student":
         return [
@@ -200,6 +215,9 @@ const Dashboard = () => {
           "Responded to 8 student questions",
         ];
       case "admin":
+      case "department_admin":
+      case "school_admin":
+      case "senate_admin":
         return [
           "Approved 3 new course registrations",
           "Reviewed system performance metrics",
@@ -214,6 +232,46 @@ const Dashboard = () => {
   const stats = getQuickStats();
   const activities = getRecentActivity();
 
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-gradient-hero rounded-lg p-6 text-white">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <h1 className="text-2xl font-bold">Loading Dashboard...</h1>
+          </div>
+          <p className="text-white/80 mt-2">Fetching your latest data...</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[...Array(6)].map((_, index) => (
+            <div key={index} className="bg-white rounded-lg p-6 animate-pulse">
+              <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h1 className="text-2xl font-bold text-red-800 mb-2">
+            Error Loading Dashboard
+          </h1>
+          <p className="text-red-600 mb-4">{error}</p>
+          <p className="text-sm text-red-500">
+            Showing fallback data. Please refresh the page to try again.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Welcome Section */}
@@ -226,16 +284,16 @@ const Dashboard = () => {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat, index) => (
+        {stats?.map((stat, index) => (
           <StatsCard
             key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-            trend={stat.trend}
+            title={stat?.title || "N/A"}
+            value={stat?.value || "0"}
+            icon={stat?.icon || Activity}
+            color={stat?.color || "text-gray-500"}
+            trend={stat?.trend || { value: "0", isPositive: true }}
           />
-        ))}
+        )) || []}
       </div>
 
       {/* Analytics Charts */}
@@ -252,14 +310,18 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {activities.map((activity, index) => (
+              {activities?.map((activity, index) => (
                 <div key={index} className="flex items-start space-x-3">
                   <div className="w-2 h-2 rounded-full bg-primary mt-2"></div>
                   <p className="text-sm text-muted-foreground flex-1">
-                    {activity}
+                    {activity || "No recent activity"}
                   </p>
                 </div>
-              ))}
+              )) || (
+                <div className="text-center text-muted-foreground py-4">
+                  No recent activity to display
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

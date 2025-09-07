@@ -44,20 +44,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Check NextAuth session first
     if (session?.user) {
-      // Convert NextAuth session to our User format
-      const nextAuthUser: User = {
-        id: session.user.id,
-        email: session.user.email || "",
-        password: "", // Not needed for session, but required by interface
-        firstName: session.user.name?.split(" ")[0] || "",
-        lastName: session.user.name?.split(" ").slice(1).join(" ") || "",
-        role: session.user.role as any,
-        isActive: session.user.isActive,
-        isVerified: true, // NextAuth users are verified
-        createdAt: new Date().toISOString(), // Use current time as fallback
+      // Fetch complete user data from database
+      const fetchUserData = async () => {
+        try {
+          console.log("Fetching user profile for:", session.user.id);
+          const response = await fetch("/api/user/profile");
+          console.log("Profile API response status:", response.status);
+          if (response.ok) {
+            const userData = await response.json();
+            // Ensure user data has proper structure with fallbacks
+            const safeUserData = {
+              id: userData?.id || session.user.id,
+              email: userData?.email || session.user.email || "",
+              password: "",
+              firstName:
+                userData?.firstName || session.user.name?.split(" ")[0] || "",
+              lastName:
+                userData?.lastName ||
+                session.user.name?.split(" ").slice(1).join(" ") ||
+                "",
+              role: userData?.role || session.user.role || "student",
+              department: userData?.department || "",
+              studentId: userData?.studentId,
+              staffId: userData?.staffId,
+              isActive: userData?.isActive ?? session.user.isActive ?? true,
+              isVerified: userData?.isVerified ?? true,
+              createdAt: userData?.createdAt || new Date().toISOString(),
+            };
+            setUser(safeUserData);
+            setIsAuthenticated(true);
+          } else {
+            // If API call fails, use fallback data
+            console.warn("Failed to fetch user profile, using session data");
+            const fallbackUser: User = {
+              id: session.user?.id || "",
+              email: session.user?.email || "",
+              password: "",
+              firstName: session.user?.name?.split(" ")[0] || "User",
+              lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
+              role: (session.user?.role as any) || "student",
+              department: "",
+              isActive: session.user?.isActive ?? true,
+              isVerified: true,
+              createdAt: new Date().toISOString(),
+            };
+            setUser(fallbackUser);
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          console.error("Error fetching user data:", error);
+          // Fallback to basic session data with safe defaults
+          const nextAuthUser: User = {
+            id: session.user?.id || "",
+            email: session.user?.email || "",
+            password: "",
+            firstName: session.user?.name?.split(" ")[0] || "User",
+            lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
+            role: (session.user?.role as any) || "student",
+            department: "",
+            isActive: session.user?.isActive ?? true,
+            isVerified: true,
+            createdAt: new Date().toISOString(),
+          };
+          setUser(nextAuthUser);
+          setIsAuthenticated(true);
+        }
       };
-      setUser(nextAuthUser);
-      setIsAuthenticated(true);
+
+      fetchUserData();
     } else if (status === "unauthenticated") {
       // Check for existing dummy user session as fallback
       const currentUser = AuthService.getCurrentUser();

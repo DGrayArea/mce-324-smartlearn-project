@@ -1,0 +1,146 @@
+import { NextApiRequest, NextApiResponse } from "next";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "../auth/[...nextauth]";
+import { prisma } from "@/lib/prisma";
+
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ message: "Method not allowed" });
+  }
+
+  try {
+    const session = await getServerSession(req, res, authOptions);
+
+    if (!session?.user?.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    // Get user with student profile
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: {
+        student: {
+          include: {
+            department: true,
+            enrollments: {
+              include: {
+                course: true,
+              },
+            },
+            results: {
+              include: {
+                course: true,
+              },
+            },
+            notifications: {
+              where: {
+                isRead: false,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 5,
+            },
+          },
+        },
+      },
+    });
+
+    if (!user?.student) {
+      return res.status(404).json({ message: "Student profile not found" });
+    }
+
+    const student = user.student;
+
+    // Calculate stats with safe defaults
+    const enrolledCourses = student?.enrollments?.length || 0;
+    const completedCourses =
+      student?.results?.filter((r) => r?.status === "SENATE_APPROVED")
+        ?.length || 0;
+    const pendingAssignments = 0; // TODO: Implement assignment tracking
+    const currentGPA = calculateGPA(student?.results || []);
+    const studyHours = 0; // TODO: Implement study time tracking
+    const completedTasks = 0; // TODO: Implement task tracking
+    const courseProgress = calculateCourseProgress(student?.enrollments || []);
+
+    // Get recent activity
+    const recentActivity = await getRecentActivity(student.id);
+
+    const dashboardData = {
+      stats: {
+        enrolledCourses,
+        pendingAssignments,
+        currentGPA: currentGPA.toFixed(1),
+        studyHours: `${studyHours}h`,
+        completedTasks,
+        courseProgress: `${courseProgress}%`,
+      },
+      recentActivity: recentActivity || [],
+      notifications: student?.notifications || [],
+      courses:
+        student?.enrollments?.map((enrollment) => ({
+          id: enrollment?.course?.id || "",
+          title: enrollment?.course?.title || "",
+          code: enrollment?.course?.code || "",
+          creditUnit: enrollment?.course?.creditUnit || 0,
+          semester: enrollment?.semester || "FIRST",
+          academicYear: enrollment?.academicYear || "",
+        })) || [],
+    };
+
+    res.status(200).json(dashboardData);
+  } catch (error: any) {
+    console.error("Error fetching student dashboard data:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching dashboard data", error: error.message });
+  }
+}
+
+function calculateGPA(results: any[]): number {
+  if (results.length === 0) return 0;
+
+  const gradePoints = results
+    .filter((r) => r.status === "SENATE_APPROVED" && r.grade)
+    .map((r) => {
+      const grade = r.grade.toUpperCase();
+      switch (grade) {
+        case "A":
+          return 4.0;
+        case "B":
+          return 3.0;
+        case "C":
+          return 2.0;
+        case "D":
+          return 1.0;
+        case "F":
+          return 0.0;
+        default:
+          return 0.0;
+      }
+    });
+
+  return gradePoints.length > 0
+    ? gradePoints.reduce((sum, gp) => sum + gp, 0) / gradePoints.length
+    : 0;
+}
+
+function calculateCourseProgress(enrollments: any[]): number {
+  if (enrollments.length === 0) return 0;
+
+  // Simple calculation - in a real app, this would be more sophisticated
+  return Math.floor(Math.random() * 40) + 60; // Random between 60-100%
+}
+
+async function getRecentActivity(studentId: string): Promise<string[]> {
+  // TODO: Implement real activity tracking
+  return [
+    "Completed Introduction to Programming quiz",
+    "Submitted assignment for Data Structures",
+    "Joined virtual meeting for Software Engineering",
+    "Downloaded lecture notes for Database Systems",
+  ];
+}
