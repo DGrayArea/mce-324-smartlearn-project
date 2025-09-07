@@ -6,7 +6,7 @@ type UserRole =
   | "STUDENT"
   | "LECTURER"
   | "DEPARTMENT_ADMIN"
-  | "FACULTY_ADMIN"
+  | "SCHOOL_ADMIN"
   | "SENATE_ADMIN"
   | null;
 

@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Enums
@@ -12,7 +13,7 @@ enum UserRole {
   STUDENT
   LECTURER
   DEPARTMENT_ADMIN
-  FACULTY_ADMIN
+  SCHOOL_ADMIN
   SENATE_ADMIN
 }
 
@@ -196,7 +197,7 @@ model User {
   student         Student?
   lecturer        Lecturer?
   departmentAdmin DepartmentAdmin?
-  facultyAdmin    FacultyAdmin?
+  schoolAdmin     SchoolAdmin?
   senateAdmin     SenateAdmin?
 
   // Activity logs
@@ -226,7 +227,7 @@ model LoginLog {
 }
 
 // Academic Structure
-model Faculty {
+model School {
   id          String   @id @default(cuid())
   name        String   @unique
   code        String   @unique
@@ -236,22 +237,22 @@ model Faculty {
 
   departments   Department[]
   courses       Course[]
-  admins        FacultyAdmin[]
-  stats         FacultyStats[]
+  admins        SchoolAdmin[]
+  stats         SchoolStats[]
   announcements Announcement[]
 
-  @@map("faculties")
+  @@map("schools")
 }
 
 model Department {
   id        String   @id @default(cuid())
   name      String
   code      String   @unique
-  facultyId String
+  schoolId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  faculty Faculty @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   students          Student[]
   lecturers         Lecturer[]
@@ -260,7 +261,7 @@ model Department {
   departmentCourses DepartmentCourse[]
   announcements     Announcement[]
 
-  @@unique([name, facultyId])
+  @@unique([name, schoolId])
   @@map("departments")
 }
 
@@ -329,29 +330,29 @@ model DepartmentAdmin {
 
   courseAssignments   CourseAssignment[]
   resultApprovals     ResultApproval[]
-  facultyStats        FacultyStats[]
+  schoolStats         SchoolStats[]
   courseRegistrations CourseRegistration[] @relation("ReviewedRegistrations")
   DepartmentStats     DepartmentStats[]
 
   @@map("department_admins")
 }
 
-model FacultyAdmin {
+model SchoolAdmin {
   id        String   @id @default(cuid())
   userId    String   @unique
   name      String
-  facultyId String
+  schoolId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  faculty Faculty @relation(fields: [facultyId], references: [id], onDelete: Restrict)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  school School @relation(fields: [schoolId], references: [id], onDelete: Restrict)
 
   resultApprovals     ResultApproval[]
   courseRegistrations CourseRegistration[]
-  FacultyStats        FacultyStats[]
+  SchoolStats         SchoolStats[]
 
-  @@map("faculty_admins")
+  @@map("school_admins")
 }
 
 model SenateAdmin {
@@ -384,10 +385,10 @@ model Course {
   updatedAt   DateTime     @updatedAt
 
   // Optional relationships for course hierarchy
-  facultyId    String?
+  schoolId     String?
   departmentId String?
 
-  faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: SetNull)
+  school     School?     @relation(fields: [schoolId], references: [id], onDelete: SetNull)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   // Course management relationships
@@ -465,9 +466,9 @@ model CourseRegistration {
   reviewedBy   DepartmentAdmin? @relation("ReviewedRegistrations", fields: [reviewedById], references: [id], onDelete: SetNull)
 
   // Enrollments linked to this registration
-  enrollments    Enrollment[]
-  FacultyAdmin   FacultyAdmin? @relation(fields: [facultyAdminId], references: [id])
-  facultyAdminId String?
+  enrollments   Enrollment[]
+  SchoolAdmin   SchoolAdmin? @relation(fields: [schoolAdminId], references: [id])
+  schoolAdminId String?
 
   @@unique([studentId, academicYear, semester])
   @@map("course_registrations")
@@ -555,7 +556,7 @@ model Result {
 model ResultApproval {
   id        String       @id @default(cuid())
   resultId  String
-  level     UserRole // DEPARTMENT_ADMIN, FACULTY_ADMIN, SENATE_ADMIN
+  level     UserRole // DEPARTMENT_ADMIN, SCHOOL_ADMIN, SENATE_ADMIN
   status    ResultStatus
   comments  String?
   createdAt DateTime     @default(now())
@@ -564,11 +565,11 @@ model ResultApproval {
 
   // Admin relationships (only one will be filled based on level)
   departmentAdminId String?
-  facultyAdminId    String?
+  schoolAdminId     String?
   senateAdminId     String?
 
   departmentAdmin DepartmentAdmin? @relation(fields: [departmentAdminId], references: [id], onDelete: SetNull)
-  facultyAdmin    FacultyAdmin?    @relation(fields: [facultyAdminId], references: [id], onDelete: SetNull)
+  schoolAdmin     SchoolAdmin?     @relation(fields: [schoolAdminId], references: [id], onDelete: SetNull)
   senateAdmin     SenateAdmin?     @relation(fields: [senateAdminId], references: [id], onDelete: SetNull)
 
   @@unique([resultId, level])
@@ -1008,10 +1009,10 @@ model SystemStats {
   @@map("system_stats")
 }
 
-model FacultyStats {
+model SchoolStats {
   id               String   @id @default(cuid())
-  facultyAdminId   String
-  facultyId        String
+  schoolAdminId    String
+  schoolId         String
   totalStudents    Int      @default(0)
   totalLecturers   Int      @default(0)
   totalCourses     Int      @default(0)
@@ -1020,14 +1021,14 @@ model FacultyStats {
   passRate         Float? // percentage of students passing
   date             DateTime @default(now())
 
-  facultyAdmin      FacultyAdmin     @relation(fields: [facultyAdminId], references: [id], onDelete: Cascade)
-  Faculty           Faculty          @relation(fields: [facultyId], references: [id])
+  schoolAdmin       SchoolAdmin      @relation(fields: [schoolAdminId], references: [id], onDelete: Cascade)
+  School            School           @relation(fields: [schoolId], references: [id])
   DepartmentAdmin   DepartmentAdmin? @relation(fields: [departmentAdminId], references: [id])
   departmentAdminId String?
 
-  @@index([facultyId])
+  @@index([schoolId])
   @@index([date])
-  @@map("faculty_stats")
+  @@map("school_stats")
 }
 
 model DepartmentStats {
@@ -1098,12 +1099,12 @@ model Announcement {
   // Scope of announcement
   courseId     String?
   departmentId String?
-  facultyId    String?
+  schoolId     String?
   isGlobal     Boolean @default(false)
 
   course     Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-  faculty    Faculty?    @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  school     School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   // Creator (admin who created the announcement)
   createdById String
@@ -1113,7 +1114,7 @@ model Announcement {
   @@index([expiresAt])
   @@index([courseId])
   @@index([departmentId])
-  @@index([facultyId])
+  @@index([schoolId])
   @@map("announcements")
 }
 

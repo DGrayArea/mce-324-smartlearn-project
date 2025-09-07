@@ -50,7 +50,7 @@ export const authOptions: NextAuthOptions = {
                 name: true,
               },
             },
-            facultyAdmin: {
+            schoolAdmin: {
               select: {
                 name: true,
               },
@@ -101,8 +101,8 @@ export const authOptions: NextAuthOptions = {
           case "DEPARTMENT_ADMIN":
             name = user.departmentAdmin?.name || "Department Admin";
             break;
-          case "FACULTY_ADMIN":
-            name = user.facultyAdmin?.name || "Faculty Admin";
+          case "SCHOOL_ADMIN":
+            name = user.schoolAdmin?.name || "School Admin";
             break;
           case "SENATE_ADMIN":
             name = user.senateAdmin?.name || "Senate Admin";
@@ -167,7 +167,7 @@ export const authOptions: NextAuthOptions = {
           | "STUDENT"
           | "LECTURER"
           | "DEPARTMENT_ADMIN"
-          | "FACULTY_ADMIN"
+          | "SCHOOL_ADMIN"
           | "SENATE_ADMIN";
         session.user.isActive = token.isActive as boolean;
       }
