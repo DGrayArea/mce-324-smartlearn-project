@@ -110,26 +110,44 @@ const Courses = () => {
     return role === "SENATE_ADMIN" || role === "senate_admin";
   };
 
-  // Fetch real courses for students, use dummy data for others
+  // Fetch real courses for students and admins, use dummy data for lecturers
   const fetchStudentCourses = async () => {
-    if (user?.role !== "student") {
+    if (user?.role === "lecturer") {
       setCourses(getCourses());
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch("/api/dashboard/student");
-      if (response.ok) {
+      let response;
+      if (user?.role === "student") {
+        response = await fetch("/api/dashboard/student");
+      } else if (isAdmin(user?.role)) {
+        response = await fetch("/api/dashboard/admin");
+      } else {
+        setCourses(getCourses());
+        setLoading(false);
+        return;
+      }
+
+      if (response && response.ok) {
         const data = await response.json();
         setCourses(data.courses || []);
       } else {
         // Fallback to dummy data
-        setCourses(studentCourses);
+        if (user?.role === "student") {
+          setCourses(studentCourses);
+        } else {
+          setCourses(getCourses());
+        }
       }
     } catch (error) {
-      console.error("Error fetching student courses:", error);
-      setCourses(studentCourses);
+      console.error("Error fetching courses:", error);
+      if (user?.role === "student") {
+        setCourses(studentCourses);
+      } else {
+        setCourses(getCourses());
+      }
     } finally {
       setLoading(false);
     }
@@ -841,7 +859,7 @@ const Courses = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(isAdmin(user?.role) ? adminCourses : courses).map((course) => (
+          {courses.map((course) => (
             <Card key={course.id} className="overflow-hidden">
               <CardHeader className="border-b bg-muted/40 p-4">
                 <div className="flex justify-between items-start">

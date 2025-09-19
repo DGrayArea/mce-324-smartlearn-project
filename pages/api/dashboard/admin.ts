@@ -65,7 +65,7 @@ export default async function handler(
       const serverUptime = 99.9; // TODO: Implement real uptime monitoring
 
       // Fetch all courses for Senate Admin
-      courses = await prisma.course.findMany({
+      const rawCourses = await prisma.course.findMany({
         where: { isActive: true },
         include: {
           department: {
@@ -80,6 +80,28 @@ export default async function handler(
         },
         orderBy: { createdAt: "desc" },
       });
+
+      // Transform courses to match frontend expected format
+      courses = rawCourses.map(course => ({
+        id: course.id,
+        name: course.title,
+        code: course.code,
+        credits: course.creditUnit,
+        description: course.description || "",
+        semester: course.semester,
+        status: "active",
+        students: course._count.enrollments,
+        schedule: `${course.semester} Semester`,
+        department: course.department?.name || "N/A",
+        school: course.school?.name || "N/A",
+        type: course.type,
+        level: course.level,
+        // Keep original properties for admin functionality
+        title: course.title,
+        creditUnit: course.creditUnit,
+        departmentId: course.departmentId,
+        schoolId: course.schoolId,
+      }));
 
       stats = {
         totalUsers,
@@ -126,7 +148,7 @@ export default async function handler(
       });
 
       // Fetch courses for this school
-      courses = await prisma.course.findMany({
+      const rawCourses = await prisma.course.findMany({
         where: { schoolId, isActive: true },
         include: {
           department: {
@@ -141,6 +163,28 @@ export default async function handler(
         },
         orderBy: { createdAt: "desc" },
       });
+
+      // Transform courses to match frontend expected format
+      courses = rawCourses.map(course => ({
+        id: course.id,
+        name: course.title,
+        code: course.code,
+        credits: course.creditUnit,
+        description: course.description || "",
+        semester: course.semester,
+        status: "active",
+        students: course._count.enrollments,
+        schedule: `${course.semester} Semester`,
+        department: course.department?.name || "N/A",
+        school: course.school?.name || "N/A",
+        type: course.type,
+        level: course.level,
+        // Keep original properties for admin functionality
+        title: course.title,
+        creditUnit: course.creditUnit,
+        departmentId: course.departmentId,
+        schoolId: course.schoolId,
+      }));
 
       stats = {
         totalUsers: schoolUsers,
@@ -177,7 +221,7 @@ export default async function handler(
       });
 
       // Fetch courses for this department
-      courses = await prisma.course.findMany({
+      const rawCourses = await prisma.course.findMany({
         where: { departmentId, isActive: true },
         include: {
           department: {
@@ -192,6 +236,28 @@ export default async function handler(
         },
         orderBy: { createdAt: "desc" },
       });
+
+      // Transform courses to match frontend expected format
+      courses = rawCourses.map(course => ({
+        id: course.id,
+        name: course.title,
+        code: course.code,
+        credits: course.creditUnit,
+        description: course.description || "",
+        semester: course.semester,
+        status: "active",
+        students: course._count.enrollments,
+        schedule: `${course.semester} Semester`,
+        department: course.department?.name || "N/A",
+        school: course.school?.name || "N/A",
+        type: course.type,
+        level: course.level,
+        // Keep original properties for admin functionality
+        title: course.title,
+        creditUnit: course.creditUnit,
+        departmentId: course.departmentId,
+        schoolId: course.schoolId,
+      }));
 
       stats = {
         totalStudents: deptStudents,
