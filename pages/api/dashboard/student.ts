@@ -83,11 +83,18 @@ export default async function handler(
       courses:
         student?.enrollments?.map((enrollment) => ({
           id: enrollment?.course?.id || "",
+          name: enrollment?.course?.title || "",
           title: enrollment?.course?.title || "",
           code: enrollment?.course?.code || "",
+          credits: enrollment?.course?.creditUnit || 0,
           creditUnit: enrollment?.course?.creditUnit || 0,
+          description: enrollment?.course?.description || "",
           semester: enrollment?.semester || "FIRST",
           academicYear: enrollment?.academicYear || "",
+          status: enrollment?.isActive ? "active" : "inactive",
+          progress: Math.floor(Math.random() * 40) + 60, // Random progress for demo
+          schedule: "Mon, Wed, Fri 10:00 AM", // Placeholder
+          enrolledAt: enrollment?.enrolledAt,
         })) || [],
     };
 
@@ -124,7 +131,8 @@ function calculateGPA(results: any[]): number {
     });
 
   return gradePoints.length > 0
-    ? gradePoints.reduce((sum, gp) => sum + gp, 0) / gradePoints.length
+    ? gradePoints.reduce((sum: number, gp: number) => sum + gp, 0) /
+        gradePoints.length
     : 0;
 }
 

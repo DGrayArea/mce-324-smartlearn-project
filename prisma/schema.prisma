@@ -254,12 +254,13 @@ model Department {
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
-  students          Student[]
-  lecturers         Lecturer[]
-  admins            DepartmentAdmin[]
-  courses           Course[]
-  departmentCourses DepartmentCourse[]
-  announcements     Announcement[]
+  students           Student[]
+  lecturers          Lecturer[]
+  admins             DepartmentAdmin[]
+  courses            Course[]
+  departmentCourses  DepartmentCourse[]
+  courseAvailability CourseAvailability[]
+  announcements      Announcement[]
 
   @@unique([name, schoolId])
   @@map("departments")
@@ -333,6 +334,7 @@ model DepartmentAdmin {
   schoolStats         SchoolStats[]
   courseRegistrations CourseRegistration[] @relation("ReviewedRegistrations")
   DepartmentStats     DepartmentStats[]
+  courseAvailability  CourseAvailability[]
 
   @@map("department_admins")
 }
@@ -392,20 +394,21 @@ model Course {
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   // Course management relationships
-  departmentCourses DepartmentCourse[]
-  courseAssignments CourseAssignment[]
-  enrollments       Enrollment[]
-  assessments       Assessment[]
-  results           Result[]
-  contents          Content[]
-  virtualClasses    VirtualClass[]
-  feedbacks         Feedback[]
-  courseSelections  CourseSelection[]
-  chatRooms         ChatRoom[]
-  assignments       Assignment[]
-  quizzes           Quiz[]
-  courseEvaluations CourseEvaluation[]
-  announcements     Announcement[]
+  departmentCourses  DepartmentCourse[]
+  courseAvailability CourseAvailability[]
+  courseAssignments  CourseAssignment[]
+  enrollments        Enrollment[]
+  assessments        Assessment[]
+  results            Result[]
+  contents           Content[]
+  virtualClasses     VirtualClass[]
+  feedbacks          Feedback[]
+  courseSelections   CourseSelection[]
+  chatRooms          ChatRoom[]
+  assignments        Assignment[]
+  quizzes            Quiz[]
+  courseEvaluations  CourseEvaluation[]
+  announcements      Announcement[]
 
   @@map("courses")
 }
@@ -422,6 +425,27 @@ model DepartmentCourse {
 
   @@unique([departmentId, courseId])
   @@map("department_courses")
+}
+
+// Course availability configuration for departments
+model CourseAvailability {
+  id            String   @id @default(cuid())
+  departmentId  String
+  courseId      String
+  isAvailable   Boolean  @default(true)
+  isRecommended Boolean  @default(false)
+  priority      Int      @default(50) // 1-100, higher = more recommended
+  notes         String? // Admin notes about why this course is available
+  configuredBy  String // Department admin who configured this
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  department Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  course     Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  admin      DepartmentAdmin @relation(fields: [configuredBy], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, courseId])
+  @@map("course_availability")
 }
 
 model CourseAssignment {

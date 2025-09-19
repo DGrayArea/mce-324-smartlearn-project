@@ -29,7 +29,8 @@ export const useDashboardData = () => {
         setError(null);
 
         let endpoint = "";
-        switch (user.role) {
+        const role = user.role?.toLowerCase();
+        switch (role) {
           case "student":
             endpoint = "/api/dashboard/student";
             break;
@@ -42,7 +43,10 @@ export const useDashboardData = () => {
             endpoint = "/api/dashboard/admin";
             break;
           default:
-            throw new Error("Invalid user role");
+            console.error(`Invalid user role: ${user.role}`);
+            setError(`Invalid user role: ${user.role}`);
+            setLoading(false);
+            return;
         }
 
         const response = await fetch(endpoint);
@@ -58,6 +62,7 @@ export const useDashboardData = () => {
 
         const dashboardData = await response.json();
         // Ensure data has proper structure with fallbacks
+        console.log("Dashboard data:", dashboardData);
         setData({
           stats: dashboardData?.stats || {},
           recentActivity: dashboardData?.recentActivity || [],
@@ -85,7 +90,8 @@ export const useDashboardData = () => {
 
 // Fallback data for demo purposes when API fails
 const getFallbackData = (role: string): DashboardData => {
-  switch (role) {
+  const normalizedRole = role?.toLowerCase();
+  switch (normalizedRole) {
     case "student":
       return {
         stats: {

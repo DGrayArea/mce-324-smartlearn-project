@@ -30,8 +30,30 @@ export default async function handler(
               },
             },
             courseAssignments: {
+              where: {
+                isActive: true,
+                academicYear: "2024/2025", // Current academic year
+                semester: "FIRST", // Current semester
+              },
               include: {
-                course: true,
+                course: {
+                  include: {
+                    department: {
+                      select: { name: true, code: true },
+                    },
+                    _count: {
+                      select: {
+                        enrollments: {
+                          where: {
+                            isActive: true,
+                            academicYear: "2024/2025",
+                            semester: "FIRST",
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
               },
             },
             virtualClasses: {
@@ -88,8 +110,15 @@ export default async function handler(
         title: assignment.course.title,
         code: assignment.course.code,
         creditUnit: assignment.course.creditUnit,
+        description: assignment.course.description,
+        type: assignment.course.type,
+        level: assignment.course.level,
         semester: assignment.semester,
         academicYear: assignment.academicYear,
+        department: assignment.course.department,
+        studentCount: assignment.course._count.enrollments,
+        assignedAt: assignment.createdAt,
+        isActive: assignment.isActive,
       })),
       virtualClasses: lecturer.virtualClasses.map((vc) => ({
         id: vc.id,

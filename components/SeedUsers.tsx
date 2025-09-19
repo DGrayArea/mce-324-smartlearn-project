@@ -53,7 +53,7 @@ export const SeedUsers = () => {
             NextAuth Users (email/password form):
           </p>
           <ul className="space-y-1 text-muted-foreground">
-            <li>• alice@university.edu / password123 (Student)</li>
+            <li>• student2@university.edu / password123 (Student)</li>
             <li>• robert@university.edu / password123 (Lecturer)</li>
             <li>• admin@university.edu / password123 (Admin)</li>
           </ul>
