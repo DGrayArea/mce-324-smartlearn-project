@@ -37,6 +37,7 @@ import {
   Plus,
   UserCheck,
   Settings,
+  Database,
 } from "lucide-react";
 import CourseFeedback from "@/components/dashboard/CourseFeedback";
 import CourseForm from "@/components/dashboard/CourseForm";
@@ -72,6 +73,12 @@ const Courses = () => {
 
   // Department course selection states
   const [departmentCourseOpen, setDepartmentCourseOpen] = useState(false);
+
+  // Seeding states
+  const [seedingOpen, setSeedingOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedingData, setSeedingData] = useState<any>(null);
+  const [purgeOnly, setPurgeOnly] = useState(false);
 
   // Helper function to check admin roles
   const isAdmin = (role: string | undefined) => {
@@ -405,6 +412,57 @@ const Courses = () => {
   useEffect(() => {
     fetchAdminCourses();
   }, [createCourseOpen, editCourse]);
+
+  // Seeding functions
+  const handleSeedDatabase = async () => {
+    setSeeding(true);
+    try {
+      const endpoint = purgeOnly
+        ? "/api/purge-database"
+        : "/api/seed-organized";
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Operation failed");
+      }
+
+      setSeedingData(data.data || data.purgedData);
+
+      if (purgeOnly) {
+        toast({
+          title: "Database Purged Successfully!",
+          description: "All existing data has been cleared from the database",
+        });
+      } else {
+        toast({
+          title: "Database Seeded Successfully!",
+          description:
+            "Organized database has been populated with schools, departments, courses, and users",
+        });
+        // Refresh the courses list only if we seeded new data
+        fetchStudentCourses();
+      }
+    } catch (error) {
+      console.error("Operation error:", error);
+      toast({
+        title: purgeOnly ? "Purge Failed" : "Seeding Failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : `An error occurred during ${purgeOnly ? "purging" : "seeding"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -755,6 +813,12 @@ const Courses = () => {
               <Settings className="mr-2 h-4 w-4" />
               Manage Courses
             </Button>
+            {isSenateAdmin(user?.role) && (
+              <Button variant="outline" onClick={() => setSeedingOpen(true)}>
+                <Database className="mr-2 h-4 w-4" />
+                Seed Database
+              </Button>
+            )}
           </div>
         ) : (
           <Button>
@@ -893,6 +957,249 @@ const Courses = () => {
           fetchStudentCourses();
         }}
       />
+
+      {/* Database Seeding Dialog */}
+      <Dialog open={seedingOpen} onOpenChange={setSeedingOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Database Management
+            </DialogTitle>
+            <DialogDescription>
+              {purgeOnly
+                ? "Clear all existing data from the database (Senate Admin only)."
+                : "Populate the database with organized schools, departments, courses, lecturers, and students. This will first purge all existing data."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Mode Selection */}
+            <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="seed-mode"
+                  name="mode"
+                  checked={!purgeOnly}
+                  onChange={() => setPurgeOnly(false)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="seed-mode" className="text-sm font-medium">
+                  Seed Database (Purge + Create New Data)
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="purge-mode"
+                  name="mode"
+                  checked={purgeOnly}
+                  onChange={() => setPurgeOnly(true)}
+                  className="h-4 w-4"
+                />
+                <label htmlFor="purge-mode" className="text-sm font-medium">
+                  Purge Only (Clear All Data)
+                </label>
+              </div>
+            </div>
+
+            {!purgeOnly && (
+              <div>
+                {/* What gets created */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Schools & Departments</h4>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-blue-100 text-blue-800">
+                          SEET
+                        </Badge>
+                        <span>Electrical & Technology</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">
+                          SIPET
+                        </Badge>
+                        <span>Infrastructure & Processing</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-purple-100 text-purple-800">
+                          SPS
+                        </Badge>
+                        <span>Physical Sciences</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-orange-100 text-orange-800">
+                          SLS
+                        </Badge>
+                        <span>Life Sciences</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-semibold">Test Accounts</h4>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="font-medium">Senate Admin:</span>
+                        <br />
+                        <span className="text-muted-foreground">
+                          senate.admin@university.edu
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">MCE Admin:</span>
+                        <br />
+                        <span className="text-muted-foreground">
+                          mce.admin@university.edu
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium">MCE Student:</span>
+                        <br />
+                        <span className="text-muted-foreground">
+                          mce.student1@university.edu
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Password: password123
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Course structure */}
+                <div className="space-y-2">
+                  <h4 className="font-semibold">Course Structure</h4>
+                  <div className="text-sm space-y-1">
+                    <p>
+                      • <strong>MCE Courses:</strong> MCE101, MCE201, MCE301,
+                      MCE401, MCE501 (100L-500L)
+                    </p>
+                    <p>
+                      • <strong>EEE Courses:</strong> EEE101, EEE201, EEE301
+                    </p>
+                    <p>
+                      • <strong>CPE Courses:</strong> CPE101, CPE201, CPE301
+                    </p>
+                    <p>
+                      • <strong>General Courses:</strong> MTH101, MTH201,
+                      MTH301, ENG101, ENG201
+                    </p>
+                    <p>
+                      • <strong>Department Course Selections:</strong> Each
+                      department selects relevant courses
+                    </p>
+                    <p>
+                      • <strong>Lecturer Assignments:</strong> Department admins
+                      assign lecturers to courses
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {purgeOnly && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h4 className="font-semibold text-red-800 mb-2">
+                  ⚠️ Purge Warning
+                </h4>
+                <div className="text-sm text-red-700 space-y-2">
+                  <p>
+                    This will permanently delete ALL data from the database:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>All users (students, lecturers, admins)</li>
+                    <li>All schools and departments</li>
+                    <li>All courses and course assignments</li>
+                    <li>All enrollments and registrations</li>
+                    <li>All assessments, results, and feedback</li>
+                    <li>All content, announcements, and chat rooms</li>
+                  </ul>
+                  <p className="font-medium">This action cannot be undone!</p>
+                </div>
+              </div>
+            )}
+
+            {/* Results */}
+            {seedingData && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">
+                  {purgeOnly ? "Purge Complete!" : "Seeding Complete!"}
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium">Schools:</span>{" "}
+                    {seedingData.schools}
+                  </div>
+                  <div>
+                    <span className="font-medium">Departments:</span>{" "}
+                    {seedingData.departments}
+                  </div>
+                  <div>
+                    <span className="font-medium">Lecturers:</span>{" "}
+                    {seedingData.lecturers}
+                  </div>
+                  <div>
+                    <span className="font-medium">Students:</span>{" "}
+                    {seedingData.students}
+                  </div>
+                  <div>
+                    <span className="font-medium">Courses:</span>{" "}
+                    {seedingData.courses}
+                  </div>
+                  <div>
+                    <span className="font-medium">Department Courses:</span>{" "}
+                    {seedingData.departmentCourses}
+                  </div>
+                  <div>
+                    <span className="font-medium">Course Assignments:</span>{" "}
+                    {seedingData.courseAssignments}
+                  </div>
+                  <div>
+                    <span className="font-medium">Admins:</span>{" "}
+                    {seedingData.departmentAdmins +
+                      seedingData.schoolAdmins +
+                      seedingData.senateAdmins}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setSeedingOpen(false)}
+                disabled={seeding}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSeedDatabase}
+                disabled={seeding}
+                className={
+                  purgeOnly
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }
+              >
+                {seeding ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    {purgeOnly ? "Purging..." : "Seeding..."}
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    {purgeOnly ? "Purge Database" : "Seed Database"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

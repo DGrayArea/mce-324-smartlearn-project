@@ -43,6 +43,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Database,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
@@ -138,6 +139,11 @@ const UserManagement = () => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
+  
+  // Seeding states
+  const [seedingOpen, setSeedingOpen] = useState(false);
+  const [seeding, setSeeding] = useState(false);
+  const [seedingData, setSeedingData] = useState<any>(null);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -201,6 +207,40 @@ const UserManagement = () => {
     setIsCreateUserOpen(false);
   };
 
+  // Seeding functions
+  const handleSeedDatabase = async () => {
+    setSeeding(true);
+    try {
+      const response = await fetch("/api/seed-organized", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Seeding failed");
+      }
+
+      setSeedingData(data.data);
+      toast({
+        title: "Database Seeded Successfully!",
+        description: "Organized database has been populated with schools, departments, courses, and users",
+      });
+    } catch (error) {
+      console.error("Seeding error:", error);
+      toast({
+        title: "Seeding Failed",
+        description: error instanceof Error ? error.message : "An error occurred during seeding",
+        variant: "destructive",
+      });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
   const handleEditUser = (userId: string) => {
     toast({
       title: "Edit User",
@@ -233,13 +273,20 @@ const UserManagement = () => {
             Manage users, roles, and permissions across the platform.
           </p>
         </div>
-        <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </DialogTrigger>
+          </Dialog>
+          <Button variant="outline" onClick={() => setSeedingOpen(true)}>
+            <Database className="h-4 w-4 mr-2" />
+            Seed Database
+          </Button>
+        </div>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
@@ -308,6 +355,114 @@ const UserManagement = () => {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Database Seeding Dialog */}
+      <Dialog open={seedingOpen} onOpenChange={setSeedingOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              Database Seeding
+            </DialogTitle>
+            <DialogDescription>
+              Populate the database with organized schools, departments, courses, lecturers, and students.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* What gets created */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <h4 className="font-semibold">Schools & Departments</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-blue-100 text-blue-800">SEET</Badge>
+                    <span>Electrical & Technology</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-green-100 text-green-800">SIPET</Badge>
+                    <span>Infrastructure & Processing</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-purple-100 text-purple-800">SPS</Badge>
+                    <span>Physical Sciences</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-orange-100 text-orange-800">SLS</Badge>
+                    <span>Life Sciences</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-semibold">Test Accounts</h4>
+                <div className="space-y-1 text-sm">
+                  <div>
+                    <span className="font-medium">Senate Admin:</span>
+                    <br />
+                    <span className="text-muted-foreground">senate.admin@university.edu</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">MCE Admin:</span>
+                    <br />
+                    <span className="text-muted-foreground">mce.admin@university.edu</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">MCE Student:</span>
+                    <br />
+                    <span className="text-muted-foreground">mce.student1@university.edu</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Password: password123</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Seeding results */}
+            {seedingData && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-800 mb-2">Seeding Complete!</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div><span className="font-medium">Schools:</span> {seedingData.schools}</div>
+                  <div><span className="font-medium">Departments:</span> {seedingData.departments}</div>
+                  <div><span className="font-medium">Lecturers:</span> {seedingData.lecturers}</div>
+                  <div><span className="font-medium">Students:</span> {seedingData.students}</div>
+                  <div><span className="font-medium">Courses:</span> {seedingData.courses}</div>
+                  <div><span className="font-medium">Department Courses:</span> {seedingData.departmentCourses}</div>
+                  <div><span className="font-medium">Course Assignments:</span> {seedingData.courseAssignments}</div>
+                  <div><span className="font-medium">Admins:</span> {seedingData.departmentAdmins + seedingData.schoolAdmins + seedingData.senateAdmins}</div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => setSeedingOpen(false)}
+                disabled={seeding}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSeedDatabase}
+                disabled={seeding}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {seeding ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Seeding...
+                  </>
+                ) : (
+                  <>
+                    <Database className="h-4 w-4 mr-2" />
+                    Seed Database
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

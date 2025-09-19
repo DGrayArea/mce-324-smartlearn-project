@@ -24,6 +24,6 @@ export const config = {
      * - login, register, forgotpassword, 404, index pages
      * - api/seed-users (development only - should be protected in production)
      */
-    "/((?!api/auth|api/seed-users|api/seed-comprehensive|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
+    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/purge-database|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
   ],
 };

@@ -15,8 +15,8 @@ import { toast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { SeedUsers } from "@/components/SeedUsers";
-import SeedComprehensive from "@/components/SeedComprehensive";
+// import { SeedUsers } from "@/components/SeedUsers";
+// import SeedComprehensive from "@/components/SeedComprehensive";
 
 export const LoginForm = () => {
   const [email, setEmail] = useState("");
@@ -251,8 +251,8 @@ export const LoginForm = () => {
             {/* Database Setup Section - Only show in development */}
             {process.env.NODE_ENV === "development" && (
               <div className="mt-6 space-y-4">
-                <SeedUsers />
-                <SeedComprehensive />
+                {/* <SeedUsers />
+                <SeedComprehensive /> */}
               </div>
             )}
           </CardContent>
