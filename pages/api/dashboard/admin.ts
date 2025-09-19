@@ -47,6 +47,7 @@ export default async function handler(
     // Calculate stats based on admin level
     let stats;
     let recentActivity;
+    let courses = [];
 
     if (user.role === "SENATE_ADMIN") {
       // Senate Admin - system-wide stats
@@ -62,6 +63,23 @@ export default async function handler(
       });
       const revenue = 24500; // TODO: Implement real revenue tracking
       const serverUptime = 99.9; // TODO: Implement real uptime monitoring
+
+      // Fetch all courses for Senate Admin
+      courses = await prisma.course.findMany({
+        where: { isActive: true },
+        include: {
+          department: {
+            select: { name: true, code: true },
+          },
+          school: {
+            select: { name: true, code: true },
+          },
+          _count: {
+            select: { enrollments: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
 
       stats = {
         totalUsers,
@@ -107,6 +125,23 @@ export default async function handler(
         },
       });
 
+      // Fetch courses for this school
+      courses = await prisma.course.findMany({
+        where: { schoolId, isActive: true },
+        include: {
+          department: {
+            select: { name: true, code: true },
+          },
+          school: {
+            select: { name: true, code: true },
+          },
+          _count: {
+            select: { enrollments: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
       stats = {
         totalUsers: schoolUsers,
         activeCourses: schoolCourses,
@@ -141,6 +176,23 @@ export default async function handler(
         },
       });
 
+      // Fetch courses for this department
+      courses = await prisma.course.findMany({
+        where: { departmentId, isActive: true },
+        include: {
+          department: {
+            select: { name: true, code: true },
+          },
+          school: {
+            select: { name: true, code: true },
+          },
+          _count: {
+            select: { enrollments: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
       stats = {
         totalStudents: deptStudents,
         totalLecturers: deptLecturers,
@@ -163,6 +215,7 @@ export default async function handler(
     const dashboardData = {
       stats,
       recentActivity,
+      courses,
       role: user.role,
       profile: {
         senateAdmin: user.senateAdmin,

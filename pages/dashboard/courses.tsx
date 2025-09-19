@@ -809,7 +809,7 @@ const Courses = () => {
               <Plus className="mr-2 h-4 w-4" />
               Create Course
             </Button>
-            <Button variant="outline" onClick={() => setCreateCourseOpen(true)}>
+            {/* <Button variant="outline" onClick={() => setCreateCourseOpen(true)}>
               <Settings className="mr-2 h-4 w-4" />
               Manage Courses
             </Button>
@@ -818,7 +818,7 @@ const Courses = () => {
                 <Database className="mr-2 h-4 w-4" />
                 Seed Database
               </Button>
-            )}
+            )} */}
           </div>
         ) : (
           <Button>
