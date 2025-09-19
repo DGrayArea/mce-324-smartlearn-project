@@ -1002,100 +1002,10 @@ export default async function handler(
       }),
     ]);
 
-    // 10. Create Course Assignments (Department Admins assign lecturers to courses)
-    // First, we need to get the actual Lecturer and DepartmentAdmin records
-    const lecturerRecords = await Promise.all(
-      lecturers.map((user) =>
-        prisma.lecturer.findUnique({
-          where: { userId: user.id },
-        })
-      )
-    );
-
-    const departmentAdminRecords = await Promise.all(
-      departmentAdmins.map((user) =>
-        prisma.departmentAdmin.findUnique({
-          where: { userId: user.id },
-        })
-      )
-    );
-
-    const courseAssignments = await Promise.all([
-      // MCE Course Assignments
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[0].id, // MCE101
-          lecturerId: lecturerRecords[0]!.id, // Dr. Alice Johnson
-          departmentAdminId: departmentAdminRecords[1]!.id, // MCE Admin
-          academicYear: "2024/2025",
-          semester: "FIRST",
-          isActive: true,
-        },
-      }),
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[1].id, // MCE201
-          lecturerId: lecturerRecords[1]!.id, // Dr. Bob Smith
-          departmentAdminId: departmentAdminRecords[1]!.id, // MCE Admin
-          academicYear: "2024/2025",
-          semester: "FIRST",
-          isActive: true,
-        },
-      }),
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[2].id, // MCE301
-          lecturerId: lecturerRecords[2]!.id, // Dr. Carol Davis
-          departmentAdminId: departmentAdminRecords[1]!.id, // MCE Admin
-          academicYear: "2024/2025",
-          semester: "SECOND",
-          isActive: true,
-        },
-      }),
-      // EEE Course Assignments
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[5].id, // EEE101
-          lecturerId: lecturerRecords[3]!.id, // Dr. Daniel Wilson
-          departmentAdminId: departmentAdminRecords[0]!.id, // EEE Admin
-          academicYear: "2024/2025",
-          semester: "FIRST",
-          isActive: true,
-        },
-      }),
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[6].id, // EEE201
-          lecturerId: lecturerRecords[4]!.id, // Dr. Emma Thompson
-          departmentAdminId: departmentAdminRecords[0]!.id, // EEE Admin
-          academicYear: "2024/2025",
-          semester: "SECOND",
-          isActive: true,
-        },
-      }),
-      // CPE Course Assignments
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[8].id, // CPE101
-          lecturerId: lecturerRecords[5]!.id, // Dr. Frank Miller
-          departmentAdminId: departmentAdminRecords[3]!.id, // CPE Admin
-          academicYear: "2024/2025",
-          semester: "FIRST",
-          isActive: true,
-        },
-      }),
-      // MTH Course Assignments
-      prisma.courseAssignment.create({
-        data: {
-          courseId: courses[11].id, // MTH101 (index 11)
-          lecturerId: lecturerRecords[6]!.id, // Dr. Grace Taylor
-          departmentAdminId: departmentAdminRecords[6]!.id, // MTH Admin
-          academicYear: "2024/2025",
-          semester: "FIRST",
-          isActive: true,
-        },
-      }),
-    ]);
+    // 10. Course Assignments - NOT CREATED AUTOMATICALLY
+    // Department Admins should assign courses to lecturers through the frontend interface
+    // This maintains the proper workflow: Senate Admin creates courses → Department Admin selects courses → Department Admin assigns lecturers
+    const courseAssignments: any[] = [];
 
     return res.status(200).json({
       message: "Comprehensive seeding completed successfully!",
@@ -1109,8 +1019,9 @@ export default async function handler(
         students: students.length,
         courses: courses.length,
         departmentCourses: departmentCourses.length,
-        courseAssignments: courseAssignments.length,
+        courseAssignments: courseAssignments.length, // 0 - to be assigned by Department Admins
       },
+      note: "Course assignments should be made by Department Admins through the frontend interface",
     });
   } catch (error) {
     console.error("Seeding error:", error);
