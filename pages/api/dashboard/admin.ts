@@ -82,7 +82,7 @@ export default async function handler(
       });
 
       // Transform courses to match frontend expected format
-      courses = rawCourses.map(course => ({
+      courses = rawCourses.map((course) => ({
         id: course.id,
         name: course.title,
         code: course.code,
@@ -165,7 +165,7 @@ export default async function handler(
       });
 
       // Transform courses to match frontend expected format
-      courses = rawCourses.map(course => ({
+      courses = rawCourses.map((course) => ({
         id: course.id,
         name: course.title,
         code: course.code,
@@ -238,7 +238,7 @@ export default async function handler(
       });
 
       // Transform courses to match frontend expected format
-      courses = rawCourses.map(course => ({
+      courses = rawCourses.map((course) => ({
         id: course.id,
         name: course.title,
         code: course.code,
