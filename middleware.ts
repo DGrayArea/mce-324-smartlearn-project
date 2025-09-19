@@ -22,8 +22,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - login, register, forgotpassword, 404, index pages
-     * - api/seed-users (development only - should be protected in production)
+     * - api/seed-users, api/seed-comprehensive, api/seed-organized, api/seed-course, api/purge-database (development only - should be protected in production)
      */
-    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/purge-database|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
+    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/seed-course|api/purge-database|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
   ],
 };
