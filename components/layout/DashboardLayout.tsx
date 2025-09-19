@@ -25,6 +25,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { useRouter } from "next/router";
 import { useSession, signIn, signOut } from "next-auth/react";
+import Link from "next/link";
 
 // export default function Component() {
 //   const { data: session } = useSession()
@@ -112,10 +113,13 @@ export const DashboardLayout = ({
           {/* User actions */}
           <div className="flex items-center space-x-2">
             {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"></span>
-            </Button>
+            <Link href="/dashboard/notifications">
+              {" "}
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute top-1 right-1 h-2 w-2 bg-destructive rounded-full"></span>
+              </Button>
+            </Link>
 
             {/* User menu */}
             <DropdownMenu>

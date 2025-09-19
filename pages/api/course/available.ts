@@ -65,30 +65,22 @@ export default async function handler(
     const requiredCourseIds = departmentCourses.map((dc) => dc.courseId);
 
     // Get course availability configuration for this department
-    const courseAvailability = await prisma.courseAvailability.findMany({
-      where: {
-        departmentId: user.student.departmentId,
-        isAvailable: true,
-      },
-      include: {
-        course: true,
-      },
-    });
-
-    const availableCourseIds = courseAvailability.map((ca) => ca.courseId);
+    // Note: courseAvailability table doesn't exist in current schema
+    // For now, we'll use department courses as available courses
+    const availableCourseIds = requiredCourseIds;
 
     // Get available courses based on department configuration
     const availableCourses = await prisma.course.findMany({
       where: {
         isActive: true,
-        id: {
-          notIn: enrolledCourseIds,
-        },
         // Filter by student level
-        level: user.student.level,
+        level: user.student?.level,
         // Only show courses that are configured as available for this department
+        // and not already enrolled
         id: {
-          in: availableCourseIds,
+          in: availableCourseIds.filter(
+            (id) => !enrolledCourseIds.includes(id)
+          ),
         },
       },
       include: {
@@ -113,9 +105,10 @@ export default async function handler(
     });
 
     // Create a map of course availability configurations
+    // Note: courseAvailability table doesn't exist, so we'll use department courses
     const availabilityMap = new Map();
-    courseAvailability.forEach((ca) => {
-      availabilityMap.set(ca.courseId, ca);
+    departmentCourses.forEach((dc) => {
+      availabilityMap.set(dc.courseId, dc);
     });
 
     // Add recommendation scoring and categorization
@@ -139,7 +132,7 @@ export default async function handler(
           : "Available for your department";
 
         // Determine category based on course type and department
-        if (course.departmentId === user.student.departmentId) {
+        if (course.departmentId === user.student?.departmentId) {
           category = "departmental";
         } else if (course.type === "GENERAL") {
           category = "general";
@@ -151,7 +144,7 @@ export default async function handler(
       }
       // Fallback to default scoring
       else {
-        if (course.departmentId === user.student.departmentId) {
+        if (course.departmentId === user.student?.departmentId) {
           recommendationScore = 80;
           recommendationReason = "From your department";
           category = "departmental";

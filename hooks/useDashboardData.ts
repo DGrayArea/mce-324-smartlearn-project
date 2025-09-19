@@ -30,23 +30,23 @@ export const useDashboardData = () => {
 
         let endpoint = "";
         const role = user.role?.toLowerCase();
-        switch (role) {
-          case "student":
-            endpoint = "/api/dashboard/student";
-            break;
-          case "lecturer":
-            endpoint = "/api/dashboard/lecturer";
-            break;
-          case "department_admin":
-          case "school_admin":
-          case "senate_admin":
-            endpoint = "/api/dashboard/admin";
-            break;
-          default:
-            console.error(`Invalid user role: ${user.role}`);
-            setError(`Invalid user role: ${user.role}`);
-            setLoading(false);
-            return;
+
+        // Handle both uppercase and lowercase role formats from database
+        if (role === "student") {
+          endpoint = "/api/dashboard/student";
+        } else if (role === "lecturer") {
+          endpoint = "/api/dashboard/lecturer";
+        } else if (
+          role === "department_admin" ||
+          role === "school_admin" ||
+          role === "senate_admin"
+        ) {
+          endpoint = "/api/dashboard/admin";
+        } else {
+          console.error(`Invalid user role: ${user.role}`);
+          setError(`Invalid user role: ${user.role}`);
+          setLoading(false);
+          return;
         }
 
         const response = await fetch(endpoint);
@@ -91,65 +91,67 @@ export const useDashboardData = () => {
 // Fallback data for demo purposes when API fails
 const getFallbackData = (role: string): DashboardData => {
   const normalizedRole = role?.toLowerCase();
-  switch (normalizedRole) {
-    case "student":
-      return {
-        stats: {
-          enrolledCourses: 6,
-          pendingAssignments: 3,
-          currentGPA: "3.8",
-          studyHours: "24h",
-          completedTasks: 18,
-          courseProgress: "78%",
-        },
-        recentActivity: [
-          "Completed Introduction to Algorithms quiz",
-          "Submitted assignment for Database Design",
-          "Joined virtual meeting for Web Development",
-          "Downloaded lecture notes for Data Structures",
-        ],
-      };
-    case "lecturer":
-      return {
-        stats: {
-          coursesTeaching: 4,
-          totalStudents: 156,
-          pendingReviews: 12,
-          avgClassRating: "4.8",
-          attendanceRate: "94%",
-          activeDiscussions: 28,
-        },
-        recentActivity: [
-          "Graded 15 assignments for Web Development",
-          "Uploaded new lecture for Database Systems",
-          "Scheduled virtual meeting for tomorrow",
-          "Responded to 8 student questions",
-        ],
-      };
-    case "department_admin":
-    case "school_admin":
-    case "senate_admin":
-      return {
-        stats: {
-          totalUsers: 1234,
-          activeCourses: 89,
-          systemLoad: "78%",
-          supportTickets: 5,
-          revenue: "$24.5k",
-          serverUptime: "99.9%",
-        },
-        recentActivity: [
-          "Approved 3 new course registrations",
-          "Reviewed system performance metrics",
-          "Updated platform security settings",
-          "Processed 12 support tickets",
-        ],
-        role: role,
-      };
-    default:
-      return {
-        stats: {},
-        recentActivity: [],
-      };
+
+  if (normalizedRole === "student") {
+    return {
+      stats: {
+        enrolledCourses: 6,
+        pendingAssignments: 3,
+        currentGPA: "3.8",
+        studyHours: "24h",
+        completedTasks: 18,
+        courseProgress: "78%",
+      },
+      recentActivity: [
+        "Completed Introduction to Algorithms quiz",
+        "Submitted assignment for Database Design",
+        "Joined virtual meeting for Web Development",
+        "Downloaded lecture notes for Data Structures",
+      ],
+    };
+  } else if (normalizedRole === "lecturer") {
+    return {
+      stats: {
+        coursesTeaching: 4,
+        totalStudents: 156,
+        pendingReviews: 12,
+        avgClassRating: "4.8",
+        attendanceRate: "94%",
+        activeDiscussions: 28,
+      },
+      recentActivity: [
+        "Graded 15 assignments for Web Development",
+        "Uploaded new lecture for Database Systems",
+        "Scheduled virtual meeting for tomorrow",
+        "Responded to 8 student questions",
+      ],
+    };
+  } else if (
+    normalizedRole === "department_admin" ||
+    normalizedRole === "school_admin" ||
+    normalizedRole === "senate_admin"
+  ) {
+    return {
+      stats: {
+        totalUsers: 1234,
+        activeCourses: 89,
+        systemLoad: "78%",
+        supportTickets: 5,
+        revenue: "$24.5k",
+        serverUptime: "99.9%",
+      },
+      recentActivity: [
+        "Approved 3 new course registrations",
+        "Reviewed system performance metrics",
+        "Updated platform security settings",
+        "Processed 12 support tickets",
+      ],
+      role: role,
+    };
+  } else {
+    return {
+      stats: {},
+      recentActivity: [],
+    };
   }
 };
