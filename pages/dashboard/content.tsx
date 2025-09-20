@@ -40,6 +40,7 @@ import {
   Video,
   FileImage,
   File,
+  Trash2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
@@ -126,6 +127,15 @@ const ContentLibrary = () => {
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+const handleDelete = (item: ContentItem) => {
+  setContent((prev) => prev.filter((c) => c.id !== item.id));
+
+  toast({
+    title: "Content Deleted",
+    description: `${item.title} has been removed from the library.`,
+    variant: "destructive",
+  });
+};
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -158,7 +168,10 @@ const ContentLibrary = () => {
     );
   };
 
-  const filteredContent = contentLibrary.filter((item) => {
+ const [content, setContent] = useState<ContentItem[]>(contentLibrary);
+
+const filteredContent = content.filter((item) => {
+
     const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -364,61 +377,74 @@ const ContentLibrary = () => {
       </div>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredContent.map((item) => (
-          <Card key={item.id} className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  {getTypeIcon(item.type)}
-                  <CardTitle className="text-base">{item.title}</CardTitle>
-                </div>
-                {getTypeBadge(item.type)}
-              </div>
-              <CardDescription>{item.course}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                {item.description}
-              </p>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  {filteredContent.map((item) => (
+    <Card key={item.id} className="hover:shadow-md transition-shadow">
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-2">
+            {getTypeIcon(item.type)}
+            {getTypeBadge(item.type)}
+          </div>
+        </div>
+      </CardHeader>
 
-              <div className="flex flex-wrap gap-1">
-                {item.tags.map((tag) => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
+      <CardContent className="space-y-3">
+        {/* Title occupies full width */}
+        <CardTitle className="text-lg font-semibold">{item.title}</CardTitle>
+        {/* Course code */}
+        <CardDescription>{item.course}</CardDescription>
 
-              <div className="text-xs text-muted-foreground space-y-1">
-                <div>Uploaded by {item.uploadedBy}</div>
-                <div>
-                  {item.uploadDate} • {item.size} • {item.downloads} downloads
-                </div>
-              </div>
+        <p className="text-sm text-muted-foreground">{item.description}</p>
 
-              <div className="flex space-x-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleDownload(item)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handlePreview(item)}
-                >
-                  <Eye className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+        <div className="flex flex-wrap gap-1">
+          {item.tags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-xs">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+
+        <div className="text-xs text-muted-foreground space-y-1">
+          <div>Uploaded by {item.uploadedBy}</div>
+          <div>
+            {item.uploadDate} • {item.size} • {item.downloads} downloads
+          </div>
+        </div>
+
+        {/* Buttons row */}
+        <div className="flex space-x-2 pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1"
+            onClick={() => handleDownload(item)}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download
+          </Button>
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => handleDelete(item)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handlePreview(item)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  ))}
+</div>
+
     </div>
   );
 };
