@@ -34,10 +34,10 @@ const navigationItems: NavItem[] = [
     icon: Home,
     roles: [
       "STUDENT",
-      "lecturer",
-      "faculty_admin",
-      "department_admin",
-      "senate_admin",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
     ],
   },
   {
@@ -50,7 +50,7 @@ const navigationItems: NavItem[] = [
     title: "Course Management",
     href: "/dashboard/courses",
     icon: BookOpen,
-    roles: ["faculty_admin", "department_admin", "senate_admin"],
+    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
   {
     title: "Assignments",
@@ -80,31 +80,31 @@ const navigationItems: NavItem[] = [
     title: "Content Library",
     href: "/dashboard/content",
     icon: FileText,
-    roles: ["lecturer"],
+    roles: ["LECTURER"],
   },
   {
     title: "Student Analytics",
     href: "/dashboard/analytics",
     icon: BarChart3,
-    roles: ["lecturer"],
+    roles: ["LECTURER"],
   },
   {
     title: "User Management",
     href: "/dashboard/users",
     icon: Users,
-    roles: ["faculty_admin", "department_admin", "senate_admin"],
+    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
   {
     title: "Result Approval",
     href: "/dashboard/result-approval",
     icon: UserCheck,
-    roles: ["faculty_admin", "department_admin", "senate_admin"],
+    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
   {
     title: "System Analytics",
     href: "/dashboard/system-analytics",
     icon: BarChart3,
-    roles: ["faculty_admin", "department_admin", "senate_admin"],
+    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
   {
     title: "Calendar",
@@ -112,10 +112,10 @@ const navigationItems: NavItem[] = [
     icon: Calendar,
     roles: [
       "STUDENT",
-      "lecturer",
-      "faculty_admin",
-      "department_admin",
-      "senate_admin",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
     ],
   },
   {
@@ -124,10 +124,10 @@ const navigationItems: NavItem[] = [
     icon: HelpCircle,
     roles: [
       "STUDENT",
-      "lecturer",
-      "faculty_admin",
-      "department_admin",
-      "senate_admin",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
     ],
   },
   {
@@ -136,10 +136,10 @@ const navigationItems: NavItem[] = [
     icon: Bell,
     roles: [
       "STUDENT",
-      "lecturer",
-      "faculty_admin",
-      "department_admin",
-      "senate_admin",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
     ],
   },
   {
@@ -148,10 +148,10 @@ const navigationItems: NavItem[] = [
     icon: MessageSquare,
     roles: [
       "STUDENT",
-      "lecturer",
-      "faculty_admin",
-      "department_admin",
-      "senate_admin",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
     ],
   },
 ];
@@ -171,7 +171,9 @@ export const DashboardSidebar = () => {
         return "text-student";
       case "LECTURER":
         return "text-lecturer";
-      case "ADMIN":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return "text-admin";
       default:
         return "text-primary";
@@ -184,7 +186,9 @@ export const DashboardSidebar = () => {
         return "bg-student/10";
       case "LECTURER":
         return "bg-lecturer/10";
-      case "ADMIN":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return "bg-admin/10";
       default:
         return "bg-primary/10";
@@ -210,7 +214,10 @@ export const DashboardSidebar = () => {
               getRoleColor(user?.role || "")
             )}
           >
-            {user?.role}
+            {user?.role === "DEPARTMENT_ADMIN" ? "Department Admin" :
+             user?.role === "SCHOOL_ADMIN" ? "School Admin" :
+             user?.role === "SENATE_ADMIN" ? "Senate Admin" :
+             user?.role || "User"}
           </span>
         </div>
       </div>

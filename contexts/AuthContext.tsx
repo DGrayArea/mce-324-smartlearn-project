@@ -44,74 +44,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Check NextAuth session first
     if (session?.user) {
-      // Fetch complete user data from database
-      const fetchUserData = async () => {
-        try {
-          console.log("Fetching user profile for:", session.user.id);
-          const response = await fetch("/api/user/profile");
-          console.log("Profile API response status:", response.status);
-          if (response.ok) {
-            const userData = await response.json();
-            // Ensure user data has proper structure with fallbacks
-            const safeUserData = {
-              id: userData?.id || session.user.id,
-              email: userData?.email || session.user.email || "",
-              password: "",
-              firstName:
-                userData?.firstName || session.user.name?.split(" ")[0] || "",
-              lastName:
-                userData?.lastName ||
-                session.user.name?.split(" ").slice(1).join(" ") ||
-                "",
-              role: userData?.role || session.user.role || "STUDENT",
-              department: userData?.department || "",
-              studentId: userData?.studentId,
-              staffId: userData?.staffId,
-              isActive: userData?.isActive ?? session.user.isActive ?? true,
-              isVerified: userData?.isVerified ?? true,
-              createdAt: userData?.createdAt || new Date().toISOString(),
-            };
-            setUser(safeUserData);
-            setIsAuthenticated(true);
-          } else {
-            // If API call fails, use fallback data
-            console.warn("Failed to fetch user profile, using session data");
-            const fallbackUser: User = {
-              id: session.user?.id || "",
-              email: session.user?.email || "",
-              password: "",
-              firstName: session.user?.name?.split(" ")[0] || "User",
-              lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
-              role: (session.user?.role as any) || "STUDENT",
-              department: "",
-              isActive: session.user?.isActive ?? true,
-              isVerified: true,
-              createdAt: new Date().toISOString(),
-            };
-            setUser(fallbackUser);
-            setIsAuthenticated(true);
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error);
-          // Fallback to basic session data with safe defaults
-          const nextAuthUser: User = {
-            id: session.user?.id || "",
-            email: session.user?.email || "",
-            password: "",
-            firstName: session.user?.name?.split(" ")[0] || "User",
-            lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
-            role: (session.user?.role as any) || "STUDENT",
-            department: "",
-            isActive: session.user?.isActive ?? true,
-            isVerified: true,
-            createdAt: new Date().toISOString(),
-          };
-          setUser(nextAuthUser);
-          setIsAuthenticated(true);
-        }
+      // Use session data directly to avoid API call issues
+      const sessionUser: User = {
+        id: session.user?.id || "",
+        email: session.user?.email || "",
+        password: "",
+        firstName: session.user?.name?.split(" ")[0] || "User",
+        lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
+        role: (session.user?.role as any) || "STUDENT",
+        department: "",
+        isActive: session.user?.isActive ?? true,
+        isVerified: true,
+        createdAt: new Date().toISOString(),
       };
-
-      fetchUserData();
+      setUser(sessionUser);
+      setIsAuthenticated(true);
     } else if (status === "unauthenticated") {
       // Check for existing dummy user session as fallback
       const currentUser = AuthService.getCurrentUser();

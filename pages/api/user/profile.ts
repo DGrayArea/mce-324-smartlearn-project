@@ -102,7 +102,7 @@ export default async function handler(
       email: dbUser.email || "",
       firstName: name.split(" ")[0] || "",
       lastName: name.split(" ").slice(1).join(" ") || "",
-      role: dbUser.role?.toLowerCase(),
+      role: dbUser.role,
       department: department,
       studentId: studentId || undefined,
       staffId: staffId || undefined,

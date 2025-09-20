@@ -19,8 +19,8 @@ import { signIn } from "next-auth/react";
 // import SeedComprehensive from "@/components/SeedComprehensive";
 
 export const LoginForm = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("mce.admin@university.edu");
+  const [password, setPassword] = useState("password123");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();

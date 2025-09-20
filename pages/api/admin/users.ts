@@ -19,7 +19,11 @@ export default async function handler(
     include: {
       senateAdmin: true,
       schoolAdmin: true,
-      departmentAdmin: true,
+      departmentAdmin: {
+        include: {
+          department: true,
+        },
+      },
     },
   });
 
@@ -36,12 +40,25 @@ export default async function handler(
 
   try {
     if (req.method === "GET") {
+      const { departmentId } = req.query;
+
       // Fetch users based on admin level
       let users;
 
       if (user.role === "SENATE_ADMIN") {
-        // Senate Admin can see all users
+        // Senate Admin can see all users or filter by department
+        let whereClause: any = {};
+
+        if (departmentId && typeof departmentId === "string") {
+          whereClause.OR = [
+            { student: { departmentId } },
+            { lecturer: { departmentId } },
+            { departmentAdmin: { departmentId } },
+          ];
+        }
+
         users = await prisma.user.findMany({
+          where: whereClause,
           include: {
             student: {
               include: {
@@ -131,6 +148,7 @@ export default async function handler(
       } else if (user.role === "DEPARTMENT_ADMIN") {
         // Department Admin can see users in their department
         const departmentId = user.departmentAdmin?.departmentId;
+
         users = await prisma.user.findMany({
           where: {
             OR: [
@@ -181,7 +199,7 @@ export default async function handler(
       // Transform users to match frontend expected format
       const transformedUsers =
         users?.map((user) => {
-          let role = user.role?.toLowerCase() || "unknown";
+          let role = user.role || "UNKNOWN";
           let department = "N/A";
           let school = "N/A";
           let name = user.name || "Unknown";

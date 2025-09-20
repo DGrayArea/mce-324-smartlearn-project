@@ -99,15 +99,50 @@ interface User {
   joinDate?: string;
 }
 
+// Helper function to check admin roles
+const isAdmin = (role: string | undefined) => {
+  if (!role) return false;
+  const adminRoles = ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"];
+  return adminRoles.includes(role);
+};
+
+interface School {
+  id: string;
+  name: string;
+  code: string;
+  departments: Department[];
+}
+
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  schoolId: string;
+  school: {
+    name: string;
+    code: string;
+  };
+}
+
 const UserManagement = () => {
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
   const [users, setUsers] = useState<ApiUser[]>([]);
+  const [schools, setSchools] = useState<School[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedDepartment, setSelectedDepartment] = useState("all");
+
+  // Hierarchical navigation state
+  const [currentView, setCurrentView] = useState<
+    "schools" | "departments" | "users" | "user-types"
+  >("schools");
+  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
+  const [selectedDept, setSelectedDept] = useState<Department | null>(null);
+  const [selectedUserType, setSelectedUserType] = useState<string | null>(null);
   const [isCreateUserOpen, setIsCreateUserOpen] = useState(false);
 
   // Create user form states
@@ -129,11 +164,43 @@ const UserManagement = () => {
   const [seeding, setSeeding] = useState(false);
   const [seedingData, setSeedingData] = useState<any>(null);
 
+  // Fetch schools data (for Senate Admin)
+  const fetchSchools = async () => {
+    try {
+      const response = await fetch("/api/admin/schools");
+      if (response.ok) {
+        const data = await response.json();
+        setSchools(data.schools || []);
+      }
+    } catch (error) {
+      console.error("Error fetching schools:", error);
+    }
+  };
+
+  // Fetch departments data
+  const fetchDepartments = async (schoolId?: string) => {
+    try {
+      const url = schoolId
+        ? `/api/admin/departments?schoolId=${schoolId}`
+        : "/api/admin/departments";
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setDepartments(data.departments || []);
+      }
+    } catch (error) {
+      console.error("Error fetching departments:", error);
+    }
+  };
+
   // Fetch users data
-  const fetchUsers = async () => {
+  const fetchUsers = async (departmentId?: string) => {
     try {
       setLoading(true);
-      const response = await fetch("/api/admin/users");
+      const url = departmentId
+        ? `/api/admin/users?departmentId=${departmentId}`
+        : "/api/admin/users";
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setUsers(data.users || []);
@@ -178,10 +245,62 @@ const UserManagement = () => {
     }
   };
 
+  // Navigation functions
+  const handleSchoolSelect = (school: School) => {
+    setSelectedSchool(school);
+    setCurrentView("departments");
+    fetchDepartments(school.id);
+  };
+
+  const handleDepartmentSelect = (department: Department) => {
+    setSelectedDept(department);
+    setCurrentView("users");
+    fetchUsers(department.id);
+  };
+
+  const handleUserTypeSelect = async (userType: string) => {
+    setSelectedUserType(userType);
+    setCurrentView("users");
+    // Fetch all users first, then filter by type
+    await fetchUsers();
+    // The filtering will happen in the filteredUsers logic
+  };
+
+  const handleBackToSchools = () => {
+    setCurrentView("schools");
+    setSelectedSchool(null);
+    setSelectedDept(null);
+    setUsers([]);
+  };
+
+  const handleBackToDepartments = () => {
+    setCurrentView("departments");
+    setSelectedDept(null);
+    setUsers([]);
+  };
+
+  const handleBackToUserTypes = () => {
+    setCurrentView("user-types");
+    setSelectedUserType(null);
+    // Don't need to refetch, just clear the filter
+  };
+
+  // Initialize based on user role
   useEffect(() => {
-    fetchUsers();
-    fetchDepartmentsAndSchools();
-  }, []);
+    if (currentUser?.role === "SENATE_ADMIN") {
+      setCurrentView("schools");
+      fetchSchools();
+      fetchDepartmentsAndSchools(); // Only fetch for Senate Admin
+    } else if (currentUser?.role === "SCHOOL_ADMIN") {
+      setCurrentView("departments");
+      fetchDepartments(); // Will fetch departments in their school
+      fetchDepartmentsAndSchools(); // Only fetch for School Admin
+    } else if (currentUser?.role === "DEPARTMENT_ADMIN") {
+      setCurrentView("user-types");
+      fetchUsers(); // Will fetch users in their department
+      // Don't fetch schools/departments for Department Admin
+    }
+  }, [currentUser]);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -232,10 +351,19 @@ const UserManagement = () => {
     const matchesDepartment =
       selectedDepartment === "all" || user.department === selectedDepartment;
 
-    return matchesSearch && matchesRole && matchesStatus && matchesDepartment;
+    // If a specific user type is selected, filter by that type
+    const matchesUserType = !selectedUserType || user.role === selectedUserType;
+
+    return (
+      matchesSearch &&
+      matchesRole &&
+      matchesStatus &&
+      matchesDepartment &&
+      matchesUserType
+    );
   });
 
-  const departments = Array.from(new Set(users.map((u) => u.department)));
+  const userDepartments = Array.from(new Set(users.map((u) => u.department)));
 
   const handleCreateUser = async () => {
     try {
@@ -404,6 +532,190 @@ const UserManagement = () => {
     }
   };
 
+  // Render breadcrumb navigation
+  const renderBreadcrumb = () => {
+    const breadcrumbs = [];
+
+    if (currentUser?.role === "SENATE_ADMIN") {
+      breadcrumbs.push({ label: "Schools", active: currentView === "schools" });
+      if (selectedSchool) {
+        breadcrumbs.push({
+          label: selectedSchool.name,
+          active: currentView === "departments",
+        });
+      }
+      if (selectedDept) {
+        breadcrumbs.push({
+          label: selectedDept.name,
+          active: currentView === "users",
+        });
+      }
+    } else if (currentUser?.role === "SCHOOL_ADMIN") {
+      breadcrumbs.push({
+        label: "Departments",
+        active: currentView === "departments",
+      });
+      if (selectedDept) {
+        breadcrumbs.push({
+          label: selectedDept.name,
+          active: currentView === "users",
+        });
+      }
+    } else if (currentUser?.role === "DEPARTMENT_ADMIN") {
+      if (currentView === "user-types") {
+        breadcrumbs.push({ label: "User Types", active: true });
+      } else if (currentView === "users") {
+        breadcrumbs.push({ label: "User Types", active: false });
+        if (selectedUserType) {
+          const userTypeLabels = {
+            STUDENT: "Students",
+            LECTURER: "Lecturers",
+            DEPARTMENT_ADMIN: "Department Admins",
+          };
+          breadcrumbs.push({
+            label:
+              userTypeLabels[selectedUserType as keyof typeof userTypeLabels] ||
+              selectedUserType,
+            active: true,
+          });
+        }
+      }
+    }
+
+    return (
+      <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+        {breadcrumbs.map((crumb, index) => (
+          <React.Fragment key={index}>
+            <span className={crumb.active ? "text-foreground font-medium" : ""}>
+              {crumb.label}
+            </span>
+            {index < breadcrumbs.length - 1 && <span>/</span>}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
+
+  // Render schools view
+  const renderSchoolsView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {schools.map((school) => (
+        <Card
+          key={school.id}
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => handleSchoolSelect(school)}
+        >
+          <CardHeader>
+            <CardTitle className="text-lg">{school.name}</CardTitle>
+            <CardDescription>{school.code}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {school.departments.length} departments
+              </span>
+              <Button variant="ghost" size="sm">
+                View →
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  // Render departments view
+  const renderDepartmentsView = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {departments.map((department) => (
+        <Card
+          key={department.id}
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => handleDepartmentSelect(department)}
+        >
+          <CardHeader>
+            <CardTitle className="text-lg">{department.name}</CardTitle>
+            <CardDescription>{department.code}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                {department.school.name}
+              </span>
+              <Button variant="ghost" size="sm">
+                View →
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
+  // Render user types view (for Department Admin)
+  const renderUserTypesView = () => {
+    const userTypeCounts = {
+      STUDENT: users.filter((u) => u.role === "STUDENT").length,
+      LECTURER: users.filter((u) => u.role === "LECTURER").length,
+      DEPARTMENT_ADMIN: users.filter((u) => u.role === "DEPARTMENT_ADMIN")
+        .length,
+    };
+
+    const userTypes = [
+      {
+        type: "STUDENT",
+        label: "Students",
+        count: userTypeCounts.STUDENT,
+        icon: "👨‍🎓",
+        description: "Students in your department",
+      },
+      {
+        type: "LECTURER",
+        label: "Lecturers",
+        count: userTypeCounts.LECTURER,
+        icon: "👨‍🏫",
+        description: "Lecturers in your department",
+      },
+      {
+        type: "DEPARTMENT_ADMIN",
+        label: "Department Admins",
+        count: userTypeCounts.DEPARTMENT_ADMIN,
+        icon: "👨‍💼",
+        description: "Department administrators",
+      },
+    ];
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {userTypes.map((userType) => (
+          <Card
+            key={userType.type}
+            className="cursor-pointer hover:shadow-md transition-shadow"
+            onClick={() => handleUserTypeSelect(userType.type)}
+          >
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <span className="text-2xl">{userType.icon}</span>
+                {userType.label}
+              </CardTitle>
+              <CardDescription>{userType.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <span className="text-2xl font-bold text-primary">
+                  {userType.count}
+                </span>
+                <Button variant="ghost" size="sm">
+                  View →
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -412,6 +724,7 @@ const UserManagement = () => {
           <p className="text-muted-foreground">
             Manage users, roles, and permissions across the platform.
           </p>
+          {renderBreadcrumb()}
         </div>
         <div className="flex gap-2">
           <Dialog open={isCreateUserOpen} onOpenChange={setIsCreateUserOpen}>
@@ -752,245 +1065,288 @@ const UserManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{users.length}</div>
-              <p className="text-xs text-muted-foreground">
-                +5 from last month
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Active Users
-              </CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter((u) => u.status === "active").length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                85% of total users
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Students</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter((u) => u.role === "STUDENT").length}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                67% of total users
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Lecturers</CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {users.filter((u) => u.role === "LECTURER").length}
-              </div>
-              <p className="text-xs text-muted-foreground">Teaching staff</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search users..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={selectedRole} onValueChange={setSelectedRole}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="STUDENT">Students</SelectItem>
-              <SelectItem value="LECTURER">Lecturers</SelectItem>
-              <SelectItem value="ADMIN">Admins</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-              <SelectItem value="suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select
-            value={selectedDepartment}
-            onValueChange={setSelectedDepartment}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {departments.map((dept) => (
-                <SelectItem key={dept} value={dept}>
-                  {dept}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Users List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Loading users...
-              </p>
-            </div>
-          ) : (
-            filteredUsers.map((user) => (
-              <Card key={user.id}>
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarImage src={user.avatar} />
-                        <AvatarFallback>
-                          {user.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="space-y-1">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-semibold text-lg">{user.name}</h3>
-                          {getStatusIcon(user.status)}
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Mail className="h-4 w-4" />
-                          <span>{user.email}</span>
-                        </div>
-                        {user.phone && (
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <Phone className="h-4 w-4" />
-                            <span>{user.phone}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4" />
-                          <span>{user.department}</span>
-                        </div>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span>Joined {user.joinDate}</span>
-                          <span>• Last login {user.lastLogin}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      {getRoleBadge(user.role)}
-                      {getStatusBadge(user.status)}
-                    </div>
-                  </div>
-
-                  {(user.enrolledCourses || user.teachingCourses) && (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex flex-wrap gap-2">
-                        {user.enrolledCourses && (
-                          <div>
-                            <span className="text-sm text-muted-foreground mr-2">
-                              Enrolled:
-                            </span>
-                            {user.enrolledCourses.map((course) => (
-                              <Badge
-                                key={course}
-                                variant="outline"
-                                className="mr-1"
-                              >
-                                {course}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                        {user.teachingCourses && (
-                          <div>
-                            <span className="text-sm text-muted-foreground mr-2">
-                              Teaching:
-                            </span>
-                            {user.teachingCourses.map((course) => (
-                              <Badge
-                                key={course}
-                                variant="secondary"
-                                className="mr-1"
-                              >
-                                {course}
-                              </Badge>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end space-x-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleStatus(user.id, user.status)}
-                    >
-                      {user.status === "active" ? "Deactivate" : "Activate"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditUser(user.id)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+      {/* Navigation buttons */}
+      {currentView !== "schools" && currentUser?.role === "SENATE_ADMIN" && (
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleBackToSchools}>
+            ← Back to Schools
+          </Button>
+          {currentView === "users" && (
+            <Button variant="outline" onClick={handleBackToDepartments}>
+              ← Back to Departments
+            </Button>
           )}
         </div>
-      </div>
+      )}
+
+      {currentView === "departments" &&
+        currentUser?.role === "SCHOOL_ADMIN" && (
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleBackToDepartments}>
+              ← Back to Departments
+            </Button>
+          </div>
+        )}
+
+      {currentView === "users" && currentUser?.role === "DEPARTMENT_ADMIN" && (
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleBackToUserTypes}>
+            ← Back to User Types
+          </Button>
+        </div>
+      )}
+
+      {/* Content based on current view */}
+      {currentView === "schools" && renderSchoolsView()}
+      {currentView === "departments" && renderDepartmentsView()}
+      {currentView === "user-types" && renderUserTypesView()}
+      {currentView === "users" && (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Total Users
+                </CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{users.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  +5 from last month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Active Users
+                </CardTitle>
+                <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {users.filter((u) => u.status === "active").length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  85% of total users
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Students</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {users.filter((u) => u.role === "STUDENT").length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  67% of total users
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Lecturers</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {users.filter((u) => u.role === "LECTURER").length}
+                </div>
+                <p className="text-xs text-muted-foreground">Teaching staff</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 items-center">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="STUDENT">Students</SelectItem>
+                <SelectItem value="LECTURER">Lecturers</SelectItem>
+                <SelectItem value="ADMIN">Admins</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
+              value={selectedDepartment}
+              onValueChange={setSelectedDepartment}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Department" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {userDepartments.map((dept) => (
+                  <SelectItem key={dept} value={dept}>
+                    {dept}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Users List */}
+          <div className="space-y-4">
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Loading users...
+                </p>
+              </div>
+            ) : (
+              filteredUsers.map((user) => (
+                <Card key={user.id}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={user.avatar} />
+                          <AvatarFallback>
+                            {user.name
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-semibold text-lg">
+                              {user.name}
+                            </h3>
+                            {getStatusIcon(user.status)}
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <Mail className="h-4 w-4" />
+                            <span>{user.email}</span>
+                          </div>
+                          {user.phone && (
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <Phone className="h-4 w-4" />
+                              <span>{user.phone}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4" />
+                            <span>{user.department}</span>
+                          </div>
+                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                            <Calendar className="h-4 w-4" />
+                            <span>Joined {user.joinDate}</span>
+                            <span>• Last login {user.lastLogin}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        {getRoleBadge(user.role)}
+                        {getStatusBadge(user.status)}
+                      </div>
+                    </div>
+
+                    {(user.enrolledCourses || user.teachingCourses) && (
+                      <div className="mt-4 pt-4 border-t">
+                        <div className="flex flex-wrap gap-2">
+                          {user.enrolledCourses && (
+                            <div>
+                              <span className="text-sm text-muted-foreground mr-2">
+                                Enrolled:
+                              </span>
+                              {user.enrolledCourses.map((course) => (
+                                <Badge
+                                  key={course}
+                                  variant="outline"
+                                  className="mr-1"
+                                >
+                                  {course}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {user.teachingCourses && (
+                            <div>
+                              <span className="text-sm text-muted-foreground mr-2">
+                                Teaching:
+                              </span>
+                              {user.teachingCourses.map((course) => (
+                                <Badge
+                                  key={course}
+                                  variant="secondary"
+                                  className="mr-1"
+                                >
+                                  {course}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end space-x-2 mt-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleStatus(user.id, user.status)}
+                      >
+                        {user.status === "active" ? "Deactivate" : "Activate"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditUser(user.id)}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteUser(user.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

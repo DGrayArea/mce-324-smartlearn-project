@@ -102,15 +102,11 @@ async function handleGet(
       },
     });
 
-    // Get current course assignments
+    // Get current course assignments for courses in this department
     const courseAssignments = await prisma.courseAssignment.findMany({
       where: {
-        course: {
-          departmentCourses: {
-            some: {
-              departmentId,
-            },
-          },
+        lecturer: {
+          departmentId,
         },
       },
       include: {
@@ -286,16 +282,12 @@ async function handleDelete(
       });
     }
 
-    // Verify the assignment belongs to a course in the department
+    // Verify the assignment belongs to a lecturer in the department
     const assignment = await prisma.courseAssignment.findFirst({
       where: {
         id: assignmentId,
-        course: {
-          departmentCourses: {
-            some: {
-              departmentId,
-            },
-          },
+        lecturer: {
+          departmentId,
         },
       },
     });
