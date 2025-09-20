@@ -43,12 +43,12 @@ const Grades = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Grade Management"
               : "My Grades & Results"}
           </h2>
           <p className="text-muted-foreground">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Review and manage student grades and feedback."
               : "Track your academic performance and progress."}
           </p>
@@ -59,7 +59,7 @@ const Grades = () => {
         </Button>
       </div>
 
-      {user?.role === "student" && (
+      {user?.role === "STUDENT" && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -109,11 +109,11 @@ const Grades = () => {
 
       <div className="space-y-4">
         <h3 className="text-xl font-semibold">
-          {user?.role === "lecturer" ? "Recent Submissions" : "Grade History"}
+          {user?.role === "LECTURER" ? "Recent Submissions" : "Grade History"}
         </h3>
 
         <div className="grid grid-cols-1 gap-4">
-          {(user?.role === "lecturer"
+          {(user?.role === "LECTURER"
             ? grades
             : studentAssignments.filter((a) => a.grade !== undefined)
           ).map((item, index) => {

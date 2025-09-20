@@ -42,6 +42,7 @@ import {
 import CourseFeedback from "@/components/dashboard/CourseFeedback";
 import CourseForm from "@/components/dashboard/CourseForm";
 import DepartmentCourseSelection from "@/components/dashboard/DepartmentCourseSelection";
+import DepartmentCourseSelectionInterface from "@/components/dashboard/DepartmentCourseSelectionInterface";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import { useToast } from "@/hooks/use-toast";
 
@@ -73,6 +74,8 @@ const Courses = () => {
 
   // Department course selection states
   const [departmentCourseOpen, setDepartmentCourseOpen] = useState(false);
+  const [departmentCourseSelectionOpen, setDepartmentCourseSelectionOpen] =
+    useState(false);
 
   // Seeding states
   const [seedingOpen, setSeedingOpen] = useState(false);
@@ -112,7 +115,7 @@ const Courses = () => {
 
   // Fetch real courses for students and admins, use dummy data for lecturers
   const fetchStudentCourses = async () => {
-    if (user?.role === "lecturer") {
+    if (user?.role === "LECTURER") {
       setCourses(getCourses());
       setLoading(false);
       return;
@@ -120,8 +123,9 @@ const Courses = () => {
 
     try {
       let response;
-      if (user?.role === "student") {
-        response = await fetch("/api/dashboard/student");
+      if (user?.role === "STUDENT") {
+        // For students, fetch available courses for registration
+        response = await fetch("/api/student/course-registration");
       } else if (isAdmin(user?.role)) {
         response = await fetch("/api/dashboard/admin");
       } else {
@@ -132,10 +136,24 @@ const Courses = () => {
 
       if (response && response.ok) {
         const data = await response.json();
-        setCourses(data.courses || []);
+        if (user?.role === "STUDENT") {
+          // For students, combine available courses and current enrollments
+          const allStudentCourses = [
+            ...(data.availableCourses || []),
+            ...(data.currentEnrollments || []).map((enrollment: any) => ({
+              ...enrollment.course,
+              isEnrolled: true,
+              enrollmentId: enrollment.id,
+              enrollmentStatus: enrollment.status,
+            })),
+          ];
+          setCourses(allStudentCourses);
+        } else {
+          setCourses(data.courses || []);
+        }
       } else {
         // Fallback to dummy data
-        if (user?.role === "student") {
+        if (user?.role === "STUDENT") {
           setCourses(studentCourses);
         } else {
           setCourses(getCourses());
@@ -143,7 +161,7 @@ const Courses = () => {
       }
     } catch (error) {
       console.error("Error fetching courses:", error);
-      if (user?.role === "student") {
+      if (user?.role === "STUDENT") {
         setCourses(studentCourses);
       } else {
         setCourses(getCourses());
@@ -160,9 +178,11 @@ const Courses = () => {
   // Select courses based on user role (for non-students)
   const getCourses = () => {
     switch (user?.role) {
-      case "lecturer":
+      case "LECTURER":
         return lecturerCourses;
-      case "admin":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return allCourses;
       default:
         return [];
@@ -196,7 +216,7 @@ const Courses = () => {
   const handleEnroll = async (courseId: string) => {
     setEnrolling(courseId);
     try {
-      const response = await fetch("/api/course/register", {
+      const response = await fetch("/api/student/course-registration", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -236,6 +256,40 @@ const Courses = () => {
       });
     } finally {
       setEnrolling(null);
+    }
+  };
+
+  const handleDropCourse = async (enrollmentId: string) => {
+    if (!confirm("Are you sure you want to drop this course?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/student/course-registration?enrollmentId=${enrollmentId}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to drop course");
+      }
+
+      toast({
+        title: "Success",
+        description: "Successfully dropped course!",
+      });
+
+      fetchStudentCourses();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to drop course",
+        variant: "destructive",
+      });
     }
   };
 
@@ -487,21 +541,21 @@ const Courses = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "My Teaching Courses"
-              : user?.role === "admin"
+              : isAdmin(user?.role)
                 ? "All Courses"
                 : "My Enrolled Courses"}
           </h2>
           <p className="text-muted-foreground">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Manage your teaching courses and student progress."
-              : user?.role === "admin"
+              : isAdmin(user?.role)
                 ? "Manage all courses across departments."
                 : "View and access your enrolled courses."}
           </p>
         </div>
-        {user?.role === "student" ? (
+        {user?.role === "STUDENT" ? (
           <Dialog open={enrollmentOpen} onOpenChange={setEnrollmentOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -820,6 +874,13 @@ const Courses = () => {
               <Settings className="mr-2 h-4 w-4" />
               Manage Department Courses
             </Button>
+            <Button
+              variant="outline"
+              onClick={() => setDepartmentCourseSelectionOpen(true)}
+            >
+              <BookOpen className="mr-2 h-4 w-4" />
+              Select Courses for Department
+            </Button>
           </div>
         ) : isSchoolAdmin(user?.role) || isSenateAdmin(user?.role) ? (
           <div className="flex gap-2">
@@ -841,9 +902,9 @@ const Courses = () => {
         ) : (
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Create Course"
-              : user?.role === "admin"
+              : isAdmin(user?.role)
                 ? "Add Course"
                 : "Enroll Course"}
           </Button>
@@ -863,9 +924,30 @@ const Courses = () => {
             <Card key={course.id} className="overflow-hidden">
               <CardHeader className="border-b bg-muted/40 p-4">
                 <div className="flex justify-between items-start">
-                  <Badge variant="outline" className="mb-2">
-                    {course.code}
-                  </Badge>
+                  <div className="flex flex-col space-y-1">
+                    <Badge variant="outline" className="mb-2">
+                      {course.code}
+                    </Badge>
+                    {user?.role === "STUDENT" && (
+                      <div className="flex space-x-1">
+                        {course.isEnrolled && (
+                          <Badge variant="default" className="text-xs">
+                            Enrolled
+                          </Badge>
+                        )}
+                        {course.isRequired && (
+                          <Badge variant="destructive" className="text-xs">
+                            Required
+                          </Badge>
+                        )}
+                        {course.category && (
+                          <Badge variant="secondary" className="text-xs">
+                            {course.category}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   <Badge
                     variant={
                       course.status === "active"
@@ -892,7 +974,7 @@ const Courses = () => {
                   <span>{course.schedule}</span>
                 </div>
 
-                {user?.role !== "admin" && course.progress !== undefined && (
+                {!isAdmin(user?.role) && course.progress !== undefined && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
                       <span>Course Progress</span>
@@ -902,7 +984,7 @@ const Courses = () => {
                   </div>
                 )}
 
-                {(user?.role === "lecturer" || user?.role === "admin") &&
+                {(user?.role === "LECTURER" || isAdmin(user?.role)) &&
                   course.students && (
                     <div className="flex items-center text-xs text-muted-foreground">
                       <Users className="h-4 w-4 mr-1" />
@@ -913,12 +995,47 @@ const Courses = () => {
 
               <CardFooter className="border-t p-4 flex justify-between">
                 <div className="flex space-x-2">
-                  <Button variant="outline" size="sm">
-                    <BookOpen className="h-4 w-4 mr-2" />
-                    {user?.role === "student" ? "View Content" : "Manage"}
-                  </Button>
-                  {user?.role === "student" && (
-                    <CourseFeedback course={course} />
+                  {user?.role === "STUDENT" ? (
+                    course.isEnrolled ? (
+                      <>
+                        <Button variant="outline" size="sm">
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          View Content
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDropCourse(course.enrollmentId)}
+                        >
+                          Drop Course
+                        </Button>
+                        <CourseFeedback course={course} />
+                      </>
+                    ) : (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleEnroll(course.id)}
+                        disabled={enrolling === course.id}
+                      >
+                        {enrolling === course.id ? (
+                          <>
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Enrolling...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Enroll
+                          </>
+                        )}
+                      </Button>
+                    )
+                  ) : (
+                    <Button variant="outline" size="sm">
+                      <BookOpen className="h-4 w-4 mr-2" />
+                      Manage
+                    </Button>
                   )}
                   {isAdmin(user?.role) && (
                     <>
@@ -940,7 +1057,7 @@ const Courses = () => {
                     </>
                   )}
                 </div>
-                {user?.role !== "admin" && (
+                {!isAdmin(user?.role) && (
                   <Button variant="ghost" size="sm">
                     <Bookmark className="h-4 w-4" />
                   </Button>
@@ -1218,6 +1335,15 @@ const Courses = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Department Course Selection Interface */}
+      <DepartmentCourseSelectionInterface
+        open={departmentCourseSelectionOpen}
+        onOpenChange={setDepartmentCourseSelectionOpen}
+        onSuccess={() => {
+          fetchStudentCourses();
+        }}
+      />
     </div>
   );
 };

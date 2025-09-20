@@ -33,11 +33,13 @@ const Dashboard = () => {
 
   const getWelcomeMessage = () => {
     switch (user?.role) {
-      case "student":
+      case "STUDENT":
         return `Welcome back, ${user.firstName}! Ready to continue your learning journey?`;
-      case "lecturer":
+      case "LECTURER":
         return `Welcome back, ${user.firstName}! Your students are waiting for new content.`;
-      case "admin":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return `Welcome back, ${user.firstName}! The platform is running smoothly.`;
       default:
         return "Welcome to the Learning Platform!";
@@ -50,7 +52,7 @@ const Dashboard = () => {
     const stats = dashboardData.stats;
 
     switch (user?.role) {
-      case "student":
+      case "STUDENT":
         return [
           {
             title: "Enrolled Courses",
@@ -95,7 +97,7 @@ const Dashboard = () => {
             trend: { value: "+12%", isPositive: true },
           },
         ];
-      case "lecturer":
+      case "LECTURER":
         return [
           {
             title: "Courses Teaching",
@@ -140,9 +142,9 @@ const Dashboard = () => {
             trend: { value: "+7", isPositive: true },
           },
         ];
-      case "department_admin":
-      case "school_admin":
-      case "senate_admin":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return [
           {
             title: "Total Users",
@@ -200,24 +202,23 @@ const Dashboard = () => {
 
     // Fallback data
     switch (user?.role) {
-      case "student":
+      case "STUDENT":
         return [
           'Completed "Introduction to Algorithms" quiz',
           'Submitted assignment for "Database Design"',
           'Joined virtual meeting for "Web Development"',
           'Downloaded lecture notes for "Data Structures"',
         ];
-      case "lecturer":
+      case "LECTURER":
         return [
           'Graded 15 assignments for "Web Development"',
           'Uploaded new lecture for "Database Systems"',
           "Scheduled virtual meeting for tomorrow",
           "Responded to 8 student questions",
         ];
-      case "admin":
-      case "department_admin":
-      case "school_admin":
-      case "senate_admin":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return [
           "Approved 3 new course registrations",
           "Reviewed system performance metrics",
@@ -297,7 +298,7 @@ const Dashboard = () => {
       </div>
 
       {/* Analytics Charts */}
-      <AnalyticsChart userRole={user?.role || "student"} />
+      <AnalyticsChart userRole={user?.role || "STUDENT"} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}
@@ -327,7 +328,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Quick Actions */}
-        <QuickActions userRole={user?.role || "student"} />
+        <QuickActions userRole={user?.role || "STUDENT"} />
       </div>
     </div>
   );

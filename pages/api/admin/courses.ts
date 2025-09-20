@@ -106,8 +106,8 @@ async function handleGet(
     });
 
     // Get departments and schools for dropdowns
-    let departments = [];
-    let schools = [];
+    let departments: any[] = [];
+    let schools: any[] = [];
 
     if (permissions.isDepartmentAdmin) {
       departments = await prisma.department.findMany({

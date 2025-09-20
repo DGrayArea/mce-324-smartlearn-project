@@ -1,5 +1,10 @@
 // Authentication and user management with localStorage
-export type UserRole = "student" | "lecturer" | "admin";
+export type UserRole =
+  | "STUDENT"
+  | "LECTURER"
+  | "DEPARTMENT_ADMIN"
+  | "SCHOOL_ADMIN"
+  | "SENATE_ADMIN";
 
 export interface User {
   id: string;
@@ -37,7 +42,7 @@ class AuthService {
           password: "password123",
           firstName: "Alice",
           lastName: "Johnson",
-          role: "student",
+          role: "STUDENT",
           department: "Computer Science",
           studentId: "CS2024001",
           isVerified: true,
@@ -49,7 +54,7 @@ class AuthService {
           password: "password123",
           firstName: "Dr. Robert",
           lastName: "Smith",
-          role: "lecturer",
+          role: "LECTURER",
           department: "Computer Science",
           staffId: "LEC001",
           isVerified: true,
@@ -61,7 +66,7 @@ class AuthService {
           password: "password123",
           firstName: "Sarah",
           lastName: "Wilson",
-          role: "admin",
+          role: "DEPARTMENT_ADMIN",
           staffId: "ADM001",
           isVerified: true,
           createdAt: new Date().toISOString(),

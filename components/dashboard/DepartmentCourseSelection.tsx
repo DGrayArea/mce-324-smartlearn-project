@@ -128,7 +128,20 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
     }
   };
 
-  const handleRemoveCourse = async (courseId: string) => {
+  const handleRemoveCourse = async (
+    courseId: string,
+    isOwnCourse: boolean = false
+  ) => {
+    if (isOwnCourse) {
+      toast({
+        title: "Cannot Remove",
+        description:
+          "This course belongs to your department by default and cannot be removed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (
       !confirm(
         "Are you sure you want to remove this course from your department?"
@@ -243,12 +256,23 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
     const matchesSearch =
       course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesLevel = !levelFilter || course.level === levelFilter;
-    const matchesType = !typeFilter || course.type === typeFilter;
+    const matchesLevel =
+      !levelFilter || levelFilter === "all" || course.level === levelFilter;
+    const matchesType =
+      !typeFilter || typeFilter === "all" || course.type === typeFilter;
     const matchesSemester =
-      !semesterFilter || course.semester === semesterFilter;
+      !semesterFilter ||
+      semesterFilter === "all" ||
+      course.semester === semesterFilter;
+    const notSelected = !course.isSelected; // This will filter out courses that are already selected
 
-    return matchesSearch && matchesLevel && matchesType && matchesSemester;
+    return (
+      matchesSearch &&
+      matchesLevel &&
+      matchesType &&
+      matchesSemester &&
+      notSelected
+    );
   });
 
   const getLevelColor = (level: string) => {
@@ -309,7 +333,7 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
                     <SelectValue placeholder="All levels" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All levels</SelectItem>
+                    <SelectItem value="all">All levels</SelectItem>
                     <SelectItem value="LEVEL_100">100 Level</SelectItem>
                     <SelectItem value="LEVEL_200">200 Level</SelectItem>
                     <SelectItem value="LEVEL_300">300 Level</SelectItem>
@@ -326,7 +350,7 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
                     <SelectValue placeholder="All types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All types</SelectItem>
+                    <SelectItem value="all">All types</SelectItem>
                     <SelectItem value="DEPARTMENTAL">Departmental</SelectItem>
                     <SelectItem value="FACULTY">Faculty</SelectItem>
                     <SelectItem value="GENERAL">General</SelectItem>
@@ -344,7 +368,7 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
                     <SelectValue placeholder="All semesters" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All semesters</SelectItem>
+                    <SelectItem value="all">All semesters</SelectItem>
                     <SelectItem value="FIRST">First Semester</SelectItem>
                     <SelectItem value="SECOND">Second Semester</SelectItem>
                   </SelectContent>
@@ -359,49 +383,74 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
                   Selected Courses ({selectedCourses.length})
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {selectedCourses.map((dc) => (
-                    <Card
-                      key={dc.id}
-                      className="border-green-200 bg-green-50/50"
-                    >
-                      <CardHeader className="pb-3">
-                        <div className="flex justify-between items-start">
-                          <Badge className={getLevelColor(dc.course.level)}>
-                            {dc.course.level.replace("LEVEL_", "")}L
-                          </Badge>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleRemoveCourse(dc.courseId)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <CardTitle className="text-lg">
-                          {dc.course.title}
-                        </CardTitle>
-                        <CardDescription>
-                          {dc.course.code} • {dc.course.creditUnit} Credits
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge
-                              variant={dc.isRequired ? "default" : "secondary"}
-                            >
-                              {dc.isRequired ? "Required" : "Elective"}
-                            </Badge>
-                            <Badge variant="outline">{dc.course.type}</Badge>
+                  {selectedCourses.map((dc) => {
+                    const isOwnCourse = dc.id.startsWith("own-");
+                    return (
+                      <Card
+                        key={dc.id}
+                        className={`${isOwnCourse ? "border-blue-200 bg-blue-50/50" : "border-green-200 bg-green-50/50"}`}
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex space-x-2">
+                              <Badge className={getLevelColor(dc.course.level)}>
+                                {dc.course.level.replace("LEVEL_", "")}L
+                              </Badge>
+                              {isOwnCourse && (
+                                <Badge
+                                  variant="outline"
+                                  className="bg-blue-100 text-blue-800"
+                                >
+                                  Department Course
+                                </Badge>
+                              )}
+                            </div>
+                            {!isOwnCourse && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() =>
+                                  handleRemoveCourse(dc.courseId, isOwnCourse)
+                                }
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Users className="h-4 w-4 mr-1" />
-                            {dc.course.studentCount} students
+                          <CardTitle className="text-lg">
+                            {dc.course.title}
+                          </CardTitle>
+                          <CardDescription>
+                            {dc.course.code} • {dc.course.creditUnit} Credits
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex items-center space-x-2">
+                              <Badge
+                                variant={
+                                  dc.isRequired ? "default" : "secondary"
+                                }
+                              >
+                                {dc.isRequired ? "Required" : "Elective"}
+                              </Badge>
+                              <Badge variant="outline">{dc.course.type}</Badge>
+                            </div>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <Users className="h-4 w-4 mr-1" />
+                              {dc.course.studentCount} students
+                            </div>
+                            {isOwnCourse && (
+                              <div className="text-xs text-blue-600 font-medium">
+                                This course belongs to your department by
+                                default
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             )}

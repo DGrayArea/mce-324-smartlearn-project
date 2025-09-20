@@ -28,6 +28,17 @@ export const LoginForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form fields
+    if (!email || !password) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter both email and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -62,24 +73,39 @@ export const LoginForm = () => {
     }
   };
 
-  const handleDummyLogin = async (role: string) => {
+  const handleDummyLogin = async (email: string, password: string) => {
+    // Validate credentials
+    if (!email || !password) {
+      toast({
+        title: "Login Error",
+        description: "Email and password are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Use dummy authentication for demo buttons
-      const dummyResult = await login(email, password);
-      if (dummyResult.success) {
+      // Use NextAuth for quick login buttons with real credentials
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast({
+          title: "Login failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else if (result?.ok) {
         toast({
           title: "Login successful",
           description: "Welcome back to the learning platform!",
         });
         router.push("/dashboard");
-      } else {
-        toast({
-          title: "Login failed",
-          description: dummyResult.error,
-          variant: "destructive",
-        });
       }
     } catch (error) {
       toast({
@@ -92,21 +118,36 @@ export const LoginForm = () => {
     }
   };
 
-  const fillDemoCredentials = (role: string) => {
+  const fillDemoCredentials = async (role: string) => {
+    let email = "";
+    let password = "password123";
+
     switch (role) {
-      case "student":
-        setEmail("student@demo.com");
-        setPassword("password123");
+      case "STUDENT":
+        email = "mce.student1@university.edu";
         break;
-      case "lecturer":
-        setEmail("lecturer@demo.com");
-        setPassword("password123");
+      case "LECTURER":
+        email = "mce.lecturer1@university.edu";
         break;
-      case "admin":
-        setEmail("admin@demo.com");
-        setPassword("password123");
+      case "DEPARTMENT_ADMIN":
+        email = "mce.admin@university.edu";
+        break;
+      case "SCHOOL_ADMIN":
+        email = "seet.admin@university.edu";
+        break;
+      case "SENATE_ADMIN":
+        email = "senate.admin@university.edu";
         break;
     }
+
+    // Set the state to populate the form fields
+    setEmail(email);
+    setPassword(password);
+
+    // Use a small delay to ensure state is updated before login
+    setTimeout(async () => {
+      await handleDummyLogin(email, password);
+    }, 100);
   };
 
   return (
@@ -140,7 +181,6 @@ export const LoginForm = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="pl-10"
-                    required
                   />
                 </div>
               </div>
@@ -156,7 +196,6 @@ export const LoginForm = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className="pl-10 pr-10"
-                    required
                   />
                   <Button
                     type="button"
@@ -194,17 +233,14 @@ export const LoginForm = () => {
 
             <div className="space-y-3">
               <div className="text-center text-sm text-muted-foreground">
-                Demo Accounts (click to auto-fill & login)
+                Quick Login (click to auto-fill & login)
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    fillDemoCredentials("student");
-                    setTimeout(() => handleDummyLogin("student"), 100);
-                  }}
+                  onClick={() => fillDemoCredentials("STUDENT")}
                   className="text-xs"
                   disabled={isLoading}
                 >
@@ -214,10 +250,7 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    fillDemoCredentials("lecturer");
-                    setTimeout(() => handleDummyLogin("lecturer"), 100);
-                  }}
+                  onClick={() => fillDemoCredentials("lecturer")}
                   className="text-xs"
                   disabled={isLoading}
                 >
@@ -227,14 +260,31 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    fillDemoCredentials("admin");
-                    setTimeout(() => handleDummyLogin("admin"), 100);
-                  }}
+                  onClick={() => fillDemoCredentials("department_admin")}
                   className="text-xs"
                   disabled={isLoading}
                 >
-                  Admin
+                  Dept Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoCredentials("school_admin")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  School Admin
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fillDemoCredentials("senate_admin")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  Senate Admin
                 </Button>
               </div>
             </div>

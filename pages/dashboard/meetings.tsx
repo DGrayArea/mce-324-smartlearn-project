@@ -449,7 +449,7 @@ const Meetings = () => {
 
   const canManageMeeting = (meeting: MeetingWithCourse) => {
     return (
-      user?.role === "lecturer" &&
+      user?.role === "LECTURER" &&
       meeting.createdBy === `${user.firstName} ${user.lastName}`
     );
   };
@@ -464,12 +464,12 @@ const Meetings = () => {
             Virtual Meetings
           </h2>
           <p className="text-muted-foreground">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Schedule and manage your virtual classes and meetings."
               : "Join your scheduled lectures and meetings."}
           </p>
         </div>
-        {user?.role === "lecturer" && (
+        {user?.role === "LECTURER" && (
           <Dialog
             open={isCreateMeetingOpen}
             onOpenChange={setIsCreateMeetingOpen}
@@ -749,7 +749,7 @@ const Meetings = () => {
                   <div className="border-t p-4 flex justify-between">
                     {meeting.status === "scheduled" && meeting.link ? (
                       <div className="flex space-x-2 w-full">
-                        {!isJoined && user?.role === "student" && (
+                        {!isJoined && user?.role === "STUDENT" && (
                           <Button
                             className="flex-1"
                             onClick={() => handleJoinMeeting(meeting)}

@@ -61,11 +61,11 @@ export const DashboardLayout = ({
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "student":
+      case "STUDENT":
         return "bg-gradient-student";
-      case "lecturer":
+      case "LECTURER":
         return "bg-gradient-lecturer";
-      case "admin":
+      case "ADMIN":
         return "bg-gradient-admin";
       default:
         return "bg-gradient-primary";

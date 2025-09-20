@@ -28,6 +28,13 @@ interface QuickActionsProps {
   userRole: UserRole;
 }
 
+// Helper function to check admin roles
+const isAdmin = (role: string | undefined) => {
+  if (!role) return false;
+  const adminRoles = ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"];
+  return adminRoles.includes(role);
+};
+
 export const QuickActions: React.FC<QuickActionsProps> = ({ userRole }) => {
   const { toast } = useToast();
   const router = useRouter();
@@ -286,16 +293,16 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ userRole }) => {
       <CardHeader>
         <CardTitle>Quick Actions</CardTitle>
         <CardDescription>
-          {userRole === "student" && "Access your learning tools and resources"}
-          {userRole === "lecturer" &&
+          {userRole === "STUDENT" && "Access your learning tools and resources"}
+          {userRole === "LECTURER" &&
             "Manage your courses and students efficiently"}
-          {userRole === "admin" && "System administration and management tools"}
+          {isAdmin(userRole) && "System administration and management tools"}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {userRole === "student" && renderStudentActions()}
-        {userRole === "lecturer" && renderLecturerActions()}
-        {userRole === "admin" && renderAdminActions()}
+        {userRole === "STUDENT" && renderStudentActions()}
+        {userRole === "LECTURER" && renderLecturerActions()}
+        {isAdmin(userRole) && renderAdminActions()}
       </CardContent>
     </Card>
   );

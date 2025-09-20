@@ -528,7 +528,7 @@ const Chatrooms = () => {
       setAvailableUsers(getUsersForCourse(room.course));
     } else {
       setAvailableUsers(
-        allUsers.filter((u) => u.role === "student" || u.role === "lecturer")
+        allUsers.filter((u) => u.role === "STUDENT" || u.role === "LECTURER")
       );
     }
     setIsManageMembersOpen(true);

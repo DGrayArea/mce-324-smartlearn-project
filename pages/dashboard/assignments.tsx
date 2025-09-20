@@ -28,7 +28,7 @@ const Assignments = () => {
   const { toast } = useToast();
 
   const assignments =
-    user?.role === "lecturer" ? lecturerAssignments : studentAssignments;
+    user?.role === "LECTURER" ? lecturerAssignments : studentAssignments;
 
   const handleCreateAssignment = () => {
     toast({
@@ -70,17 +70,17 @@ const Assignments = () => {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Course Assignments"
               : "My Assignments"}
           </h2>
           <p className="text-muted-foreground">
-            {user?.role === "lecturer"
+            {user?.role === "LECTURER"
               ? "Manage assignments and review student submissions."
               : "View and submit your course assignments."}
           </p>
         </div>
-        {user?.role === "lecturer" && (
+        {user?.role === "LECTURER" && (
           <Button onClick={handleCreateAssignment}>
             <Plus className="mr-2 h-4 w-4" />
             Create Assignment
@@ -152,7 +152,7 @@ const Assignments = () => {
             </CardContent>
 
             <div className="border-t p-4 flex justify-between">
-              {user?.role === "student" ? (
+              {user?.role === "STUDENT" ? (
                 <>
                   <Button
                     variant="outline"

@@ -32,9 +32,9 @@ export const useDashboardData = () => {
         const role = user.role?.toLowerCase();
 
         // Handle both uppercase and lowercase role formats from database
-        if (role === "student") {
+        if (role === "STUDENT") {
           endpoint = "/api/dashboard/student";
-        } else if (role === "lecturer") {
+        } else if (role === "LECTURER") {
           endpoint = "/api/dashboard/lecturer";
         } else if (
           role === "department_admin" ||
@@ -92,7 +92,7 @@ export const useDashboardData = () => {
 const getFallbackData = (role: string): DashboardData => {
   const normalizedRole = role?.toLowerCase();
 
-  if (normalizedRole === "student") {
+  if (normalizedRole === "STUDENT") {
     return {
       stats: {
         enrolledCourses: 6,

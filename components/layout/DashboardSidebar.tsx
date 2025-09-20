@@ -33,7 +33,7 @@ const navigationItems: NavItem[] = [
     href: "/dashboard",
     icon: Home,
     roles: [
-      "student",
+      "STUDENT",
       "lecturer",
       "faculty_admin",
       "department_admin",
@@ -44,7 +44,7 @@ const navigationItems: NavItem[] = [
     title: "My Courses",
     href: "/dashboard/courses",
     icon: BookOpen,
-    roles: ["student", "lecturer"],
+    roles: ["STUDENT", "LECTURER"],
   },
   {
     title: "Course Management",
@@ -56,25 +56,25 @@ const navigationItems: NavItem[] = [
     title: "Assignments",
     href: "/dashboard/assignments",
     icon: FileText,
-    roles: ["student", "lecturer"],
+    roles: ["STUDENT", "LECTURER"],
   },
   {
     title: "Virtual Meetings",
     href: "/dashboard/meetings",
     icon: Video,
-    roles: ["student", "lecturer"],
+    roles: ["STUDENT", "LECTURER"],
   },
   {
     title: "Messages & Forums",
     href: "/dashboard/messages",
     icon: MessageSquare,
-    roles: ["student", "lecturer"],
+    roles: ["STUDENT", "LECTURER"],
   },
   {
     title: "Grades & Results",
     href: "/dashboard/grades",
     icon: Award,
-    roles: ["student", "lecturer"],
+    roles: ["STUDENT", "LECTURER"],
   },
   {
     title: "Content Library",
@@ -111,7 +111,7 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/calendar",
     icon: Calendar,
     roles: [
-      "student",
+      "STUDENT",
       "lecturer",
       "faculty_admin",
       "department_admin",
@@ -123,7 +123,7 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/support",
     icon: HelpCircle,
     roles: [
-      "student",
+      "STUDENT",
       "lecturer",
       "faculty_admin",
       "department_admin",
@@ -135,7 +135,7 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/notifications",
     icon: Bell,
     roles: [
-      "student",
+      "STUDENT",
       "lecturer",
       "faculty_admin",
       "department_admin",
@@ -147,7 +147,7 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/chatrooms",
     icon: MessageSquare,
     roles: [
-      "student",
+      "STUDENT",
       "lecturer",
       "faculty_admin",
       "department_admin",
@@ -167,11 +167,11 @@ export const DashboardSidebar = () => {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case "student":
+      case "STUDENT":
         return "text-student";
-      case "lecturer":
+      case "LECTURER":
         return "text-lecturer";
-      case "admin":
+      case "ADMIN":
         return "text-admin";
       default:
         return "text-primary";
@@ -180,11 +180,11 @@ export const DashboardSidebar = () => {
 
   const getRoleBg = (role: string) => {
     switch (role) {
-      case "student":
+      case "STUDENT":
         return "bg-student/10";
-      case "lecturer":
+      case "LECTURER":
         return "bg-lecturer/10";
-      case "admin":
+      case "ADMIN":
         return "bg-admin/10";
       default:
         return "bg-primary/10";

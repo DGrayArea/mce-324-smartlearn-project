@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
                 userData?.lastName ||
                 session.user.name?.split(" ").slice(1).join(" ") ||
                 "",
-              role: userData?.role || session.user.role || "student",
+              role: userData?.role || session.user.role || "STUDENT",
               department: userData?.department || "",
               studentId: userData?.studentId,
               staffId: userData?.staffId,
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
               password: "",
               firstName: session.user?.name?.split(" ")[0] || "User",
               lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
-              role: (session.user?.role as any) || "student",
+              role: (session.user?.role as any) || "STUDENT",
               department: "",
               isActive: session.user?.isActive ?? true,
               isVerified: true,
@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
             password: "",
             firstName: session.user?.name?.split(" ")[0] || "User",
             lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
-            role: (session.user?.role as any) || "student",
+            role: (session.user?.role as any) || "STUDENT",
             department: "",
             isActive: session.user?.isActive ?? true,
             isVerified: true,

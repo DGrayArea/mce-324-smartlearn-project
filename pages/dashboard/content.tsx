@@ -111,6 +111,13 @@ const contentLibrary: ContentItem[] = [
   },
 ];
 
+// Helper function to check admin roles
+const isAdmin = (role: string | undefined) => {
+  if (!role) return false;
+  const adminRoles = ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"];
+  return adminRoles.includes(role);
+};
+
 const ContentLibrary = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -221,7 +228,7 @@ const ContentLibrary = () => {
             Access and manage course materials, resources, and assignments.
           </p>
         </div>
-        {(user?.role === "lecturer" || user?.role === "admin") && (
+        {(user?.role === "LECTURER" || isAdmin(user?.role)) && (
           <Dialog open={isUploadOpen} onOpenChange={setIsUploadOpen}>
             <DialogTrigger asChild>
               <Button>

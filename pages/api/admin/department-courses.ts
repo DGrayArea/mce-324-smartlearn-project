@@ -74,7 +74,7 @@ async function handleGet(
       orderBy: [{ type: "asc" }, { level: "asc" }, { code: "asc" }],
     });
 
-    // Get department's selected courses
+    // Get department's selected courses (explicitly selected by admin)
     const departmentCourses = await prisma.departmentCourse.findMany({
       where: { departmentId },
       include: {
@@ -99,13 +99,36 @@ async function handleGet(
       orderBy: { course: { level: "asc" } },
     });
 
+    // Get courses that belong to this department by default (created under this department)
+    const departmentOwnCourses = await prisma.course.findMany({
+      where: {
+        isActive: true,
+        departmentId: departmentId,
+      },
+      include: {
+        department: {
+          select: { name: true, code: true },
+        },
+        school: {
+          select: { name: true, code: true },
+        },
+        _count: {
+          select: {
+            enrollments: {
+              where: { isActive: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ level: "asc" }, { code: "asc" }],
+    });
+
     // Get department's lecturers for assignment
     const lecturers = await prisma.lecturer.findMany({
       where: { departmentId },
       select: {
         id: true,
         name: true,
-        email: true,
         _count: {
           select: {
             courseAssignments: {
@@ -133,6 +156,68 @@ async function handleGet(
       },
     });
 
+    // Combine department's own courses with explicitly selected courses
+    const allSelectedCourseIds = new Set([
+      ...departmentOwnCourses.map((c) => c.id),
+      ...departmentCourses.map((dc) => dc.courseId),
+    ]);
+
+    // Create a map of explicitly selected courses for easy lookup
+    const selectedCoursesMap = new Map();
+    departmentCourses.forEach((dc) => {
+      selectedCoursesMap.set(dc.courseId, dc);
+    });
+
+    // Transform department's own courses to match the expected format
+    const departmentOwnCoursesFormatted = departmentOwnCourses.map(
+      (course) => ({
+        id: `own-${course.id}`, // Use a different ID to distinguish from explicitly selected
+        courseId: course.id,
+        isRequired: true, // Department's own courses are required by default
+        level: course.level,
+        course: {
+          id: course.id,
+          title: course.title,
+          code: course.code,
+          creditUnit: course.creditUnit,
+          description: course.description,
+          type: course.type,
+          level: course.level,
+          semester: course.semester,
+          department: course.department,
+          school: course.school,
+          studentCount: course._count.enrollments,
+        },
+      })
+    );
+
+    // Transform explicitly selected courses
+    const selectedCoursesFormatted = departmentCourses.map((dc) => ({
+      id: dc.id,
+      courseId: dc.courseId,
+      isRequired: dc.isRequired,
+      level: dc.course.level,
+      course: {
+        id: dc.course.id,
+        title: dc.course.title,
+        code: dc.course.code,
+        creditUnit: dc.course.creditUnit,
+        description: dc.course.description,
+        type: dc.course.type,
+        level: dc.course.level,
+        semester: dc.course.semester,
+        department: dc.course.department,
+        school: dc.course.school,
+        studentCount: dc.course._count.enrollments,
+      },
+    }));
+
+    // Combine all selected courses (own + explicitly selected)
+    const allSelectedCourses = [
+      ...departmentOwnCoursesFormatted,
+      ...selectedCoursesFormatted,
+    ];
+
     return res.status(200).json({
       allCourses: allCourses.map((course) => ({
         id: course.id,
@@ -146,27 +231,10 @@ async function handleGet(
         department: course.department,
         school: course.school,
         studentCount: course._count.enrollments,
-        isSelected: departmentCourses.some((dc) => dc.courseId === course.id),
+        isSelected: allSelectedCourseIds.has(course.id),
+        isOwnCourse: course.departmentId === departmentId, // Mark if it's the department's own course
       })),
-      selectedCourses: departmentCourses.map((dc) => ({
-        id: dc.id,
-        courseId: dc.courseId,
-        isRequired: dc.isRequired,
-        level: dc.level,
-        course: {
-          id: dc.course.id,
-          title: dc.course.title,
-          code: dc.course.code,
-          creditUnit: dc.course.creditUnit,
-          description: dc.course.description,
-          type: dc.course.type,
-          level: dc.course.level,
-          semester: dc.course.semester,
-          department: dc.course.department,
-          school: dc.course.school,
-          studentCount: dc.course._count.enrollments,
-        },
-      })),
+      selectedCourses: allSelectedCourses,
       lecturers,
       assignments,
     });
@@ -225,7 +293,6 @@ async function handlePost(
         where: { id: existingSelection.id },
         data: {
           isRequired: isRequired ?? existingSelection.isRequired,
-          level: level ?? existingSelection.level,
         },
         include: {
           course: {
@@ -248,7 +315,6 @@ async function handlePost(
           departmentId,
           courseId,
           isRequired: isRequired ?? false,
-          level: level ?? course.level,
         },
         include: {
           course: {

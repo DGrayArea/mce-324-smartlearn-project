@@ -60,7 +60,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "student" | "lecturer" | "admin";
+  role: "STUDENT" | "LECTURER" | "ADMIN";
   department: string;
   avatar?: string;
   status: "active" | "inactive" | "suspended";
@@ -344,7 +344,7 @@ export const allUsers: User[] = [
     id: "1",
     name: "Alice Johnson",
     email: "alice@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 14:30",
@@ -363,7 +363,7 @@ export const allUsers: User[] = [
     id: "2",
     name: "Bob Smith",
     email: "bob@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 15:45",
@@ -382,7 +382,7 @@ export const allUsers: User[] = [
     id: "3",
     name: "Charlie Brown",
     email: "charlie@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 16:20",
@@ -401,7 +401,7 @@ export const allUsers: User[] = [
     id: "4",
     name: "David Wilson",
     email: "david@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 13:15",
@@ -420,7 +420,7 @@ export const allUsers: User[] = [
     id: "5",
     name: "Emma Davis",
     email: "emma@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 17:30",
@@ -438,7 +438,7 @@ export const allUsers: User[] = [
     id: "6",
     name: "Frank Miller",
     email: "frank@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 12:45",
@@ -448,7 +448,7 @@ export const allUsers: User[] = [
     id: "7",
     name: "Grace Lee",
     email: "grace@university.edu",
-    role: "student",
+    role: "STUDENT",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 14:20",
@@ -458,7 +458,7 @@ export const allUsers: User[] = [
     id: "8",
     name: "Dr. Robert Smith",
     email: "robert@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 09:15",
@@ -468,7 +468,7 @@ export const allUsers: User[] = [
     id: "9",
     name: "Dr. Emily Johnson",
     email: "emily@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 10:30",
@@ -478,7 +478,7 @@ export const allUsers: User[] = [
     id: "10",
     name: "Dr. Michael Brown",
     email: "michael@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 11:45",
@@ -488,7 +488,7 @@ export const allUsers: User[] = [
     id: "11",
     name: "Dr. Sarah Wilson",
     email: "sarah@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 16:45",
@@ -498,7 +498,7 @@ export const allUsers: User[] = [
     id: "12",
     name: "Dr. James Davis",
     email: "james@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 08:30",
@@ -508,7 +508,7 @@ export const allUsers: User[] = [
     id: "13",
     name: "Dr. Jennifer Wilson",
     email: "jennifer@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 14:15",
@@ -518,7 +518,7 @@ export const allUsers: User[] = [
     id: "14",
     name: "Dr. Robert Chen",
     email: "robert.chen@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 13:45",
@@ -528,7 +528,7 @@ export const allUsers: User[] = [
     id: "15",
     name: "Mike Chen",
     email: "mike@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 15:20",
@@ -538,7 +538,7 @@ export const allUsers: User[] = [
     id: "16",
     name: "Lisa Wang",
     email: "lisa@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 12:30",
@@ -548,7 +548,7 @@ export const allUsers: User[] = [
     id: "17",
     name: "Alex Rodriguez",
     email: "alex@university.edu",
-    role: "lecturer",
+    role: "LECTURER",
     department: "Computer Science",
     status: "active",
     lastLogin: "2024-01-20 16:10",
@@ -558,7 +558,7 @@ export const allUsers: User[] = [
     id: "18",
     name: "Admin User",
     email: "admin@university.edu",
-    role: "admin",
+    role: "ADMIN",
     department: "Administration",
     status: "active",
     lastLogin: "2024-01-20 17:00",
@@ -708,7 +708,7 @@ export const getCoursesForUser = (
   userRole: string,
   userName: string
 ): Course[] => {
-  if (userRole === "student") {
+  if (userRole === "STUDENT") {
     const user = allUsers.find((u) => u.name === userName);
     if (user?.enrolledCourses) {
       return allCourses.filter((course) =>
@@ -716,7 +716,7 @@ export const getCoursesForUser = (
       );
     }
     return studentCourses;
-  } else if (userRole === "lecturer") {
+  } else if (userRole === "LECTURER") {
     const user = allUsers.find((u) => u.name === userName);
     if (user?.teachingCourses) {
       return allCourses.filter((course) =>
@@ -733,9 +733,9 @@ export const getUsersForCourse = (courseCode: string): User[] => {
   if (!course) return [];
 
   return allUsers.filter((user) => {
-    if (user.role === "student") {
+    if (user.role === "STUDENT") {
       return user.enrolledCourses?.includes(courseCode);
-    } else if (user.role === "lecturer") {
+    } else if (user.role === "LECTURER") {
       return (
         user.teachingCourses?.includes(courseCode) ||
         course.teachingAssistants?.includes(user.name)

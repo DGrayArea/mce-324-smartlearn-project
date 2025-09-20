@@ -81,8 +81,8 @@ export const RegisterForm = () => {
         password: formData.password,
         role: formData.role as UserRole,
         department: formData.department,
-        ...(formData.role === "student" && { studentId: formData.studentId }),
-        ...(formData.role !== "student" && { staffId: formData.staffId }),
+        ...(formData.role === "STUDENT" && { studentId: formData.studentId }),
+        ...(formData.role !== "STUDENT" && { staffId: formData.staffId }),
       };
 
       const result = await register(userData);
@@ -194,9 +194,9 @@ export const RegisterForm = () => {
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="lecturer">Lecturer</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="STUDENT">Student</SelectItem>
+                    <SelectItem value="LECTURER">Lecturer</SelectItem>
+                    <SelectItem value="ADMIN">Admin</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -225,7 +225,7 @@ export const RegisterForm = () => {
                 </div>
               </div>
 
-              {formData.role === "student" && (
+              {formData.role === "STUDENT" && (
                 <div className="space-y-2">
                   <Label htmlFor="studentId">Student ID</Label>
                   <Input
@@ -240,7 +240,7 @@ export const RegisterForm = () => {
                 </div>
               )}
 
-              {formData.role && formData.role !== "student" && (
+              {formData.role && formData.role !== "STUDENT" && (
                 <div className="space-y-2">
                   <Label htmlFor="staffId">Staff ID</Label>
                   <Input

@@ -30,7 +30,7 @@ const Profile = () => {
 
   const getProfileData = () => {
     switch (user?.role) {
-      case "student":
+      case "STUDENT":
         return {
           achievements: [
             { title: "Dean's List", description: "Fall 2023", icon: Award },
@@ -58,7 +58,7 @@ const Profile = () => {
             advisor: "Dr. Robert Smith",
           },
         };
-      case "lecturer":
+      case "LECTURER":
         return {
           achievements: [
             {
@@ -90,7 +90,9 @@ const Profile = () => {
             researchArea: "Database Systems & Machine Learning",
           },
         };
-      case "admin":
+      case "DEPARTMENT_ADMIN":
+      case "SCHOOL_ADMIN":
+      case "SENATE_ADMIN":
         return {
           achievements: [
             {
