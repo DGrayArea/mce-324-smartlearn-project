@@ -182,7 +182,10 @@ export const authOptions: NextAuthOptions = {
       return `${baseUrl}/dashboard`;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || "fallback-secret-for-development",
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    process.env.AUTH_SECRET ||
+    "fallback-secret-for-development",
   debug: process.env.NODE_ENV === "development",
   // SSR configuration
   session: {
@@ -204,6 +207,8 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
+  // Add these for better session persistence
+  useSecureCookies: process.env.NODE_ENV === "production",
 };
 
 export default NextAuth(authOptions);
