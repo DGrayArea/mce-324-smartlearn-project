@@ -18,21 +18,47 @@ export default async function handler(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get user with admin profile
+    // Get user with admin profile - optimized query
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: {
-        senateAdmin: true,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        senateAdmin: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         schoolAdmin: {
-          include: {
-            school: true,
+          select: {
+            id: true,
+            name: true,
+            schoolId: true,
+            school: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
           },
         },
         departmentAdmin: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            departmentId: true,
             department: {
-              include: {
-                school: true,
+              select: {
+                name: true,
+                code: true,
+                school: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
               },
             },
           },

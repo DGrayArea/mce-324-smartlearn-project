@@ -59,40 +59,81 @@ export default async function handler(
 
         users = await prisma.user.findMany({
           where: whereClause,
-          include: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
             student: {
-              include: {
+              select: {
+                name: true,
+                level: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             lecturer: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             departmentAdmin: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             schoolAdmin: {
-              include: {
-                school: true,
+              select: {
+                name: true,
+                school: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
               },
             },
-            senateAdmin: true,
+            senateAdmin: {
+              select: {
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         });
@@ -108,40 +149,81 @@ export default async function handler(
               { schoolAdmin: { schoolId } },
             ],
           },
-          include: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
             student: {
-              include: {
+              select: {
+                name: true,
+                level: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             lecturer: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             departmentAdmin: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             schoolAdmin: {
-              include: {
-                school: true,
+              select: {
+                name: true,
+                school: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
               },
             },
-            senateAdmin: true,
+            senateAdmin: {
+              select: {
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         });
@@ -157,40 +239,81 @@ export default async function handler(
               { departmentAdmin: { departmentId } },
             ],
           },
-          include: {
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
             student: {
-              include: {
+              select: {
+                name: true,
+                level: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             lecturer: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             departmentAdmin: {
-              include: {
+              select: {
+                name: true,
                 department: {
-                  include: {
-                    school: true,
+                  select: {
+                    name: true,
+                    code: true,
+                    school: {
+                      select: {
+                        name: true,
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
             },
             schoolAdmin: {
-              include: {
-                school: true,
+              select: {
+                name: true,
+                school: {
+                  select: {
+                    name: true,
+                    code: true,
+                  },
+                },
               },
             },
-            senateAdmin: true,
+            senateAdmin: {
+              select: {
+                name: true,
+              },
+            },
           },
           orderBy: { createdAt: "desc" },
         });

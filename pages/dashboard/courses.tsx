@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { studentCourses, lecturerCourses, allCourses } from "@/lib/dummyData";
 import {
@@ -38,6 +39,8 @@ import {
   UserCheck,
   Settings,
   Database,
+  FileText,
+  Award,
 } from "lucide-react";
 import CourseFeedback from "@/components/dashboard/CourseFeedback";
 import CourseForm from "@/components/dashboard/CourseForm";
@@ -47,6 +50,7 @@ import { withDashboardLayout } from "@/lib/layoutWrappers";
 import { useToast } from "@/hooks/use-toast";
 
 const Courses = () => {
+  const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
   const [courses, setCourses] = useState<any[]>([]);
@@ -113,10 +117,22 @@ const Courses = () => {
     return role === "SENATE_ADMIN" || role === "senate_admin";
   };
 
-  // Fetch real courses for students and admins, use dummy data for lecturers
+  // Fetch real courses for students, lecturers, and admins
   const fetchStudentCourses = async () => {
     if (user?.role === "LECTURER") {
-      setCourses(getCourses());
+      try {
+        const response = await fetch("/api/lecturer/courses");
+        if (response.ok) {
+          const data = await response.json();
+          setCourses(data.courses || []);
+        } else {
+          // Fallback to dummy data
+          setCourses(getCourses());
+        }
+      } catch (error) {
+        console.error("Error fetching lecturer courses:", error);
+        setCourses(getCourses());
+      }
       setLoading(false);
       return;
     }
@@ -556,132 +572,142 @@ const Courses = () => {
           </p>
         </div>
         {user?.role === "STUDENT" ? (
-          <Dialog open={enrollmentOpen} onOpenChange={setEnrollmentOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Enroll Course
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Enroll in Courses</DialogTitle>
-                <DialogDescription>
-                  Browse and enroll in available courses for the selected
-                  academic period.
-                </DialogDescription>
-              </DialogHeader>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => router.push("/dashboard/student/course-selection")}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Course Selection
+            </Button>
+            <Dialog open={enrollmentOpen} onOpenChange={setEnrollmentOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Quick Enroll
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Enroll in Courses</DialogTitle>
+                  <DialogDescription>
+                    Browse and enroll in available courses for the selected
+                    academic period.
+                  </DialogDescription>
+                </DialogHeader>
 
-              <div className="space-y-4">
-                {/* Academic Period Selection */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="academicYear">Academic Year</Label>
-                    <Select
-                      value={academicYear}
-                      onValueChange={setAcademicYear}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select academic year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2024/2025">2024/2025</SelectItem>
-                        <SelectItem value="2023/2024">2023/2024</SelectItem>
-                        <SelectItem value="2025/2026">2025/2026</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="semester">Semester</Label>
-                    <Select value={semester} onValueChange={setSemester}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="FIRST">First Semester</SelectItem>
-                        <SelectItem value="SECOND">Second Semester</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Available Courses */}
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold">
-                    Available Courses ({availableCourses.length})
-                  </h3>
-
-                  {availableCourses.length === 0 ? (
-                    <div className="text-center py-8">
-                      <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <p className="text-muted-foreground">
-                        No available courses found
-                      </p>
+                  {/* Academic Period Selection */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="academicYear">Academic Year</Label>
+                      <Select
+                        value={academicYear}
+                        onValueChange={setAcademicYear}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select academic year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2024/2025">2024/2025</SelectItem>
+                          <SelectItem value="2023/2024">2023/2024</SelectItem>
+                          <SelectItem value="2025/2026">2025/2026</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {availableCourses.map((course) => (
-                        <Card key={course.id} className="relative">
-                          <CardHeader className="pb-3">
-                            <div className="flex justify-between items-start">
-                              <Badge variant="outline" className="mb-2">
-                                {course.code}
-                              </Badge>
-                              <Badge variant="secondary">
-                                {course.creditUnit} Credits
-                              </Badge>
-                            </div>
-                            <CardTitle className="text-lg">
-                              {course.title}
-                            </CardTitle>
-                            <CardDescription>
-                              {course.department?.name} • {course.type}
-                            </CardDescription>
-                          </CardHeader>
-
-                          <CardContent className="space-y-3">
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {course.description}
-                            </p>
-
-                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                              <div className="flex items-center">
-                                <Users className="h-4 w-4 mr-1" />
-                                <span>{course.enrolledCount} enrolled</span>
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-1" />
-                                <span>{course.semester}</span>
-                              </div>
-                            </div>
-
-                            <Button
-                              onClick={() => handleEnroll(course.id)}
-                              disabled={enrolling === course.id}
-                              className="w-full"
-                              size="sm"
-                            >
-                              {enrolling === course.id ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                  Enrolling...
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Enroll
-                                </>
-                              )}
-                            </Button>
-                          </CardContent>
-                        </Card>
-                      ))}
+                    <div className="space-y-2">
+                      <Label htmlFor="semester">Semester</Label>
+                      <Select value={semester} onValueChange={setSemester}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select semester" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="FIRST">First Semester</SelectItem>
+                          <SelectItem value="SECOND">
+                            Second Semester
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  )}
+                  </div>
+
+                  {/* Available Courses */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold">
+                      Available Courses ({availableCourses.length})
+                    </h3>
+
+                    {availableCourses.length === 0 ? (
+                      <div className="text-center py-8">
+                        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                          No available courses found
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {availableCourses.map((course) => (
+                          <Card key={course.id} className="relative">
+                            <CardHeader className="pb-3">
+                              <div className="flex justify-between items-start">
+                                <Badge variant="outline" className="mb-2">
+                                  {course.code}
+                                </Badge>
+                                <Badge variant="secondary">
+                                  {course.creditUnit} Credits
+                                </Badge>
+                              </div>
+                              <CardTitle className="text-lg">
+                                {course.title}
+                              </CardTitle>
+                              <CardDescription>
+                                {course.department?.name} • {course.type}
+                              </CardDescription>
+                            </CardHeader>
+
+                            <CardContent className="space-y-3">
+                              <p className="text-sm text-muted-foreground line-clamp-2">
+                                {course.description}
+                              </p>
+
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <div className="flex items-center">
+                                  <Users className="h-4 w-4 mr-1" />
+                                  <span>{course.enrolledCount} enrolled</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-1" />
+                                  <span>{course.semester}</span>
+                                </div>
+                              </div>
+
+                              <Button
+                                onClick={() => handleEnroll(course.id)}
+                                disabled={enrolling === course.id}
+                                className="w-full"
+                                size="sm"
+                              >
+                                {enrolling === course.id ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Enrolling...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Enroll
+                                  </>
+                                )}
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogContent>
+            </Dialog>
+          </div>
         ) : isDepartmentAdmin(user?.role) ? (
           <div className="flex gap-2">
             <Dialog open={assignmentOpen} onOpenChange={setAssignmentOpen}>
@@ -998,9 +1024,17 @@ const Courses = () => {
                   {user?.role === "STUDENT" ? (
                     course.isEnrolled ? (
                       <>
-                        <Button variant="outline" size="sm">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/student/materials/${course.id}`
+                            )
+                          }
+                        >
                           <BookOpen className="h-4 w-4 mr-2" />
-                          View Content
+                          View Materials
                         </Button>
                         <Button
                           variant="destructive"
@@ -1031,6 +1065,61 @@ const Courses = () => {
                         )}
                       </Button>
                     )
+                  ) : user?.role === "LECTURER" ? (
+                    <div className="flex flex-col space-y-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() =>
+                          router.push(`/dashboard/lecturer/course/${course.id}`)
+                        }
+                      >
+                        <BookOpen className="h-4 w-4 mr-2" />
+                        Manage Course
+                      </Button>
+                      <div className="flex space-x-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/lecturer/course/${course.id}?tab=materials`
+                            )
+                          }
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Materials
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/lecturer/course/${course.id}?tab=students`
+                            )
+                          }
+                        >
+                          <Users className="h-4 w-4 mr-1" />
+                          Students
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() =>
+                            router.push(
+                              `/dashboard/lecturer/course/${course.id}?tab=quizzes`
+                            )
+                          }
+                        >
+                          <Award className="h-4 w-4 mr-1" />
+                          Quizzes
+                        </Button>
+                      </div>
+                    </div>
                   ) : (
                     <Button variant="outline" size="sm">
                       <BookOpen className="h-4 w-4 mr-2" />

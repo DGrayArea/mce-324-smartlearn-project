@@ -245,7 +245,7 @@ const Chatrooms = () => {
         JSON.stringify(defaultMessages)
       );
     }
-  }, []);
+  }, [availableCourses]);
 
   // Save chat rooms and messages to localStorage whenever they change
   useEffect(() => {

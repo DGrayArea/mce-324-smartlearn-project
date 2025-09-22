@@ -1,21 +1,31 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { useSession, signOut } from "next-auth/react";
-import AuthService, { User, AuthState } from "@/lib/auth";
+import { useSession, signOut, signIn } from "next-auth/react";
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  role:
+    | "STUDENT"
+    | "LECTURER"
+    | "DEPARTMENT_ADMIN"
+    | "SCHOOL_ADMIN"
+    | "SENATE_ADMIN";
+  isActive: boolean;
+}
+
+interface AuthState {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}
 
 interface AuthContextType extends AuthState {
   login: (
     email: string,
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
-  register: (userData: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  resetPassword: (
-    email: string
-  ) => Promise<{ success: boolean; error?: string }>;
-  changePassword: (
-    currentPassword: string,
-    newPassword: string
-  ) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,112 +41,69 @@ export const useAuth = () => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const { data: session, status } = useSession() || {
-    data: null,
-    status: "loading",
-  };
+  const { data: session, status } = useSession();
   const [user, setUser] = useState<User | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize dummy data
-    AuthService.initializeDummyData();
+    if (status === "loading") {
+      setIsLoading(true);
+      return;
+    }
 
-    // Check NextAuth session first
     if (session?.user) {
-      // Use session data directly to avoid API call issues
+      // Use session data directly from NextAuth
       const sessionUser: User = {
         id: session.user?.id || "",
         email: session.user?.email || "",
-        password: "",
-        firstName: session.user?.name?.split(" ")[0] || "User",
-        lastName: session.user?.name?.split(" ").slice(1).join(" ") || "",
+        name: session.user?.name || "",
         role: (session.user?.role as any) || "STUDENT",
-        department: "",
         isActive: session.user?.isActive ?? true,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
       };
       setUser(sessionUser);
       setIsAuthenticated(true);
+      setIsLoading(false);
     } else if (status === "unauthenticated") {
-      // Check for existing dummy user session as fallback
-      const currentUser = AuthService.getCurrentUser();
-      if (currentUser) {
-        setUser(currentUser);
-        setIsAuthenticated(true);
-      } else {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
+      setUser(null);
+      setIsAuthenticated(false);
+      setIsLoading(false);
     }
   }, [session, status]);
 
   const login = async (email: string, password: string) => {
-    // This is now used as fallback for dummy accounts
-    const result = await AuthService.login(email, password);
-    if (result.success && result.user) {
-      setUser(result.user);
-      setIsAuthenticated(true);
-      return { success: true };
-    }
-    return { success: false, error: result.error };
-  };
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      });
 
-  const register = async (userData: any) => {
-    const result = await AuthService.register(userData);
-    if (result.success && result.user) {
-      // Auto-login after registration
-      setUser(result.user);
-      setIsAuthenticated(true);
+      if (result?.error) {
+        return { success: false, error: result.error };
+      }
+
       return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Login failed",
+      };
     }
-    return { success: false, error: result.error };
   };
 
   const logout = () => {
-    // Sign out from NextAuth
     signOut({ redirect: false });
-
-    // Also clear dummy session
-    AuthService.logout();
     setUser(null);
     setIsAuthenticated(false);
-  };
-
-  const resetPassword = async (email: string) => {
-    return await AuthService.resetPassword(email);
-  };
-
-  const changePassword = async (
-    currentPassword: string,
-    newPassword: string
-  ) => {
-    if (!user) return { success: false, error: "No user logged in" };
-
-    const result = await AuthService.changePassword(
-      user.id,
-      currentPassword,
-      newPassword
-    );
-    if (result.success) {
-      // Update user state
-      const updatedUser = AuthService.getCurrentUser();
-      if (updatedUser) {
-        setUser(updatedUser);
-      }
-    }
-    return result;
   };
 
   const value: AuthContextType = {
     user,
     isAuthenticated,
+    isLoading,
     login,
-    register,
     logout,
-    resetPassword,
-    changePassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

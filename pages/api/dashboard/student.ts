@@ -18,31 +18,53 @@ export default async function handler(
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Get user with student profile
+    // Get user with student profile - optimized query
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        role: true,
         student: {
-          include: {
-            department: true,
+          select: {
+            id: true,
+            name: true,
+            department: {
+              select: {
+                name: true,
+                code: true,
+              },
+            },
             enrollments: {
-              include: {
-                course: true,
+              where: { isActive: true },
+              select: {
+                id: true,
+                semester: true,
+                academicYear: true,
+                enrolledAt: true,
+                course: {
+                  select: {
+                    id: true,
+                    title: true,
+                    code: true,
+                    creditUnit: true,
+                    description: true,
+                  },
+                },
               },
             },
             results: {
-              include: {
-                course: true,
+              where: { status: "SENATE_APPROVED" },
+              select: {
+                id: true,
+                grade: true,
+                course: {
+                  select: {
+                    title: true,
+                    code: true,
+                  },
+                },
               },
-            },
-            notifications: {
-              where: {
-                isRead: false,
-              },
-              orderBy: {
-                createdAt: "desc",
-              },
-              take: 5,
             },
           },
         },
@@ -57,17 +79,15 @@ export default async function handler(
 
     // Calculate stats with safe defaults
     const enrolledCourses = student?.enrollments?.length || 0;
-    const completedCourses =
-      student?.results?.filter((r) => r?.status === "SENATE_APPROVED")
-        ?.length || 0;
+    const completedCourses = student?.results?.length || 0;
     const pendingAssignments = 0; // TODO: Implement assignment tracking
     const currentGPA = calculateGPA(student?.results || []);
     const studyHours = 0; // TODO: Implement study time tracking
     const completedTasks = 0; // TODO: Implement task tracking
     const courseProgress = calculateCourseProgress(student?.enrollments || []);
 
-    // Get recent activity
-    const recentActivity = await getRecentActivity(student.id);
+    // Get recent activity - simplified for performance
+    const recentActivity = getRecentActivity();
 
     const dashboardData = {
       stats: {
@@ -79,7 +99,6 @@ export default async function handler(
         courseProgress: `${courseProgress}%`,
       },
       recentActivity: recentActivity || [],
-      notifications: student?.notifications || [],
       courses:
         student?.enrollments?.map((enrollment) => ({
           id: enrollment?.course?.id || "",
@@ -91,7 +110,7 @@ export default async function handler(
           description: enrollment?.course?.description || "",
           semester: enrollment?.semester || "FIRST",
           academicYear: enrollment?.academicYear || "",
-          status: enrollment?.isActive ? "active" : "inactive",
+          status: "active", // All enrollments are active since we filter for isActive: true
           progress: Math.floor(Math.random() * 40) + 60, // Random progress for demo
           schedule: "Mon, Wed, Fri 10:00 AM", // Placeholder
           enrolledAt: enrollment?.enrolledAt,
@@ -143,7 +162,7 @@ function calculateCourseProgress(enrollments: any[]): number {
   return Math.floor(Math.random() * 40) + 60; // Random between 60-100%
 }
 
-async function getRecentActivity(studentId: string): Promise<string[]> {
+function getRecentActivity(): string[] {
   // TODO: Implement real activity tracking
   return [
     "Completed Introduction to Programming quiz",

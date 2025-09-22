@@ -137,13 +137,17 @@ const Profile = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Profile</h2>
           <p className="text-muted-foreground">
-            Manage your profile information and view your achievements.
+            {user?.role === "STUDENT"
+              ? "View your profile information and achievements."
+              : "Manage your profile information and view your achievements."}
           </p>
         </div>
-        <Button>
-          <Edit className="mr-2 h-4 w-4" />
-          Edit Profile
-        </Button>
+        {user?.role !== "STUDENT" && (
+          <Button>
+            <Edit className="mr-2 h-4 w-4" />
+            Edit Profile
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

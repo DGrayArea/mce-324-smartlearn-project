@@ -131,15 +131,16 @@ export const DashboardLayout = ({
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className={getRoleColor(user?.role || "")}>
                       <span className="text-white font-medium">
-                        {user?.firstName?.[0]}
-                        {user?.lastName?.[0]}
+                        {user?.name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()}
                       </span>
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden md:block text-left">
-                    <p className="text-sm font-medium">
-                      {user?.firstName} {user?.lastName}
-                    </p>
+                    <p className="text-sm font-medium">{user?.name}</p>
                     <p className="text-xs text-muted-foreground capitalize">
                       {user?.role}
                     </p>
@@ -150,9 +151,7 @@ export const DashboardLayout = ({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div>
-                    <p className="font-medium">
-                      {user?.firstName} {user?.lastName}
-                    </p>
+                    <p className="font-medium">{user?.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {user?.email}
                     </p>

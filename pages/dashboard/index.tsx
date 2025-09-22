@@ -32,15 +32,16 @@ const Dashboard = () => {
   const { data: dashboardData, loading, error } = useDashboardData();
 
   const getWelcomeMessage = () => {
+    const firstName = user?.name?.split(" ")[0] || "User";
     switch (user?.role) {
       case "STUDENT":
-        return `Welcome back, ${user.firstName}! Ready to continue your learning journey?`;
+        return `Welcome back, ${firstName}! Ready to continue your learning journey?`;
       case "LECTURER":
-        return `Welcome back, ${user.firstName}! Your students are waiting for new content.`;
+        return `Welcome back, ${firstName}! Your students are waiting for new content.`;
       case "DEPARTMENT_ADMIN":
       case "SCHOOL_ADMIN":
       case "SENATE_ADMIN":
-        return `Welcome back, ${user.firstName}! The platform is running smoothly.`;
+        return `Welcome back, ${firstName}! The platform is running smoothly.`;
       default:
         return "Welcome to the Learning Platform!";
     }

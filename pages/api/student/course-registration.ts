@@ -195,6 +195,33 @@ async function handlePost(
       });
     }
 
+    // Check if registration is open for this session
+    const currentDate = new Date();
+    const registrationDeadline = new Date("2024-10-15"); // This should come from session settings
+
+    if (currentDate > registrationDeadline) {
+      return res.status(400).json({
+        message: "Course registration period has ended for this session",
+      });
+    }
+
+    // Check if student has already registered for this session
+    const existingSessionRegistration =
+      await prisma.courseRegistration.findFirst({
+        where: {
+          studentId,
+          academicYear,
+          semester,
+        },
+      });
+
+    if (existingSessionRegistration) {
+      return res.status(409).json({
+        message:
+          "You have already registered for courses this session. Please contact your department admin to modify your registration.",
+      });
+    }
+
     // Check if course exists and is active
     const course = await prisma.course.findUnique({
       where: { id: courseId },

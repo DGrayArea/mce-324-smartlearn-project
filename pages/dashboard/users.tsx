@@ -54,6 +54,14 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
   Users,
   UserPlus,
   Search,
@@ -1218,8 +1226,8 @@ const UserManagement = () => {
             </Select>
           </div>
 
-          {/* Users List */}
-          <div className="space-y-4">
+          {/* Users Table */}
+          <div className="rounded-md border">
             {loading ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -1228,121 +1236,189 @@ const UserManagement = () => {
                 </p>
               </div>
             ) : (
-              filteredUsers.map((user) => (
-                <Card key={user.id}>
-                  <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start space-x-4">
-                        <Avatar className="h-12 w-12">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[50px]">Avatar</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Phone
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Last Login
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Courses
+                    </TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <Avatar className="h-8 w-8">
                           <AvatarImage src={user.avatar} />
-                          <AvatarFallback>
+                          <AvatarFallback className="text-xs">
                             {user.name
                               .split(" ")
                               .map((n) => n[0])
                               .join("")}
                           </AvatarFallback>
                         </Avatar>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center space-x-2">
+                          <span>{user.name}</span>
+                          {getStatusIcon(user.status)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate max-w-[200px]">
+                            {user.email}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2 text-sm">
+                          <MapPin className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate max-w-[150px]">
+                            {user.department}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getStatusBadge(user.status)}</TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        {user.phone ? (
+                          <div className="flex items-center space-x-2 text-sm">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            <span>{user.phone}</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="flex items-center space-x-2 text-sm">
+                          <Calendar className="h-3 w-3 text-muted-foreground" />
+                          <span>{user.lastLogin}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <div className="space-y-1">
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-lg">
-                              {user.name}
-                            </h3>
-                            {getStatusIcon(user.status)}
-                          </div>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <Mail className="h-4 w-4" />
-                            <span>{user.email}</span>
-                          </div>
-                          {user.phone && (
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                              <Phone className="h-4 w-4" />
-                              <span>{user.phone}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
-                            <span>{user.department}</span>
-                          </div>
-                          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                            <Calendar className="h-4 w-4" />
-                            <span>Joined {user.joinDate}</span>
-                            <span>• Last login {user.lastLogin}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-start space-x-2">
-                        {getRoleBadge(user.role)}
-                        {getStatusBadge(user.status)}
-                      </div>
-                    </div>
-
-                    {(user.enrolledCourses || user.teachingCourses) && (
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="flex flex-wrap gap-2">
-                          {user.enrolledCourses && (
-                            <div>
-                              <span className="text-sm text-muted-foreground mr-2">
-                                Enrolled:
+                          {user.enrolledCourses &&
+                            user.enrolledCourses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                <span className="text-xs text-muted-foreground">
+                                  Enrolled:
+                                </span>
+                                {user.enrolledCourses
+                                  .slice(0, 2)
+                                  .map((course) => (
+                                    <Badge
+                                      key={course}
+                                      variant="outline"
+                                      className="text-xs"
+                                    >
+                                      {course}
+                                    </Badge>
+                                  ))}
+                                {user.enrolledCourses.length > 2 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{user.enrolledCourses.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          {user.teachingCourses &&
+                            user.teachingCourses.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                <span className="text-xs text-muted-foreground">
+                                  Teaching:
+                                </span>
+                                {user.teachingCourses
+                                  .slice(0, 2)
+                                  .map((course) => (
+                                    <Badge
+                                      key={course}
+                                      variant="secondary"
+                                      className="text-xs"
+                                    >
+                                      {course}
+                                    </Badge>
+                                  ))}
+                                {user.teachingCourses.length > 2 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs"
+                                  >
+                                    +{user.teachingCourses.length - 2}
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          {(!user.enrolledCourses ||
+                            user.enrolledCourses.length === 0) &&
+                            (!user.teachingCourses ||
+                              user.teachingCourses.length === 0) && (
+                              <span className="text-muted-foreground text-xs">
+                                -
                               </span>
-                              {user.enrolledCourses.map((course) => (
-                                <Badge
-                                  key={course}
-                                  variant="outline"
-                                  className="mr-1"
-                                >
-                                  {course}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          {user.teachingCourses && (
-                            <div>
-                              <span className="text-sm text-muted-foreground mr-2">
-                                Teaching:
-                              </span>
-                              {user.teachingCourses.map((course) => (
-                                <Badge
-                                  key={course}
-                                  variant="secondary"
-                                  className="mr-1"
-                                >
-                                  {course}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                            )}
                         </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end space-x-2 mt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleToggleStatus(user.id, user.status)}
-                      >
-                        {user.status === "active" ? "Deactivate" : "Activate"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEditUser(user.id)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteUser(user.id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              handleToggleStatus(user.id, user.status)
+                            }
+                            className="h-8 w-8 p-0"
+                            title={
+                              user.status === "active"
+                                ? "Deactivate"
+                                : "Activate"
+                            }
+                          >
+                            {user.status === "active" ? (
+                              <XCircle className="h-4 w-4" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditUser(user.id)}
+                            className="h-8 w-8 p-0"
+                            title="Edit User"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                            className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                            title="Delete User"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </div>
         </>

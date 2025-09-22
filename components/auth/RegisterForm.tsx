@@ -25,7 +25,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { UserRole } from "@/lib/auth";
 import Link from "next/link";
@@ -44,7 +43,6 @@ export const RegisterForm = () => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { register } = useAuth();
 
   const departments = [
     "Computer Science",
@@ -85,7 +83,16 @@ export const RegisterForm = () => {
         ...(formData.role !== "STUDENT" && { staffId: formData.staffId }),
       };
 
-      const result = await register(userData);
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      });
+
+      const result = await response.json();
+
       if (result.success) {
         toast({
           title: "Registration successful",

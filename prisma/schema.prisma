@@ -123,6 +123,44 @@ enum ChatRoomType {
   QNA_BOARD
 }
 
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ArticleCategory {
+  GETTING_STARTED
+  ACCOUNT_MANAGEMENT
+  COURSE_REGISTRATION
+  GRADES_AND_RESULTS
+  TECHNICAL_SUPPORT
+  ACADEMIC_POLICIES
+  SYSTEM_GUIDES
+  TROUBLESHOOTING
+  OTHER
+}
+
+enum ChatSessionStatus {
+  ACTIVE
+  WAITING
+  ENDED
+  TRANSFERRED
+}
+
+enum ChatMessageType {
+  TEXT
+  FILE
+  SYSTEM
+  TYPING
+}
+
+enum PasswordResetStatus {
+  PENDING
+  USED
+  EXPIRED
+}
+
 enum ResultStatus {
   PENDING
   DEPARTMENT_APPROVED
@@ -211,6 +249,33 @@ model User {
   userSessions     UserSession[]
   announcements    Announcement[]
 
+  // Forum and Q&A relations
+  forumCategories ForumCategory[]
+  forumThreads    ForumThread[]
+  forumPosts      ForumPost[]
+  questions       Question[]
+  answers         Answer[]
+  questionVotes   QuestionVote[]
+  answerVotes     AnswerVote[]
+
+  // Feedback and Evaluation relations
+  feedbackForms FeedbackForm[]
+
+  // Knowledge Base relations
+  knowledgeArticles KnowledgeArticle[]
+
+  // Live Chat relations
+  chatSessions      LiveChatSession[] @relation("ChatSessions")
+  agentChatSessions LiveChatSession[] @relation("AgentChatSessions")
+  chatMessages      LiveChatMessage[] @relation("ChatMessages")
+
+  // Password Reset relations
+  passwordResets PasswordReset[]
+
+  // Email Notification relations
+  emailNotificationsSent     EmailNotification[] @relation("EmailNotificationsSent")
+  emailNotificationsReceived EmailNotification[] @relation("EmailNotificationsReceived")
+
   @@map("users")
 }
 
@@ -241,6 +306,9 @@ model School {
   stats         SchoolStats[]
   announcements Announcement[]
 
+  // Forum relationships
+  forumCategories ForumCategory[]
+
   @@map("schools")
 }
 
@@ -261,6 +329,9 @@ model Department {
   departmentCourses  DepartmentCourse[]
   courseAvailability CourseAvailability[]
   announcements      Announcement[]
+
+  // Forum relationships
+  forumCategories ForumCategory[]
 
   @@unique([name, schoolId])
   @@map("departments")
@@ -292,6 +363,9 @@ model Student {
   quizAttempts            QuizAttempt[]
   courseEvaluations       CourseEvaluation[]
 
+  // Feedback relationships
+  feedbackResponses FeedbackResponse[]
+
   @@map("students")
 }
 
@@ -314,6 +388,9 @@ model Lecturer {
   assignments       Assignment[]
   quizzes           Quiz[]
   courseEvaluations CourseEvaluation[]
+
+  // Feedback relationships
+  feedbackForms FeedbackForm[]
 
   @@map("lecturers")
 }
@@ -404,11 +481,18 @@ model Course {
   virtualClasses     VirtualClass[]
   feedbacks          Feedback[]
   courseSelections   CourseSelection[]
-  chatRooms          ChatRoom[]
-  assignments        Assignment[]
-  quizzes            Quiz[]
-  courseEvaluations  CourseEvaluation[]
-  announcements      Announcement[]
+
+  // Forum and Q&A relationships
+  forumCategories   ForumCategory[]
+  questions         Question[]
+  chatRooms         ChatRoom[]
+  assignments       Assignment[]
+  quizzes           Quiz[]
+  courseEvaluations CourseEvaluation[]
+  announcements     Announcement[]
+
+  // Feedback relationships
+  feedbackForms FeedbackForm[]
 
   @@map("courses")
 }
@@ -1156,4 +1240,366 @@ model Feedback {
 
   @@unique([studentId, courseId])
   @@map("feedbacks")
+}
+
+// Discussion Forums System
+model ForumCategory {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Scope of forum category
+  courseId     String?
+  departmentId String?
+  schoolId     String?
+  isGlobal     Boolean @default(false)
+
+  course     Course?     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  school     School?     @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  // Creator
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  // Relations
+  threads ForumThread[]
+
+  @@index([courseId])
+  @@index([departmentId])
+  @@index([schoolId])
+  @@map("forum_categories")
+}
+
+model ForumThread {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  isPinned   Boolean  @default(false)
+  isLocked   Boolean  @default(false)
+  viewCount  Int      @default(0)
+  replyCount Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  categoryId String
+  category   ForumCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  posts ForumPost[]
+
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("forum_threads")
+}
+
+model ForumPost {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  threadId String
+  thread   ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("forum_posts")
+}
+
+// Q&A System
+model Question {
+  id         String   @id @default(cuid())
+  title      String
+  content    String
+  isAnswered Boolean  @default(false)
+  isResolved Boolean  @default(false)
+  viewCount  Int      @default(0)
+  upvotes    Int      @default(0)
+  downvotes  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  courseId String
+  course   Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  answers Answer[]
+  votes   QuestionVote[]
+
+  @@index([courseId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(cuid())
+  content    String
+  isAccepted Boolean  @default(false)
+  upvotes    Int      @default(0)
+  downvotes  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  votes AnswerVote[]
+
+  @@index([questionId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("answers")
+}
+
+model QuestionVote {
+  id       String  @id @default(cuid())
+  isUpvote Boolean
+
+  // Relations
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, userId])
+  @@map("question_votes")
+}
+
+model AnswerVote {
+  id       String  @id @default(cuid())
+  isUpvote Boolean
+
+  // Relations
+  answerId String
+  answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, userId])
+  @@map("answer_votes")
+}
+
+// Feedback and Evaluation System
+model FeedbackForm {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  type        String // SYSTEM, GENERAL, COURSE, LECTURER
+  targetId    String? // ID of the target (course, lecturer, etc.)
+  courseId    String?
+  lecturerId  String?
+  questions   String // JSON string of questions
+  isActive    Boolean   @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  course      Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lecturer    Lecturer? @relation(fields: [lecturerId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdById String
+
+  responses FeedbackResponse[]
+
+  @@index([type])
+  @@index([courseId])
+  @@index([lecturerId])
+  @@index([isActive])
+  @@map("feedback_forms")
+}
+
+model FeedbackResponse {
+  id          String   @id @default(cuid())
+  formId      String
+  studentId   String
+  responses   String // JSON string of responses
+  isAnonymous Boolean  @default(true)
+  submittedAt DateTime @default(now())
+
+  // Relations
+  form    FeedbackForm @relation(fields: [formId], references: [id], onDelete: Cascade)
+  student Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([formId, studentId])
+  @@index([formId])
+  @@index([studentId])
+  @@map("feedback_responses")
+}
+
+// Knowledge Base System
+model KnowledgeArticle {
+  id          String          @id @default(cuid())
+  title       String
+  content     String
+  summary     String?
+  category    ArticleCategory
+  status      ArticleStatus   @default(DRAFT)
+  tags        String[] // Array of tags for search
+  viewCount   Int             @default(0)
+  helpful     Int             @default(0)
+  notHelpful  Int             @default(0)
+  isFeatured  Boolean         @default(false)
+  order       Int             @default(0) // For ordering within category
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  publishedAt DateTime?
+
+  // Relations
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  // Related articles
+  relatedArticles KnowledgeArticleRelation[] @relation("RelatedArticles")
+  relatedTo       KnowledgeArticleRelation[] @relation("RelatedTo")
+
+  @@index([category])
+  @@index([status])
+  @@index([isFeatured])
+  @@index([tags])
+  @@index([publishedAt])
+  @@map("knowledge_articles")
+}
+
+model KnowledgeArticleRelation {
+  id        String @id @default(cuid())
+  articleId String
+  relatedId String
+
+  article KnowledgeArticle @relation("RelatedArticles", fields: [articleId], references: [id], onDelete: Cascade)
+  related KnowledgeArticle @relation("RelatedTo", fields: [relatedId], references: [id], onDelete: Cascade)
+
+  @@unique([articleId, relatedId])
+  @@map("knowledge_article_relations")
+}
+
+// Password Reset System
+model PasswordReset {
+  id        String              @id @default(cuid())
+  userId    String
+  token     String              @unique
+  status    PasswordResetStatus @default(PENDING)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_resets")
+}
+
+// Live Chat System
+model LiveChatSession {
+  id            String            @id @default(cuid())
+  sessionId     String            @unique // Unique session identifier
+  userId        String // Student who initiated the chat
+  agentId       String? // Admin/agent handling the chat
+  status        ChatSessionStatus @default(WAITING)
+  priority      String            @default("NORMAL") // LOW, NORMAL, HIGH, URGENT
+  subject       String? // Brief subject of the chat
+  startedAt     DateTime          @default(now())
+  endedAt       DateTime?
+  lastMessageAt DateTime?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relations
+  user  User  @relation("ChatSessions", fields: [userId], references: [id], onDelete: Cascade)
+  agent User? @relation("AgentChatSessions", fields: [agentId], references: [id], onDelete: SetNull)
+
+  messages LiveChatMessage[]
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("live_chat_sessions")
+}
+
+model LiveChatMessage {
+  id        String          @id @default(cuid())
+  sessionId String
+  senderId  String
+  content   String
+  type      ChatMessageType @default(TEXT)
+  fileUrl   String? // For file attachments
+  fileName  String? // Original file name
+  fileSize  Int? // File size in bytes
+  isRead    Boolean         @default(false)
+  readAt    DateTime?
+  createdAt DateTime        @default(now())
+
+  // Relations
+  session LiveChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender  User            @relation("ChatMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@map("live_chat_messages")
+}
+
+// Email Notification System
+enum EmailNotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+  BOUNCED
+}
+
+model EmailNotification {
+  id           String                  @id @default(cuid())
+  type         String // Type of notification (GRADE, DEADLINE, ANNOUNCEMENT, etc.)
+  subject      String
+  content      String
+  template     String? // Email template used
+  data         String? // JSON data for template variables
+  senderId     String
+  recipientId  String
+  status       EmailNotificationStatus @default(PENDING)
+  scheduledAt  DateTime
+  sentAt       DateTime?
+  deliveredAt  DateTime?
+  errorMessage String?
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+
+  // Relations
+  sender    User @relation("EmailNotificationsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("EmailNotificationsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([senderId])
+  @@index([recipientId])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
+  @@map("email_notifications")
 }
