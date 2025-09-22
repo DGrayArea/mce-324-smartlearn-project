@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -44,7 +44,7 @@ const StudentCourseMaterials = () => {
   const [filterType, setFilterType] = useState("ALL");
   const [filterWeek, setFilterWeek] = useState("ALL");
 
-  const fetchCourseData = async () => {
+  const fetchCourseData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -78,7 +78,7 @@ const StudentCourseMaterials = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId, toast]);
 
   useEffect(() => {
     if (courseId && user?.role === "STUDENT") {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -120,7 +120,7 @@ const SupportTickets = () => {
     isInternal: false,
   });
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -149,7 +149,7 @@ const SupportTickets = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedStatus, selectedPriority, selectedCategory, toast]);
 
   useEffect(() => {
     fetchTickets();

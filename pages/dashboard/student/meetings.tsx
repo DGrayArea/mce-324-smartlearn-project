@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -63,7 +63,7 @@ const StudentMeetings = () => {
   const [loading, setLoading] = useState(true);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -87,7 +87,7 @@ const StudentMeetings = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [academicYear, semester, toast]);
 
   useEffect(() => {
     if (user?.role === "STUDENT") {

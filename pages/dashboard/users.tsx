@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Type for API response
@@ -173,7 +173,7 @@ const UserManagement = () => {
   const [seedingData, setSeedingData] = useState<any>(null);
 
   // Fetch schools data (for Senate Admin)
-  const fetchSchools = async () => {
+  const fetchSchools = useCallback(async () => {
     try {
       const response = await fetch("/api/admin/schools");
       if (response.ok) {
@@ -183,10 +183,10 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error fetching schools:", error);
     }
-  };
+  }, []);
 
   // Fetch departments data
-  const fetchDepartments = async (schoolId?: string) => {
+  const fetchDepartments = useCallback(async (schoolId?: string) => {
     try {
       const url = schoolId
         ? `/api/admin/departments?schoolId=${schoolId}`
@@ -199,40 +199,43 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error fetching departments:", error);
     }
-  };
+  }, []);
 
   // Fetch users data
-  const fetchUsers = async (departmentId?: string) => {
-    try {
-      setLoading(true);
-      const url = departmentId
-        ? `/api/admin/users?departmentId=${departmentId}`
-        : "/api/admin/users";
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.users || []);
-      } else {
+  const fetchUsers = useCallback(
+    async (departmentId?: string) => {
+      try {
+        setLoading(true);
+        const url = departmentId
+          ? `/api/admin/users?departmentId=${departmentId}`
+          : "/api/admin/users";
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          setUsers(data.users || []);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch users",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching users:", error);
         toast({
           title: "Error",
-          description: "Failed to fetch users",
+          description: "Failed to load users",
           variant: "destructive",
         });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load users",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [toast]
+  );
 
   // Fetch departments and schools for create user form
-  const fetchDepartmentsAndSchools = async () => {
+  const fetchDepartmentsAndSchools = useCallback(async () => {
     try {
       const [deptResponse, schoolResponse] = await Promise.all([
         fetch("/api/admin/departments"),
@@ -251,47 +254,56 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error fetching departments and schools:", error);
     }
-  };
+  }, []);
 
   // Navigation functions
-  const handleSchoolSelect = (school: School) => {
-    setSelectedSchool(school);
-    setCurrentView("departments");
-    fetchDepartments(school.id);
-  };
+  const handleSchoolSelect = useCallback(
+    (school: School) => {
+      setSelectedSchool(school);
+      setCurrentView("departments");
+      fetchDepartments(school.id);
+    },
+    [fetchDepartments]
+  );
 
-  const handleDepartmentSelect = (department: Department) => {
-    setSelectedDept(department);
-    setCurrentView("users");
-    fetchUsers(department.id);
-  };
+  const handleDepartmentSelect = useCallback(
+    (department: Department) => {
+      setSelectedDept(department);
+      setCurrentView("users");
+      fetchUsers(department.id);
+    },
+    [fetchUsers]
+  );
 
-  const handleUserTypeSelect = async (userType: string) => {
-    setSelectedUserType(userType);
-    setCurrentView("users");
-    // Fetch all users first, then filter by type
-    await fetchUsers();
-    // The filtering will happen in the filteredUsers logic
-  };
+  const handleUserTypeSelect = useCallback(
+    async (userType: string) => {
+      setSelectedUserType(userType);
+      setCurrentView("users");
+      // Fetch all users first, then filter by type
+      await fetchUsers();
+      // The filtering will happen in the filteredUsers logic
+    },
+    [fetchUsers]
+  );
 
-  const handleBackToSchools = () => {
+  const handleBackToSchools = useCallback(() => {
     setCurrentView("schools");
     setSelectedSchool(null);
     setSelectedDept(null);
     setUsers([]);
-  };
+  }, []);
 
-  const handleBackToDepartments = () => {
+  const handleBackToDepartments = useCallback(() => {
     setCurrentView("departments");
     setSelectedDept(null);
     setUsers([]);
-  };
+  }, []);
 
-  const handleBackToUserTypes = () => {
+  const handleBackToUserTypes = useCallback(() => {
     setCurrentView("user-types");
     setSelectedUserType(null);
     // Don't need to refetch, just clear the filter
-  };
+  }, []);
 
   // Initialize based on user role
   useEffect(() => {

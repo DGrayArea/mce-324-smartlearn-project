@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -61,7 +61,7 @@ const StudentQuiz = () => {
     }
   }, [quizId, user]);
 
-  const handleSubmitQuiz = async () => {
+  const handleSubmitQuiz = useCallback(async () => {
     setSubmitting(true);
     try {
       const response = await fetch("/api/student/quiz", {
@@ -96,7 +96,7 @@ const StudentQuiz = () => {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [answers, attempt?.id, toast]);
 
   useEffect(() => {
     if (timeRemaining > 0 && !quizCompleted) {
@@ -109,7 +109,7 @@ const StudentQuiz = () => {
     }
   }, [timeRemaining, quizCompleted, handleSubmitQuiz]);
 
-  const startQuiz = async () => {
+  const startQuiz = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/student/quiz", {
@@ -144,7 +144,7 @@ const StudentQuiz = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quizId, router, toast]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers({ ...answers, [questionId]: answer });
