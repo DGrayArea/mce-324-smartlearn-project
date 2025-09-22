@@ -63,12 +63,6 @@ const StudentMeetings = () => {
   const [loading, setLoading] = useState(true);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchMeetings();
-    }
-  }, [user, academicYear, semester]);
-
   const fetchMeetings = async () => {
     try {
       setLoading(true);
@@ -94,6 +88,12 @@ const StudentMeetings = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      fetchMeetings();
+    }
+  }, [user, academicYear, semester, fetchMeetings]);
 
   const joinMeeting = (meeting: Meeting) => {
     if (meeting.status === "ENDED") {

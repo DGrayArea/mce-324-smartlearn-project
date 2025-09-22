@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -66,13 +66,7 @@ const LecturerGrading = () => {
     Record<string, { score: number; feedback?: string }>
   >({});
 
-  useEffect(() => {
-    if (quizId && user?.role === "LECTURER") {
-      fetchQuizAttempts();
-    }
-  }, [quizId, user]);
-
-  const fetchQuizAttempts = async () => {
+  const fetchQuizAttempts = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -95,7 +89,13 @@ const LecturerGrading = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [quizId, toast]);
+
+  useEffect(() => {
+    if (quizId && user?.role === "LECTURER") {
+      fetchQuizAttempts();
+    }
+  }, [quizId, user, fetchQuizAttempts]);
 
   const handleGradeChange = (attemptId: string, score: number) => {
     setGrades({
@@ -202,7 +202,8 @@ const LecturerGrading = () => {
         <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">Quiz Not Found</h3>
         <p className="text-muted-foreground">
-          The requested quiz could not be found or you don&apos;t have access to it.
+          The requested quiz could not be found or you don&apos;t have access to
+          it.
         </p>
       </div>
     );

@@ -110,24 +110,6 @@ const LiveChat = () => {
     user?.role &&
     ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"].includes(user.role);
 
-  useEffect(() => {
-    fetchSessions();
-  }, []);
-
-  useEffect(() => {
-    if (selectedSession) {
-      fetchMessages(selectedSession.sessionId);
-    }
-  }, [selectedSession]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const fetchSessions = async () => {
     try {
       setLoading(true);
@@ -182,6 +164,24 @@ const LiveChat = () => {
         variant: "destructive",
       });
     }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  useEffect(() => {
+    if (selectedSession) {
+      fetchMessages(selectedSession.sessionId);
+    }
+  }, [selectedSession, fetchMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const handleCreateSession = async (e: React.FormEvent) => {

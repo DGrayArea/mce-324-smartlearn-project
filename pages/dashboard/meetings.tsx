@@ -79,9 +79,7 @@ const Meetings = () => {
   });
 
   // Get available courses for the current user
-  const availableCourses = user
-    ? getCoursesForUser(user.role, `${user.firstName} ${user.lastName}`)
-    : [];
+  const availableCourses = user ? getCoursesForUser(user.role, user.name) : [];
 
   // Load meetings from localStorage on component mount
   useEffect(() => {
@@ -301,7 +299,7 @@ const Meetings = () => {
           newMeeting.link ||
           `https://zoom.us/j/${Math.random().toString(36).substr(2, 9)}`,
         description: newMeeting.description,
-        createdBy: user ? `${user.firstName} ${user.lastName}` : "Current User",
+        createdBy: user ? user.name : "Current User",
         participants: [],
         invitedUsers: [],
         notifications: [],
@@ -341,11 +339,7 @@ const Meetings = () => {
   };
 
   const handleJoinMeeting = (meeting: MeetingWithCourse) => {
-    if (
-      meeting.participants.includes(
-        user ? `${user.firstName} ${user.lastName}` : "Current User"
-      )
-    ) {
+    if (meeting.participants.includes(user ? user.name : "Current User")) {
       toast({
         title: "Already Joined",
         description: "You are already a participant in this meeting.",
@@ -358,7 +352,7 @@ const Meetings = () => {
       attendees: (meeting.attendees || 0) + 1,
       participants: [
         ...meeting.participants,
-        user ? `${user.firstName} ${user.lastName}` : "Current User",
+        user ? user.name : "Current User",
       ],
     };
 
@@ -442,16 +436,11 @@ const Meetings = () => {
   };
 
   const isParticipant = (meeting: MeetingWithCourse) => {
-    return meeting.participants.includes(
-      user ? `${user.firstName} ${user.lastName}` : "Current User"
-    );
+    return meeting.participants.includes(user ? user.name : "Current User");
   };
 
   const canManageMeeting = (meeting: MeetingWithCourse) => {
-    return (
-      user?.role === "LECTURER" &&
-      meeting.createdBy === `${user.firstName} ${user.lastName}`
-    );
+    return user?.role === "LECTURER" && meeting.createdBy === user.name;
   };
 
   const filteredMeetings = getFilteredMeetings();

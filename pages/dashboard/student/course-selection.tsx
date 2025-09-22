@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -71,13 +71,7 @@ const StudentCourseSelection = () => {
   const [remainingCredits, setRemainingCredits] = useState(24);
   const [registrationStatus, setRegistrationStatus] = useState("NOT_STARTED");
 
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchCourseSelection();
-    }
-  }, [user, academicYear, semester]);
-
-  const fetchCourseSelection = async () => {
+  const fetchCourseSelection = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -107,7 +101,13 @@ const StudentCourseSelection = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [academicYear, semester, toast]);
+
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      fetchCourseSelection();
+    }
+  }, [user, academicYear, semester, fetchCourseSelection]);
 
   const handleCourseToggle = (courseId: string, creditUnit: number) => {
     const isSelected = selectedCourseIds.includes(courseId);

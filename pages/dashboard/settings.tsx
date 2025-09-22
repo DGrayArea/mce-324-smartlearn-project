@@ -38,8 +38,8 @@ const Settings = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [settings, setSettings] = useState({
     // Account settings
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
+    firstName: (user?.name ? user.name.split(" ")[0] : "") || "",
+    lastName: (user?.name ? user.name.split(" ").slice(1).join(" ") : "") || "",
     email: user?.email || "",
     bio: "",
 
@@ -166,11 +166,7 @@ const Settings = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={user?.department || ""}
-                  disabled
-                />
+                <Input id="department" value={""} disabled />
               </div>
             </CardContent>
           </Card>

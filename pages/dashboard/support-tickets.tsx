@@ -120,10 +120,6 @@ const SupportTickets = () => {
     isInternal: false,
   });
 
-  useEffect(() => {
-    fetchTickets();
-  }, [selectedStatus, selectedPriority, selectedCategory]);
-
   const fetchTickets = async () => {
     try {
       setLoading(true);
@@ -154,6 +150,10 @@ const SupportTickets = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchTickets();
+  }, [selectedStatus, selectedPriority, selectedCategory, fetchTickets]);
 
   const fetchResponses = async (ticketId: string) => {
     try {

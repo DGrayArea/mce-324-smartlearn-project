@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -118,7 +118,15 @@ Please log in to your dashboard to view detailed feedback.
 
 Best regards,
 {{lecturerName}}`,
-      variables: ["studentName", "courseName", "grade", "score", "totalScore", "comments", "lecturerName"],
+      variables: [
+        "studentName",
+        "courseName",
+        "grade",
+        "score",
+        "totalScore",
+        "comments",
+        "lecturerName",
+      ],
     },
     {
       id: "deadline_reminder",
@@ -136,7 +144,14 @@ Please ensure you submit your assignment on time.
 
 Best regards,
 {{lecturerName}}`,
-      variables: ["studentName", "assignmentName", "dueDate", "courseName", "timeRemaining", "lecturerName"],
+      variables: [
+        "studentName",
+        "assignmentName",
+        "dueDate",
+        "courseName",
+        "timeRemaining",
+        "lecturerName",
+      ],
     },
     {
       id: "course_announcement",
@@ -169,7 +184,7 @@ Best regards,
     data: {},
   });
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -177,7 +192,7 @@ Best regards,
       if (typeFilter !== "all") params.append("type", typeFilter);
 
       const response = await fetch(`/api/notifications/email?${params}`);
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch email notifications");
       }
@@ -194,16 +209,16 @@ Best regards,
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter, typeFilter, toast]);
 
   useEffect(() => {
     fetchNotifications();
-  }, [statusFilter, typeFilter]);
+  }, [fetchNotifications]);
 
   const handleSendEmail = async () => {
     try {
       setSending(true);
-      
+
       const response = await fetch("/api/notifications/email", {
         method: "POST",
         headers: {
@@ -245,7 +260,7 @@ Best regards,
   };
 
   const handleTemplateSelect = (templateId: string) => {
-    const template = emailTemplates.find(t => t.id === templateId);
+    const template = emailTemplates.find((t) => t.id === templateId);
     if (template) {
       setFormData({
         ...formData,
@@ -291,12 +306,16 @@ Best regards,
     }
   };
 
-  const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = 
+  const filteredNotifications = notifications.filter((notification) => {
+    const matchesSearch =
       notification.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      notification.recipient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      notification.recipient.email.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      notification.recipient.name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      notification.recipient.email
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
     return matchesSearch;
   });
 
@@ -378,7 +397,9 @@ Best regards,
                     <Input
                       id="type"
                       value={formData.type}
-                      onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, type: e.target.value })
+                      }
                       placeholder="e.g., grade_notification"
                     />
                   </div>
@@ -388,7 +409,12 @@ Best regards,
                   <Input
                     id="recipientEmail"
                     value={formData.recipientEmail}
-                    onChange={(e) => setFormData({ ...formData, recipientEmail: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        recipientEmail: e.target.value,
+                      })
+                    }
                     placeholder="user@example.com"
                   />
                 </div>
@@ -397,7 +423,9 @@ Best regards,
                   <Input
                     id="subject"
                     value={formData.subject}
-                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
                     placeholder="Email subject"
                   />
                 </div>
@@ -406,7 +434,9 @@ Best regards,
                   <Textarea
                     id="content"
                     value={formData.content}
-                    onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, content: e.target.value })
+                    }
                     placeholder="Email content"
                     rows={8}
                   />
@@ -463,9 +493,15 @@ Best regards,
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="grade_notification">Grade Notification</SelectItem>
-                <SelectItem value="deadline_reminder">Deadline Reminder</SelectItem>
-                <SelectItem value="course_announcement">Course Announcement</SelectItem>
+                <SelectItem value="grade_notification">
+                  Grade Notification
+                </SelectItem>
+                <SelectItem value="deadline_reminder">
+                  Deadline Reminder
+                </SelectItem>
+                <SelectItem value="course_announcement">
+                  Course Announcement
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -498,7 +534,9 @@ Best regards,
                 <TableRow key={notification.id}>
                   <TableCell>
                     <div>
-                      <div className="font-medium">{notification.recipient.name}</div>
+                      <div className="font-medium">
+                        {notification.recipient.name}
+                      </div>
                       <div className="text-sm text-muted-foreground">
                         {notification.recipient.email}
                       </div>
@@ -522,10 +560,9 @@ Best regards,
                     {new Date(notification.scheduledAt).toLocaleString()}
                   </TableCell>
                   <TableCell>
-                    {notification.sentAt 
+                    {notification.sentAt
                       ? new Date(notification.sentAt).toLocaleString()
-                      : "-"
-                    }
+                      : "-"}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center space-x-2">
@@ -546,7 +583,9 @@ Best regards,
           {filteredNotifications.length === 0 && (
             <div className="text-center py-8">
               <Mail className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">No Email Notifications</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                No Email Notifications
+              </h3>
               <p className="text-muted-foreground">
                 No email notifications found matching your criteria.
               </p>
@@ -559,4 +598,3 @@ Best regards,
 };
 
 export default withDashboardLayout(EmailNotifications);
-

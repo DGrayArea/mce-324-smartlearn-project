@@ -308,7 +308,13 @@ const UserManagement = () => {
       fetchUsers(); // Will fetch users in their department
       // Don't fetch schools/departments for Department Admin
     }
-  }, [currentUser]);
+  }, [
+    currentUser,
+    fetchSchools,
+    fetchDepartments,
+    fetchDepartmentsAndSchools,
+    fetchUsers,
+  ]);
 
   const getStatusBadge = (status: string) => {
     const variants = {

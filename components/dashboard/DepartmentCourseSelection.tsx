@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,13 +56,7 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
   const [typeFilter, setTypeFilter] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      fetchData();
-    }
-  }, [open]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const response = await fetch("/api/admin/department-courses");
@@ -86,7 +80,13 @@ const DepartmentCourseSelection: React.FC<DepartmentCourseSelectionProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    if (open) {
+      fetchData();
+    }
+  }, [open, fetchData]);
 
   const handleSelectCourse = async (
     course: any,

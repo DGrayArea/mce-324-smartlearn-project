@@ -156,16 +156,17 @@ const Profile = () => {
           <CardHeader className="text-center">
             <Avatar className="w-24 h-24 mx-auto mb-4">
               <AvatarImage
-                src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.firstName} ${user?.lastName}`}
+                src={`https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`}
               />
               <AvatarFallback>
-                {user?.firstName?.[0]}
-                {user?.lastName?.[0]}
+                {user?.name
+                  ?.split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <CardTitle>
-              {user?.firstName} {user?.lastName}
-            </CardTitle>
+            <CardTitle>{user?.name}</CardTitle>
             <CardDescription className="flex items-center justify-center gap-2">
               <Badge variant="outline" className="capitalize">
                 {user?.role}
@@ -179,24 +180,16 @@ const Profile = () => {
             </div>
             <div className="flex items-center text-sm">
               <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>{user?.department}</span>
+              <span>Department</span>
             </div>
             <div className="flex items-center text-sm">
               <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>
-                Joined {new Date(user?.createdAt || "").toLocaleDateString()}
-              </span>
+              <span>Joined {new Date().toLocaleDateString()}</span>
             </div>
-            {user?.studentId && (
+            {user?.role === "STUDENT" && (
               <div className="flex items-center text-sm">
                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>ID: {user.studentId}</span>
-              </div>
-            )}
-            {user?.staffId && (
-              <div className="flex items-center text-sm">
-                <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Staff ID: {user.staffId}</span>
+                <span>Student</span>
               </div>
             )}
           </CardContent>

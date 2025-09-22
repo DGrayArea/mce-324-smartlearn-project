@@ -249,8 +249,8 @@ export default async function handler(
         where: { id: ticketId },
         data: updateData,
         include: {
-          student: {
-            select: { id: true, name: true, studentId: true },
+          user: {
+            select: { id: true, name: true, role: true },
           },
           assignedTo: {
             select: { id: true, name: true, role: true },

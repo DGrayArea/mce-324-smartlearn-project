@@ -44,12 +44,6 @@ const StudentCourseMaterials = () => {
   const [filterType, setFilterType] = useState("ALL");
   const [filterWeek, setFilterWeek] = useState("ALL");
 
-  useEffect(() => {
-    if (courseId && user?.role === "STUDENT") {
-      fetchCourseData();
-    }
-  }, [courseId, user]);
-
   const fetchCourseData = async () => {
     try {
       setLoading(true);
@@ -85,6 +79,12 @@ const StudentCourseMaterials = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (courseId && user?.role === "STUDENT") {
+      fetchCourseData();
+    }
+  }, [courseId, user, fetchCourseData]);
 
   const handleDownload = async (document: any) => {
     try {

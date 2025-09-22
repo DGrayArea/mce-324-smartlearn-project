@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -46,13 +46,7 @@ const StudentGrades = () => {
   const [gpa, setGpa] = useState(0);
   const [statistics, setStatistics] = useState<any>(null);
 
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchGrades();
-    }
-  }, [user, academicYear, semester]);
-
-  const fetchGrades = async () => {
+  const fetchGrades = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -79,7 +73,13 @@ const StudentGrades = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [academicYear, semester, toast]);
+
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      fetchGrades();
+    }
+  }, [user, academicYear, semester, fetchGrades]);
 
   const getGradeColor = (grade: string) => {
     switch (grade) {

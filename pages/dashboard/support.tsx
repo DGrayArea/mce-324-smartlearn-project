@@ -109,6 +109,15 @@ const faqItems: FAQItem[] = [
 const Support = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const userInitials = user?.name
+    ? user.name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase()
+    : "U";
   const [searchQuery, setSearchQuery] = useState("");
   const [chatMessage, setChatMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([
@@ -167,9 +176,11 @@ const Support = () => {
 
   const handleSendChatMessage = useCallback(() => {
     if (chatMessage.trim()) {
+      const displayName = user?.name || "User";
+
       const newMessage = {
         id: Date.now().toString(),
-        sender: user ? `${user.firstName} ${user.lastName}` : "User",
+        sender: displayName,
         content: chatMessage,
         timestamp: new Date().toLocaleTimeString(),
         isBot: false,
@@ -407,11 +418,7 @@ const Support = () => {
                     <div key={msg.id} className="flex items-start space-x-2">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
-                          {msg.isBot
-                            ? "AI"
-                            : user
-                              ? `${user.firstName[0]}${user.lastName[0]}`
-                              : "U"}
+                          {msg.isBot ? "AI" : userInitials}
                         </AvatarFallback>
                       </Avatar>
                       <div

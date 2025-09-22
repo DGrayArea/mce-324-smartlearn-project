@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -98,13 +98,7 @@ const LecturerCourseManagement = () => {
   });
   const [questions, setQuestions] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (courseId && user?.role === "LECTURER") {
-      fetchCourseData();
-    }
-  }, [courseId, user]);
-
-  const fetchCourseData = async () => {
+  const fetchCourseData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -154,7 +148,13 @@ const LecturerCourseManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId, toast]);
+
+  useEffect(() => {
+    if (courseId && user?.role === "LECTURER") {
+      fetchCourseData();
+    }
+  }, [courseId, user, fetchCourseData]);
 
   const handleDocumentUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,8 +342,8 @@ const LecturerCourseManagement = () => {
         <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
         <h3 className="text-lg font-semibold mb-2">Course Not Found</h3>
         <p className="text-muted-foreground">
-          The requested course could not be found or you don&apos;t have access to
-          it.
+          The requested course could not be found or you don&apos;t have access
+          to it.
         </p>
       </div>
     );

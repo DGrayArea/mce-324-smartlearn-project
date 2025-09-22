@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -76,13 +76,7 @@ const LecturerGrades = () => {
   const [semester, setSemester] = useState("FIRST");
   const [exporting, setExporting] = useState(false);
 
-  useEffect(() => {
-    if (courseId && user?.role === "LECTURER") {
-      fetchCourseData();
-    }
-  }, [courseId, user, academicYear, semester]);
-
-  const fetchCourseData = async () => {
+  const fetchCourseData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -152,7 +146,13 @@ const LecturerGrades = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [courseId, academicYear, semester, toast]);
+
+  useEffect(() => {
+    if (courseId && user?.role === "LECTURER") {
+      fetchCourseData();
+    }
+  }, [courseId, user, academicYear, semester, fetchCourseData]);
 
   const handleGradeChange = (
     studentId: string,

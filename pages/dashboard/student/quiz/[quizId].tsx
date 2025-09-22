@@ -61,6 +61,43 @@ const StudentQuiz = () => {
     }
   }, [quizId, user]);
 
+  const handleSubmitQuiz = async () => {
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/student/quiz", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          attemptId: attempt.id,
+          answers: Object.entries(answers).map(([questionId, answer]) => ({
+            questionId,
+            answer,
+          })),
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResult(data);
+        setQuizCompleted(true);
+        setShowSubmitDialog(false);
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to submit quiz");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit quiz",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   useEffect(() => {
     if (timeRemaining > 0 && !quizCompleted) {
       const timer = setTimeout(() => {
@@ -70,7 +107,7 @@ const StudentQuiz = () => {
     } else if (timeRemaining === 0 && !quizCompleted) {
       handleSubmitQuiz();
     }
-  }, [timeRemaining, quizCompleted]);
+  }, [timeRemaining, quizCompleted, handleSubmitQuiz]);
 
   const startQuiz = async () => {
     try {
@@ -122,43 +159,6 @@ const StudentQuiz = () => {
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
-    }
-  };
-
-  const handleSubmitQuiz = async () => {
-    setSubmitting(true);
-    try {
-      const response = await fetch("/api/student/quiz", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          attemptId: attempt.id,
-          answers: Object.entries(answers).map(([questionId, answer]) => ({
-            questionId,
-            answer,
-          })),
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setResult(data);
-        setQuizCompleted(true);
-        setShowSubmitDialog(false);
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to submit quiz");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to submit quiz",
-        variant: "destructive",
-      });
-    } finally {
-      setSubmitting(false);
     }
   };
 

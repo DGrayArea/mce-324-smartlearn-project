@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -81,33 +81,38 @@ const PerformanceMetrics = () => {
   const [timeRange, setTimeRange] = useState("24h");
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchMetrics = async (range: string = timeRange) => {
-    try {
-      setRefreshing(true);
-      const response = await fetch(`/api/analytics/performance?timeRange=${range}`);
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch performance metrics");
-      }
+  const fetchMetrics = useCallback(
+    async (range: string = timeRange) => {
+      try {
+        setRefreshing(true);
+        const response = await fetch(
+          `/api/analytics/performance?timeRange=${range}`
+        );
 
-      const data = await response.json();
-      setMetrics(data);
-    } catch (error) {
-      console.error("Error fetching performance metrics:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch performance metrics",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
+        if (!response.ok) {
+          throw new Error("Failed to fetch performance metrics");
+        }
+
+        const data = await response.json();
+        setMetrics(data);
+      } catch (error) {
+        console.error("Error fetching performance metrics:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch performance metrics",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [timeRange, toast]
+  );
 
   useEffect(() => {
     fetchMetrics();
-  }, []);
+  }, [fetchMetrics]);
 
   const handleTimeRangeChange = (newRange: string) => {
     setTimeRange(newRange);
@@ -190,7 +195,9 @@ const PerformanceMetrics = () => {
               Unable to fetch performance metrics at this time.
             </p>
             <Button onClick={handleRefresh} disabled={refreshing}>
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+              />
               Try Again
             </Button>
           </CardContent>
@@ -221,8 +228,14 @@ const PerformanceMetrics = () => {
               <SelectItem value="30d">Last 30 Days</SelectItem>
             </SelectContent>
           </Select>
-          <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+          <Button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            variant="outline"
+          >
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`}
+            />
             Refresh
           </Button>
         </div>
@@ -250,10 +263,15 @@ const PerformanceMetrics = () => {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.system.avgResponseTime}ms</div>
+            <div className="text-2xl font-bold">
+              {metrics.system.avgResponseTime}ms
+            </div>
             <p className="text-xs text-muted-foreground">Average</p>
-            <Progress 
-              value={Math.min((metrics.system.avgResponseTime / 1000) * 100, 100)} 
+            <Progress
+              value={Math.min(
+                (metrics.system.avgResponseTime / 1000) * 100,
+                100
+              )}
               className="mt-2"
             />
           </CardContent>
@@ -265,7 +283,9 @@ const PerformanceMetrics = () => {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.system.requestsPerMinute}</div>
+            <div className="text-2xl font-bold">
+              {metrics.system.requestsPerMinute}
+            </div>
             <p className="text-xs text-muted-foreground">Current rate</p>
             <div className="text-xs text-muted-foreground mt-1">
               Total: {metrics.system.totalRequests.toLocaleString()}
@@ -279,12 +299,11 @@ const PerformanceMetrics = () => {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{metrics.system.errorRate}%</div>
+            <div className="text-2xl font-bold">
+              {metrics.system.errorRate}%
+            </div>
             <p className="text-xs text-muted-foreground">Last {timeRange}</p>
-            <Progress 
-              value={metrics.system.errorRate * 20} 
-              className="mt-2"
-            />
+            <Progress value={metrics.system.errorRate * 20} className="mt-2" />
           </CardContent>
         </Card>
       </div>
@@ -304,15 +323,23 @@ const PerformanceMetrics = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <div className="text-2xl font-bold">{metrics.database.avgQueryTime}ms</div>
-              <p className="text-sm text-muted-foreground">Average Query Time</p>
+              <div className="text-2xl font-bold">
+                {metrics.database.avgQueryTime}ms
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Average Query Time
+              </p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.database.totalQueries.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {metrics.database.totalQueries.toLocaleString()}
+              </div>
               <p className="text-sm text-muted-foreground">Total Queries</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.database.slowQueries}</div>
+              <div className="text-2xl font-bold">
+                {metrics.database.slowQueries}
+              </div>
               <p className="text-sm text-muted-foreground">Slow Queries</p>
             </div>
           </div>
@@ -357,11 +384,17 @@ const PerformanceMetrics = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <div className="text-2xl font-bold">{metrics.api.avgAPITime}ms</div>
-              <p className="text-sm text-muted-foreground">Average API Response Time</p>
+              <div className="text-2xl font-bold">
+                {metrics.api.avgAPITime}ms
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Average API Response Time
+              </p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.api.totalAPICalls.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {metrics.api.totalAPICalls.toLocaleString()}
+              </div>
               <p className="text-sm text-muted-foreground">Total API Calls</p>
             </div>
           </div>
@@ -369,10 +402,13 @@ const PerformanceMetrics = () => {
             <h4 className="text-sm font-medium mb-3">Top Endpoints</h4>
             <div className="space-y-2">
               {Object.entries(metrics.api.endpointStats)
-                .sort(([,a], [,b]) => b.count - a.count)
+                .sort(([, a], [, b]) => b.count - a.count)
                 .slice(0, 5)
                 .map(([endpoint, stats]) => (
-                  <div key={endpoint} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <div
+                    key={endpoint}
+                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
+                  >
                     <span className="text-sm font-medium">{endpoint}</span>
                     <div className="flex items-center space-x-4">
                       <span className="text-sm text-muted-foreground">
@@ -404,20 +440,30 @@ const PerformanceMetrics = () => {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
-              <div className="text-2xl font-bold">{metrics.userActivity.activeUsers}</div>
+              <div className="text-2xl font-bold">
+                {metrics.userActivity.activeUsers}
+              </div>
               <p className="text-sm text-muted-foreground">Active Users</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.userActivity.concurrentUsers}</div>
+              <div className="text-2xl font-bold">
+                {metrics.userActivity.concurrentUsers}
+              </div>
               <p className="text-sm text-muted-foreground">Concurrent Users</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.userActivity.totalUsers}</div>
+              <div className="text-2xl font-bold">
+                {metrics.userActivity.totalUsers}
+              </div>
               <p className="text-sm text-muted-foreground">Total Users</p>
             </div>
             <div>
-              <div className="text-2xl font-bold">{metrics.userActivity.avgSessionDuration}m</div>
-              <p className="text-sm text-muted-foreground">Avg Session Duration</p>
+              <div className="text-2xl font-bold">
+                {metrics.userActivity.avgSessionDuration}m
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Avg Session Duration
+              </p>
             </div>
           </div>
         </CardContent>
@@ -432,4 +478,3 @@ const PerformanceMetrics = () => {
 };
 
 export default withDashboardLayout(PerformanceMetrics);
-

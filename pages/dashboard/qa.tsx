@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -102,36 +102,29 @@ const QABoards = () => {
     content: "",
   });
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  useEffect(() => {
-    if (courses.length > 0) {
-      fetchQuestions();
-    }
-  }, [courses, selectedCourse, sortBy]);
-
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const response = await fetch("/api/lecturer/courses");
       if (response.ok) {
         const data = await response.json();
         setCourses(data.courses || []);
       } else {
-        // If lecturer courses fail, try student courses
         const studentResponse = await fetch("/api/student/courses");
         if (studentResponse.ok) {
-          const studentData = await studentResponse.json();
+          const studentData = await response.json();
           setCourses(studentData.courses || []);
         }
       }
     } catch (error) {
       console.error("Error fetching courses:", error);
     }
-  };
+  }, []);
 
-  const fetchQuestions = async () => {
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  const fetchQuestions = useCallback(async () => {
     if (!selectedCourse) return;
 
     try {
@@ -159,7 +152,13 @@ const QABoards = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCourse, sortBy, toast]);
+
+  useEffect(() => {
+    if (courses.length > 0) {
+      fetchQuestions();
+    }
+  }, [courses, selectedCourse, sortBy, fetchQuestions]);
 
   const handleCreateQuestion = async (e: React.FormEvent) => {
     e.preventDefault();

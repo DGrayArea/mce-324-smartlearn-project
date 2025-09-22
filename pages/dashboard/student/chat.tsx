@@ -55,26 +55,6 @@ const StudentChat = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchChatRooms();
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedRoom) {
-      fetchMessages();
-    }
-  }, [selectedRoom]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   const fetchChatRooms = async () => {
     try {
       setLoading(true);
@@ -114,6 +94,26 @@ const StudentChat = () => {
         variant: "destructive",
       });
     }
+  };
+
+  useEffect(() => {
+    if (user?.role === "STUDENT") {
+      fetchChatRooms();
+    }
+  }, [user, fetchChatRooms]);
+
+  useEffect(() => {
+    if (selectedRoom) {
+      fetchMessages();
+    }
+  }, [selectedRoom, fetchMessages]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const sendMessage = async () => {

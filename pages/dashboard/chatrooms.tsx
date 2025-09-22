@@ -103,7 +103,7 @@ const Chatrooms = () => {
 
   // Get available courses for the current user
   const availableCourses = user
-    ? getCoursesForUser(user.role, `${user.firstName} ${user.lastName}`)
+    ? getCoursesForUser(user.role, user.name)
     : [];
 
   // Load chat rooms and messages from localStorage on component mount
@@ -319,10 +319,10 @@ const Chatrooms = () => {
     if (message.trim() && selectedRoom) {
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
-        sender: user ? `${user.firstName} ${user.lastName}` : "Current User",
+        sender: user ? user.name : "Current User",
         content: message,
         timestamp: new Date().toLocaleTimeString(),
-        avatar: user ? `${user.firstName[0]}${user.lastName[0]}` : "U",
+        avatar: user ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : "U",
         roomId: selectedRoom.id,
       };
 
@@ -364,7 +364,7 @@ const Chatrooms = () => {
           memberCount: room.memberCount + 1,
           members: [
             ...room.members,
-            user ? `${user.firstName} ${user.lastName}` : "Current User",
+            user ? user.name : "Current User",
           ],
         };
 
@@ -392,7 +392,7 @@ const Chatrooms = () => {
           members: room.members.filter(
             (member) =>
               member !==
-              (user ? `${user.firstName} ${user.lastName}` : "Current User")
+              (user ? user.name : "Current User")
           ),
         };
 
@@ -423,8 +423,8 @@ const Chatrooms = () => {
         memberCount: 1,
         isJoined: true,
         lastActivity: new Date().toLocaleString(),
-        createdBy: user ? `${user.firstName} ${user.lastName}` : "Current User",
-        members: [user ? `${user.firstName} ${user.lastName}` : "Current User"],
+        createdBy: user ? user.name : "Current User",
+        members: [user ? user.name : "Current User"],
         course: newRoom.course || undefined,
         courseDetails:
           newRoom.type === "course"
@@ -518,7 +518,7 @@ const Chatrooms = () => {
   const canManageRoom = (room: ChatRoom) => {
     return (
       room.createdBy ===
-      (user ? `${user.firstName} ${user.lastName}` : "Current User")
+      (user ? user.name : "Current User")
     );
   };
 
