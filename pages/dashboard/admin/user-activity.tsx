@@ -102,8 +102,8 @@ const UserActivityMonitoring = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAction, setSelectedAction] = useState<string>("");
-  const [selectedEntity, setSelectedEntity] = useState<string>("");
+  const [selectedAction, setSelectedAction] = useState<string>("all");
+  const [selectedEntity, setSelectedEntity] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -112,8 +112,10 @@ const UserActivityMonitoring = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (selectedAction) params.append("action", selectedAction);
-      if (selectedEntity) params.append("entity", selectedEntity);
+      if (selectedAction && selectedAction !== "all")
+        params.append("action", selectedAction);
+      if (selectedEntity && selectedEntity !== "all")
+        params.append("entity", selectedEntity);
       if (selectedUser) params.append("userId", selectedUser);
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
@@ -301,7 +303,7 @@ const UserActivityMonitoring = () => {
                   <SelectValue placeholder="All Actions" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Actions</SelectItem>
+                  <SelectItem value="all">All Actions</SelectItem>
                   <SelectItem value="login">Login</SelectItem>
                   <SelectItem value="logout">Logout</SelectItem>
                   <SelectItem value="create">Create</SelectItem>
@@ -319,7 +321,7 @@ const UserActivityMonitoring = () => {
                   <SelectValue placeholder="All Entities" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Entities</SelectItem>
+                  <SelectItem value="all">All Entities</SelectItem>
                   <SelectItem value="course">Course</SelectItem>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="lecturer">Lecturer</SelectItem>

@@ -69,7 +69,7 @@ export default async function handler(
       // Role-based access
       if (currentUser.role === "STUDENT" && currentUser.student) {
         // Students can only see their own tickets
-        whereClause.studentId = currentUser.student.id;
+        whereClause.userId = session.user.id;
       } else if (currentUser.role === "LECTURER" && currentUser.lecturer) {
         // Lecturers can see tickets assigned to them or from their students
         whereClause.OR = [

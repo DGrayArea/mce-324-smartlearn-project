@@ -32,9 +32,9 @@ export const useDashboardData = () => {
         const role = user.role?.toLowerCase();
 
         // Handle both uppercase and lowercase role formats from database
-        if (role === "STUDENT") {
+        if (role === "student") {
           endpoint = "/api/dashboard/student";
-        } else if (role === "LECTURER") {
+        } else if (role === "lecturer") {
           endpoint = "/api/dashboard/lecturer";
         } else if (
           role === "department_admin" ||
@@ -77,6 +77,7 @@ export const useDashboardData = () => {
         // Don't set error state, just use fallback data
         console.warn("Using fallback dashboard data due to error");
         setData(getFallbackData(user.role));
+        setError(null); // Clear any previous errors
       } finally {
         setLoading(false);
       }
@@ -92,7 +93,7 @@ export const useDashboardData = () => {
 const getFallbackData = (role: string): DashboardData => {
   const normalizedRole = role?.toLowerCase();
 
-  if (normalizedRole === "STUDENT") {
+  if (normalizedRole === "student") {
     return {
       stats: {
         enrolledCourses: 6,

@@ -202,15 +202,16 @@ const Courses = () => {
 
       toast({
         title: "Success",
-        description: "Successfully enrolled in course!",
+        description:
+          data.message || "Course added to registration successfully!",
       });
 
-      // Remove enrolled course from available list
+      // Remove course from available list since it's now in registration
       setAvailableCourses((prev) =>
         prev.filter((course) => course.id !== courseId)
       );
 
-      // Refresh enrolled courses
+      // Refresh course data
       mutateCourses();
     } catch (error) {
       console.error("Enrollment error:", error);
@@ -532,10 +533,10 @@ const Courses = () => {
               </DialogTrigger>
               <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
-                  <DialogTitle>Enroll in Courses</DialogTitle>
+                  <DialogTitle>Register for Courses</DialogTitle>
                   <DialogDescription>
-                    Browse and enroll in available courses for the selected
-                    academic period.
+                    Browse and register for available courses. Your registration
+                    will be reviewed by your department admin.
                   </DialogDescription>
                 </DialogHeader>
 

@@ -68,11 +68,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       };
       setUser(sessionUser);
       setIsAuthenticated(true);
-      setIsLoading(false);
+      // Add a small delay to prevent glitching
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 100);
     } else if (status === "unauthenticated") {
       setUser(null);
       setIsAuthenticated(false);
-      setIsLoading(false);
+      // Add a small delay to prevent glitching
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 100);
     }
   }, [session, status]);
 
@@ -81,24 +87,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setupMobileAuthListener();
   }, []);
 
-  // Handle production callback issues
+  // Handle production callback issues - only for specific callback scenarios
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && isAuthenticated && user) {
       const urlParams = new URLSearchParams(window.location.search);
       const callbackUrl = urlParams.get("callbackUrl");
       const currentPath = window.location.pathname;
 
       // Only handle callback if we're on the login page and have a callback URL
-      if (currentPath === "/login" && callbackUrl && isAuthenticated && user) {
+      if (currentPath === "/login" && callbackUrl) {
         // Clear the callback URL from the URL to prevent loops
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete("callbackUrl");
         window.history.replaceState({}, "", newUrl.toString());
 
-        // Force redirect to dashboard
+        // Force redirect to dashboard with a longer delay to prevent glitching
         setTimeout(() => {
           window.location.href = "/dashboard";
-        }, 100);
+        }, 300);
       }
     }
   }, [isAuthenticated, user]);
@@ -116,17 +122,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return { success: false, error: result.error };
       }
 
-      // Force a page reload to ensure proper navigation and clear any callback URLs
+      // Clear any callback URL from the current URL but let NextAuth handle the redirect
       if (typeof window !== "undefined") {
-        // Clear any callback URL from the current URL
         const newUrl = new URL(window.location.href);
         newUrl.searchParams.delete("callbackUrl");
         window.history.replaceState({}, "", newUrl.toString());
-
-        // Force navigation to dashboard
-        setTimeout(() => {
-          window.location.href = "/dashboard";
-        }, 100);
       }
 
       return { success: true };

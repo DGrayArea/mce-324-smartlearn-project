@@ -30,9 +30,29 @@ export const LoginForm = () => {
   // Redirect to dashboard when session is established
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
-      router.push("/dashboard");
+      // Use a small delay to prevent glitching
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 100);
     }
   }, [status, session, router]);
+
+  // Show loading state while checking authentication
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-hero p-4">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center">
+            <div className="mx-auto w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-medium mb-4">
+              <GraduationCap className="h-6 w-6 text-primary animate-spin" />
+            </div>
+            <h1 className="text-3xl font-bold text-white">Loading...</h1>
+            <p className="text-white/80">Checking authentication status</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

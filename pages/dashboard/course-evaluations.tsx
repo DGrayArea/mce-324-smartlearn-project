@@ -103,8 +103,8 @@ const CourseEvaluations = () => {
   const [lecturers, setLecturers] = useState<Lecturer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCourse, setSelectedCourse] = useState<string>("");
-  const [selectedLecturer, setSelectedLecturer] = useState<string>("");
+  const [selectedCourse, setSelectedCourse] = useState<string>("all");
+  const [selectedLecturer, setSelectedLecturer] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingEvaluation, setEditingEvaluation] =
@@ -130,8 +130,10 @@ const CourseEvaluations = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (selectedCourse) params.append("courseId", selectedCourse);
-      if (selectedLecturer) params.append("lecturerId", selectedLecturer);
+      if (selectedCourse && selectedCourse !== "all")
+        params.append("courseId", selectedCourse);
+      if (selectedLecturer && selectedLecturer !== "all")
+        params.append("lecturerId", selectedLecturer);
 
       const response = await fetch(
         `/api/evaluations/course-evaluations?${params}`
@@ -757,7 +759,7 @@ const CourseEvaluations = () => {
                 <SelectValue placeholder="Filter by course" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Courses</SelectItem>
+                <SelectItem value="all">All Courses</SelectItem>
                 {courses.map((course) => (
                   <SelectItem key={course.id} value={course.id}>
                     {course.code} - {course.title}
@@ -773,7 +775,7 @@ const CourseEvaluations = () => {
                 <SelectValue placeholder="Filter by lecturer" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All Lecturers</SelectItem>
+                <SelectItem value="all">All Lecturers</SelectItem>
                 {lecturers.map((lecturer) => (
                   <SelectItem key={lecturer.id} value={lecturer.id}>
                     {lecturer.name}

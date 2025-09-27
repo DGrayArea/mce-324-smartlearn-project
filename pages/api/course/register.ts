@@ -90,6 +90,22 @@ export default async function handler(
       });
     }
 
+    // Check if course is already selected in this registration
+    const existingSelection = await prisma.courseSelection.findUnique({
+      where: {
+        courseRegistrationId_courseId: {
+          courseRegistrationId: courseRegistration.id,
+          courseId: courseId,
+        },
+      },
+    });
+
+    if (existingSelection) {
+      return res.status(409).json({
+        message: "Course already selected in this registration",
+      });
+    }
+
     // Add course to the registration
     await prisma.courseSelection.create({
       data: {
@@ -98,35 +114,14 @@ export default async function handler(
       },
     });
 
-    // Create enrollment (assuming auto-approval for now)
-    const enrollment = await prisma.enrollment.create({
-      data: {
-        studentId: user.student.id,
-        courseId: courseId,
-        academicYear: academicYear,
-        semester: semester,
-        courseRegistrationId: courseRegistration.id,
-        isActive: true,
-      },
-    });
-
-    // Update course registration status to approved
-    await prisma.courseRegistration.update({
-      where: { id: courseRegistration.id },
-      data: {
-        status: "DEPARTMENT_APPROVED",
-        reviewedAt: new Date(),
-      },
-    });
-
     return res.status(201).json({
-      message: "Successfully enrolled in course",
-      enrollment: {
-        id: enrollment.id,
-        courseId: enrollment.courseId,
-        academicYear: enrollment.academicYear,
-        semester: enrollment.semester,
-        enrolledAt: enrollment.enrolledAt,
+      message:
+        "Course added to registration successfully. Submit your registration for department admin review.",
+      registration: {
+        id: courseRegistration.id,
+        status: courseRegistration.status,
+        academicYear: courseRegistration.academicYear,
+        semester: courseRegistration.semester,
       },
     });
   } catch (error) {

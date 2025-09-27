@@ -95,8 +95,8 @@ const KnowledgeBase = () => {
     useState<KnowledgeArticle | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [showFeatured, setShowFeatured] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -134,8 +134,10 @@ const KnowledgeBase = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (selectedCategory) params.append("category", selectedCategory);
-      if (selectedStatus) params.append("status", selectedStatus);
+      if (selectedCategory && selectedCategory !== "all")
+        params.append("category", selectedCategory);
+      if (selectedStatus && selectedStatus !== "all")
+        params.append("status", selectedStatus);
       if (showFeatured) params.append("featured", "true");
       if (searchTerm) params.append("search", searchTerm);
 
@@ -578,7 +580,7 @@ const KnowledgeBase = () => {
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             {categories.map((category) => (
               <SelectItem key={category.value} value={category.value}>
                 {category.label}
@@ -592,7 +594,7 @@ const KnowledgeBase = () => {
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               {statuses.map((status) => (
                 <SelectItem key={status.value} value={status.value}>
                   {status.label}

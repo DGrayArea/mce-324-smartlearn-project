@@ -72,7 +72,25 @@ export default async function handler(
     });
 
     if (!user?.student) {
-      return res.status(404).json({ message: "Student profile not found" });
+      // Return fallback data instead of error for missing student profile
+      const fallbackData = {
+        stats: {
+          enrolledCourses: 0,
+          pendingAssignments: 0,
+          currentGPA: "0.0",
+          studyHours: "0h",
+          completedTasks: 0,
+          courseProgress: "0%",
+        },
+        recentActivity: [
+          "Welcome to the learning platform!",
+          "Complete your profile to get started",
+          "Explore available courses",
+          "Check out the knowledge base",
+        ],
+        courses: [],
+      };
+      return res.status(200).json(fallbackData);
     }
 
     const student = user.student;

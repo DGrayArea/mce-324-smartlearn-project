@@ -250,31 +250,85 @@ async function handlePost(
       });
     }
 
-    // Create enrollment
-    const enrollment = await prisma.enrollment.create({
-      data: {
-        studentId,
-        courseId,
-        academicYear,
-        semester,
+    // Create course registration if it doesn't exist
+    let courseRegistration = await prisma.courseRegistration.findUnique({
+      where: {
+        studentId_academicYear_semester: {
+          studentId,
+          academicYear,
+          semester,
+        },
       },
+    });
+
+    if (!courseRegistration) {
+      courseRegistration = await prisma.courseRegistration.create({
+        data: {
+          studentId,
+          academicYear,
+          semester,
+          status: "PENDING",
+        },
+      });
+    }
+
+    // Check if course is already selected in this registration
+    const existingSelection = await prisma.courseSelection.findUnique({
+      where: {
+        courseRegistrationId_courseId: {
+          courseRegistrationId: courseRegistration.id,
+          courseId,
+        },
+      },
+    });
+
+    if (existingSelection) {
+      return res.status(409).json({
+        message: "Course already selected in this registration",
+      });
+    }
+
+    // Add course to the registration
+    await prisma.courseSelection.create({
+      data: {
+        courseRegistrationId: courseRegistration.id,
+        courseId,
+      },
+    });
+
+    // Create notification for department admin
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
       include: {
-        course: {
+        department: {
           include: {
-            department: {
-              select: { name: true, code: true },
-            },
-            school: {
-              select: { name: true, code: true },
-            },
+            admins: true,
           },
         },
       },
     });
 
+    if (student?.department.admins.length > 0) {
+      await prisma.notification.create({
+        data: {
+          title: "New Course Registration for Review",
+          message: `${student.name} (${student.matricNumber}) has registered for a new course: ${course.title} (${course.code}) for review.`,
+          type: "COURSE_REGISTRATION",
+          priority: "normal",
+          actionUrl: `/dashboard/course-registrations`,
+          studentId,
+        },
+      });
+    }
+
     return res.status(201).json({
-      message: "Successfully enrolled in course",
-      enrollment,
+      message: "Course added to registration successfully. Your registration will be reviewed by your department admin.",
+      registration: {
+        id: courseRegistration.id,
+        status: courseRegistration.status,
+        academicYear: courseRegistration.academicYear,
+        semester: courseRegistration.semester,
+      },
     });
   } catch (error) {
     console.error("Course registration error:", error);

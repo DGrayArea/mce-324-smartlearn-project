@@ -100,9 +100,9 @@ const SupportTickets = () => {
   const [responses, setResponses] = useState<SupportResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState<string>("");
-  const [selectedPriority, setSelectedPriority] = useState<string>("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedPriority, setSelectedPriority] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isResponseDialogOpen, setIsResponseDialogOpen] = useState(false);
@@ -124,9 +124,12 @@ const SupportTickets = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
-      if (selectedStatus) params.append("status", selectedStatus);
-      if (selectedPriority) params.append("priority", selectedPriority);
-      if (selectedCategory) params.append("category", selectedCategory);
+      if (selectedStatus && selectedStatus !== "all")
+        params.append("status", selectedStatus);
+      if (selectedPriority && selectedPriority !== "all")
+        params.append("priority", selectedPriority);
+      if (selectedCategory && selectedCategory !== "all")
+        params.append("category", selectedCategory);
 
       const response = await fetch(`/api/support/tickets?${params}`);
       if (response.ok) {
@@ -504,7 +507,7 @@ const SupportTickets = () => {
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Status</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="OPEN">Open</SelectItem>
             <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
             <SelectItem value="RESOLVED">Resolved</SelectItem>
@@ -516,7 +519,7 @@ const SupportTickets = () => {
             <SelectValue placeholder="Priority" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Priority</SelectItem>
+            <SelectItem value="all">All Priority</SelectItem>
             <SelectItem value="LOW">Low</SelectItem>
             <SelectItem value="MEDIUM">Medium</SelectItem>
             <SelectItem value="HIGH">High</SelectItem>
@@ -528,7 +531,7 @@ const SupportTickets = () => {
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="TECHNICAL">Technical</SelectItem>
             <SelectItem value="ACADEMIC">Academic</SelectItem>
             <SelectItem value="ACCOUNT">Account</SelectItem>
