@@ -49,12 +49,6 @@ const navigationItems: NavItem[] = [
     roles: ["STUDENT", "LECTURER"],
   },
   {
-    title: "Course Selection",
-    href: "/dashboard/student/course-selection",
-    icon: ClipboardCheck,
-    roles: ["STUDENT"],
-  },
-  {
     title: "My Grades",
     href: "/dashboard/student/grades",
     icon: Award,
