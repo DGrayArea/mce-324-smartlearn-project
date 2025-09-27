@@ -80,14 +80,14 @@ const LecturerGrades = () => {
   const {
     students = [],
     isLoading: studentsLoading,
-    error: studentsError
+    error: studentsError,
   } = useLecturerStudents(courseId as string);
 
   const {
     results = [],
     isLoading: resultsLoading,
     error: resultsError,
-    mutate: mutateResults
+    mutate: mutateResults,
   } = useLecturerResults(courseId as string, academicYear, semester);
 
   // Fetch course details separately (not covered by SWR hooks yet)
@@ -253,7 +253,7 @@ const LecturerGrades = () => {
           description: "Grades submitted to department admin for review",
         });
         setShowSubmitDialog(false);
-        fetchCourseData();
+        mutateResults();
       } else {
         throw new Error("Failed to submit grades");
       }

@@ -45,7 +45,7 @@ const StudentCourseMaterials = () => {
   // SWR hook for course materials data
   const {
     course,
-    documents = [],
+    materials = [],
     isLoading,
     error
   } = useStudentMaterials(courseId as string);
@@ -133,7 +133,7 @@ const StudentCourseMaterials = () => {
     }
   };
 
-  const filteredDocuments = documents.filter((doc) => {
+  const filteredDocuments = materials.filter((doc) => {
     const matchesSearch =
       doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.description?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -145,9 +145,9 @@ const StudentCourseMaterials = () => {
   });
 
   const uniqueWeeks = [
-    ...new Set(documents.map((doc) => doc.week).filter(Boolean)),
-  ].sort((a, b) => a - b);
-  const documentTypes = [...new Set(documents.map((doc) => doc.documentType))];
+    ...new Set(materials.map((doc) => doc.week).filter(Boolean)),
+  ].sort((a, b) => Number(a) - Number(b));
+  const documentTypes = [...new Set(materials.map((doc) => doc.documentType))];
 
   if (isLoading) {
     return (
@@ -223,8 +223,8 @@ const StudentCourseMaterials = () => {
                 <SelectContent>
                   <SelectItem value="ALL">All Types</SelectItem>
                   {documentTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.replace("_", " ")}
+                    <SelectItem key={String(type)} value={String(type)}>
+                      {String(type).replace("_", " ")}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -236,8 +236,8 @@ const StudentCourseMaterials = () => {
                 <SelectContent>
                   <SelectItem value="ALL">All Weeks</SelectItem>
                   {uniqueWeeks.map((week) => (
-                    <SelectItem key={week} value={week.toString()}>
-                      Week {week}
+                    <SelectItem key={String(week)} value={String(week)}>
+                      Week {String(week)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -339,7 +339,7 @@ const StudentCourseMaterials = () => {
             <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Materials Found</h3>
             <p className="text-muted-foreground">
-              {documents.length === 0
+              {materials.length === 0
                 ? "No materials have been uploaded for this course yet."
                 : "No materials match your current filters."}
             </p>
