@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useSession, signOut, signIn } from "next-auth/react";
+import {
+  isMobile,
+  forceMobileNavigation,
+  setupMobileAuthListener,
+} from "@/lib/mobileAuth";
 
 interface User {
   id: string;
@@ -71,16 +76,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [session, status]);
 
+  // Setup mobile auth listeners
+  useEffect(() => {
+    setupMobileAuthListener();
+  }, []);
+
+  // Handle production callback issues
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const callbackUrl = urlParams.get("callbackUrl");
+
+      if (callbackUrl && isAuthenticated && user) {
+        // Force redirect to dashboard if we have a callback URL and are authenticated
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 100);
+      }
+    }
+  }, [isAuthenticated, user]);
+
   const login = async (email: string, password: string) => {
     try {
       const result = await signIn("credentials", {
         email,
         password,
         redirect: false,
+        callbackUrl: "/dashboard",
       });
 
       if (result?.error) {
         return { success: false, error: result.error };
+      }
+
+      // Force a page reload on mobile to ensure proper navigation
+      if (isMobile()) {
+        forceMobileNavigation("/dashboard");
+        return { success: true };
       }
 
       return { success: true };

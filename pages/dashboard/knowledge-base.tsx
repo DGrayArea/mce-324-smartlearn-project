@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -130,11 +130,7 @@ const KnowledgeBase = () => {
     { value: "ARCHIVED", label: "Archived" },
   ];
 
-  useEffect(() => {
-    fetchArticles();
-  }, [selectedCategory, selectedStatus, showFeatured]);
-
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -164,7 +160,11 @@ const KnowledgeBase = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, selectedStatus, showFeatured, searchTerm, toast]);
+
+  useEffect(() => {
+    fetchArticles();
+  }, [fetchArticles]);
 
   const fetchArticle = async (articleId: string) => {
     try {

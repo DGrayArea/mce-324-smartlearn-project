@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -42,11 +42,7 @@ const Notifications = () => {
   const [loading, setLoading] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [showUnreadOnly]);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
       const url = showUnreadOnly
@@ -75,7 +71,11 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showUnreadOnly, toast]);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const markAsRead = async (notificationIds: string[]) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { studentCourses, lecturerCourses, allCourses } from "@/lib/dummyData";
@@ -155,7 +155,7 @@ const Courses = () => {
 
   const courses = getCourses();
 
-  const fetchAvailableCourses = async () => {
+  const fetchAvailableCourses = useCallback(async () => {
     if (!enrollmentOpen) return;
 
     try {
@@ -177,7 +177,7 @@ const Courses = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [enrollmentOpen, academicYear, semester, toast]);
 
   const handleEnroll = async (courseId: string) => {
     setEnrolling(courseId);
@@ -225,46 +225,49 @@ const Courses = () => {
     }
   };
 
-  const handleDropCourse = async (enrollmentId: string) => {
-    if (!confirm("Are you sure you want to drop this course?")) {
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `/api/student/course-registration?enrollmentId=${enrollmentId}`,
-        {
-          method: "DELETE",
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to drop course");
+  const handleDropCourse = useCallback(
+    async (enrollmentId: string) => {
+      if (!confirm("Are you sure you want to drop this course?")) {
+        return;
       }
 
-      toast({
-        title: "Success",
-        description: "Successfully dropped course!",
-      });
+      try {
+        const response = await fetch(
+          `/api/student/course-registration?enrollmentId=${enrollmentId}`,
+          {
+            method: "DELETE",
+          }
+        );
 
-      mutateCourses();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to drop course",
-        variant: "destructive",
-      });
-    }
-  };
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to drop course");
+        }
+
+        toast({
+          title: "Success",
+          description: "Successfully dropped course!",
+        });
+
+        mutateCourses();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description:
+            error instanceof Error ? error.message : "Failed to drop course",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast, mutateCourses]
+  );
 
   useEffect(() => {
     fetchAvailableCourses();
-  }, [enrollmentOpen, academicYear, semester]);
+  }, [fetchAvailableCourses]);
 
   // Course assignment functions for department admins
-  const fetchCourseAssignments = async () => {
+  const fetchCourseAssignments = useCallback(async () => {
     if (!assignmentOpen) return;
 
     try {
@@ -288,7 +291,7 @@ const Courses = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [assignmentOpen, academicYear, semester, toast]);
 
   const handleAssignCourse = async (courseId: string, lecturerId: string) => {
     const assignmentKey = `${courseId}-${lecturerId}`;
@@ -370,7 +373,7 @@ const Courses = () => {
 
   useEffect(() => {
     fetchCourseAssignments();
-  }, [assignmentOpen, academicYear, semester]);
+  }, [fetchCourseAssignments]);
 
   // Course management functions for admins
   // Set admin level when admin courses data is available

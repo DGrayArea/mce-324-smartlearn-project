@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -120,11 +120,7 @@ const FAQManagement = () => {
     "Financial",
   ];
 
-  useEffect(() => {
-    fetchFAQs();
-  }, []);
-
-  const fetchFAQs = async () => {
+  const fetchFAQs = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -151,7 +147,11 @@ const FAQManagement = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [categoryFilter, statusFilter, toast]);
+
+  useEffect(() => {
+    fetchFAQs();
+  }, [fetchFAQs]);
 
   const handleCreateFAQ = async () => {
     if (

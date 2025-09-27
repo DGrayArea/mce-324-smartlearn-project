@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -77,11 +77,7 @@ const FAQPage = () => {
     Financial: CreditCard,
   };
 
-  useEffect(() => {
-    fetchFAQs();
-  }, []);
-
-  const fetchFAQs = async () => {
+  const fetchFAQs = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -107,11 +103,11 @@ const FAQPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedCategory, toast]);
 
   useEffect(() => {
     fetchFAQs();
-  }, [selectedCategory]);
+  }, [fetchFAQs]);
 
   const filteredFAQs = faqs.filter((faq) => {
     const matchesSearch =
@@ -352,8 +348,8 @@ const FAQPage = () => {
           <MessageSquare className="h-8 w-8 text-primary mx-auto mb-4" />
           <h3 className="text-lg font-semibold mb-2">Still Need Help?</h3>
           <p className="text-muted-foreground mb-4">
-            Can&apos;t find what you&apos;re looking for? Our support team is here to
-            help.
+            Can&apos;t find what you&apos;re looking for? Our support team is
+            here to help.
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Button variant="outline">Contact Support</Button>

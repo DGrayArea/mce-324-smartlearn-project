@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -108,11 +108,7 @@ const UserActivityMonitoring = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  useEffect(() => {
-    fetchUserActivity();
-  }, [selectedAction, selectedEntity, selectedUser, startDate, endDate]);
-
-  const fetchUserActivity = async () => {
+  const fetchUserActivity = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -145,7 +141,11 @@ const UserActivityMonitoring = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedAction, selectedEntity, selectedUser, startDate, endDate, toast]);
+
+  useEffect(() => {
+    fetchUserActivity();
+  }, [fetchUserActivity]);
 
   const getActionColor = (action: string) => {
     switch (action.toLowerCase()) {

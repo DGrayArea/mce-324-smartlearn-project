@@ -8,7 +8,19 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        // Allow access to login page and API routes
+        if (
+          req.nextUrl.pathname.startsWith("/login") ||
+          req.nextUrl.pathname.startsWith("/api/") ||
+          req.nextUrl.pathname.startsWith("/register") ||
+          req.nextUrl.pathname.startsWith("/forgotpassword")
+        ) {
+          return true;
+        }
+        // For all other routes, require authentication
+        return !!token;
+      },
     },
   }
 );

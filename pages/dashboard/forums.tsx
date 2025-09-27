@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -102,11 +102,7 @@ const Forums = () => {
     schoolId: "",
   });
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch("/api/forums/categories");
@@ -130,7 +126,11 @@ const Forums = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();

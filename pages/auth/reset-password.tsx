@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -30,13 +30,7 @@ const ResetPassword = () => {
   const router = useRouter();
   const { token } = router.query;
 
-  useEffect(() => {
-    if (token) {
-      verifyToken();
-    }
-  }, [token]);
-
-  const verifyToken = async () => {
+  const verifyToken = useCallback(async () => {
     try {
       const response = await fetch(`/api/auth/password-reset?token=${token}`);
       const data = await response.json();
@@ -61,7 +55,13 @@ const ResetPassword = () => {
     } finally {
       setVerifying(false);
     }
-  };
+  }, [token, toast]);
+
+  useEffect(() => {
+    if (token) {
+      verifyToken();
+    }
+  }, [token, verifyToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

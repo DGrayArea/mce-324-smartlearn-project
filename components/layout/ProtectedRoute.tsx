@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { UserRole } from "@/lib/auth";
+import { isMobile, forceMobileNavigation } from "@/lib/mobileAuth";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -20,12 +21,22 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     if (isLoading) return; // Don't redirect while loading
 
     if (!isAuthenticated || !user) {
-      router.push("/login");
+      // Use mobile-specific navigation
+      if (isMobile()) {
+        forceMobileNavigation("/login");
+      } else {
+        router.push("/login");
+      }
       return;
     }
 
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-      router.push("/unauthorized");
+      // Use mobile-specific navigation
+      if (isMobile()) {
+        forceMobileNavigation("/unauthorized");
+      } else {
+        router.push("/unauthorized");
+      }
     }
   }, [isAuthenticated, user, allowedRoles, router, isLoading]);
 

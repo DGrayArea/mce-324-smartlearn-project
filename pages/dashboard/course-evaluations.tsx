@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -126,6 +126,38 @@ const CourseEvaluations = () => {
     isAnonymous: true,
   });
 
+  const fetchEvaluations = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams();
+      if (selectedCourse) params.append("courseId", selectedCourse);
+      if (selectedLecturer) params.append("lecturerId", selectedLecturer);
+
+      const response = await fetch(
+        `/api/evaluations/course-evaluations?${params}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setEvaluations(data.evaluations);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch course evaluations",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching evaluations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch course evaluations",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedCourse, selectedLecturer, toast]);
+
   useEffect(() => {
     fetchCourses();
     fetchLecturers();
@@ -135,7 +167,7 @@ const CourseEvaluations = () => {
     if (courses.length > 0) {
       fetchEvaluations();
     }
-  }, [courses, selectedCourse, selectedLecturer]);
+  }, [courses, selectedCourse, selectedLecturer, fetchEvaluations]);
 
   const fetchCourses = async () => {
     try {
@@ -165,38 +197,6 @@ const CourseEvaluations = () => {
       }
     } catch (error) {
       console.error("Error fetching lecturers:", error);
-    }
-  };
-
-  const fetchEvaluations = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams();
-      if (selectedCourse) params.append("courseId", selectedCourse);
-      if (selectedLecturer) params.append("lecturerId", selectedLecturer);
-
-      const response = await fetch(
-        `/api/evaluations/course-evaluations?${params}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setEvaluations(data.evaluations);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch course evaluations",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching evaluations:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch course evaluations",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
   };
 

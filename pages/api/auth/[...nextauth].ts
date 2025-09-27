@@ -174,6 +174,19 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
+      // Handle production callback URL issues
+      if (url.includes("callbackUrl=")) {
+        const callbackUrl = decodeURIComponent(url.split("callbackUrl=")[1]);
+        if (callbackUrl.startsWith(baseUrl)) {
+          return callbackUrl;
+        }
+      }
+
+      // Handle mobile app redirects
+      if (url.includes("mobile") || url.includes("app")) {
+        return `${baseUrl}/dashboard`;
+      }
+
       // If it's a relative URL, make it absolute
       if (url.startsWith("/")) {
         return `${baseUrl}${url}`;
@@ -200,9 +213,31 @@ export const authOptions: NextAuthOptions = {
   jwt: {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
+  // Add adapter for better session handling
+  adapter: undefined, // Use JWT strategy
   cookies: {
     sessionToken: {
       name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+        domain:
+          process.env.NODE_ENV === "production" ? ".vercel.app" : "localhost",
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
       options: {
         httpOnly: true,
         sameSite: "lax",

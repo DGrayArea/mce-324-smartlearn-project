@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -79,7 +79,10 @@ const Meetings = () => {
   });
 
   // Get available courses for the current user
-  const availableCourses = user ? getCoursesForUser(user.role, user.name) : [];
+  const availableCourses = useMemo(
+    () => (user ? getCoursesForUser(user.role, user.name) : []),
+    [user]
+  );
 
   // Load meetings from localStorage on component mount
   useEffect(() => {

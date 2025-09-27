@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -102,9 +102,10 @@ const Chatrooms = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Get available courses for the current user
-  const availableCourses = user
-    ? getCoursesForUser(user.role, user.name)
-    : [];
+  const availableCourses = useMemo(() => 
+    user ? getCoursesForUser(user.role, user.name) : [], 
+    [user]
+  );
 
   // Load chat rooms and messages from localStorage on component mount
   useEffect(() => {
@@ -449,7 +450,7 @@ const Chatrooms = () => {
         variant: "destructive",
       });
     }
-  }, [newRoom, user, toast]);
+  }, [newRoom, user, toast, availableCourses]);
 
   const handleEditRoom = useCallback((room: ChatRoom) => {
     setSelectedRoomForEdit(room);

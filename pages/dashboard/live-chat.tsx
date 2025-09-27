@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
@@ -110,7 +110,7 @@ const LiveChat = () => {
     user?.role &&
     ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"].includes(user.role);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -139,32 +139,35 @@ const LiveChat = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isAdmin, toast]);
 
-  const fetchMessages = async (sessionId: string) => {
-    try {
-      const response = await fetch(
-        `/api/live-chat/messages?sessionId=${sessionId}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages);
-      } else {
+  const fetchMessages = useCallback(
+    async (sessionId: string) => {
+      try {
+        const response = await fetch(
+          `/api/live-chat/messages?sessionId=${sessionId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setMessages(data.messages);
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to fetch messages",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching messages:", error);
         toast({
           title: "Error",
           description: "Failed to fetch messages",
           variant: "destructive",
         });
       }
-    } catch (error) {
-      console.error("Error fetching messages:", error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch messages",
-        variant: "destructive",
-      });
-    }
-  };
+    },
+    [toast]
+  );
 
   useEffect(() => {
     fetchSessions();

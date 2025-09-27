@@ -55,11 +55,48 @@ const StudentQuiz = () => {
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [result, setResult] = useState<any>(null);
 
+  const startQuiz = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/student/quiz", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ quizId }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setQuiz(data.quiz);
+        setQuestions(data.questions);
+        setAttempt(data.attempt);
+
+        // Set timer if quiz has time limit
+        if (data.quiz.timeLimit) {
+          setTimeRemaining(data.quiz.timeLimit * 60); // Convert minutes to seconds
+        }
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to start quiz");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to start quiz",
+        variant: "destructive",
+      });
+      router.push("/dashboard/courses");
+    } finally {
+      setLoading(false);
+    }
+  }, [quizId, router, toast]);
+
   useEffect(() => {
     if (quizId && user?.role === "STUDENT") {
       startQuiz();
     }
-  }, [quizId, user]);
+  }, [quizId, user, startQuiz]);
 
   const handleSubmitQuiz = useCallback(async () => {
     setSubmitting(true);
@@ -108,43 +145,6 @@ const StudentQuiz = () => {
       handleSubmitQuiz();
     }
   }, [timeRemaining, quizCompleted, handleSubmitQuiz]);
-
-  const startQuiz = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/student/quiz", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ quizId }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setQuiz(data.quiz);
-        setQuestions(data.questions);
-        setAttempt(data.attempt);
-
-        // Set timer if quiz has time limit
-        if (data.quiz.timeLimit) {
-          setTimeRemaining(data.quiz.timeLimit * 60); // Convert minutes to seconds
-        }
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to start quiz");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start quiz",
-        variant: "destructive",
-      });
-      router.push("/dashboard/courses");
-    } finally {
-      setLoading(false);
-    }
-  }, [quizId, router, toast]);
 
   const handleAnswerChange = (questionId: string, answer: string) => {
     setAnswers({ ...answers, [questionId]: answer });
