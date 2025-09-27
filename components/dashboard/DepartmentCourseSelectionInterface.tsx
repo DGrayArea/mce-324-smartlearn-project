@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
+import useSWR, { mutate } from "swr";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,16 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   BookOpen,
   Search,
   Plus,
@@ -34,6 +45,7 @@ import {
   XCircle,
   UserCheck,
   Users,
+  Loader2,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
@@ -44,18 +56,35 @@ interface DepartmentCourseSelectionInterfaceProps {
   onSuccess: () => void;
 }
 
+// Fetcher function for SWR
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 const DepartmentCourseSelectionInterface: React.FC<
   DepartmentCourseSelectionInterfaceProps
 > = ({ open, onOpenChange, onSuccess }) => {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [allCourses, setAllCourses] = useState<any[]>([]);
-  const [selectedCourses, setSelectedCourses] = useState<any[]>([]);
-  const [department, setDepartment] = useState<any>(null);
 
-  // Lecturer assignment states
-  const [lecturers, setLecturers] = useState<any[]>([]);
-  const [courseAssignments, setCourseAssignments] = useState<any[]>([]);
+  // SWR hooks for data fetching
+  const {
+    data: coursesData,
+    error: coursesError,
+    isLoading: coursesLoading,
+  } = useSWR(open ? "/api/admin/department-course-selection" : null, fetcher);
+
+  const {
+    data: assignmentsData,
+    error: assignmentsError,
+    isLoading: assignmentsLoading,
+  } = useSWR(open ? "/api/admin/lecturer-assignment" : null, fetcher);
+
+  // Extract data from SWR responses
+  const allCourses = coursesData?.allCourses || [];
+  const selectedCourses = coursesData?.selectedCourses || [];
+  const department = coursesData?.department;
+  const lecturers = assignmentsData?.lecturers || [];
+  const courseAssignments = assignmentsData?.courseAssignments || [];
+
+  // UI states
   const [assigningLecturer, setAssigningLecturer] = useState<string | null>(
     null
   );
@@ -66,67 +95,72 @@ const DepartmentCourseSelectionInterface: React.FC<
   const [typeFilter, setTypeFilter] = useState("");
   const [semesterFilter, setSemesterFilter] = useState("");
 
-  useEffect(() => {
-    if (open) {
-      fetchDepartmentCourses();
-      fetchLecturerAssignments();
-    }
-  }, [open]);
+  // Confirmation dialog states
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    description: string;
+    action: () => void;
+  }>({
+    open: false,
+    title: "",
+    description: "",
+    action: () => {},
+  });
 
-  const fetchDepartmentCourses = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/department-course-selection");
+  // Handle errors from SWR
+  if (coursesError) {
+    toast({
+      title: "Error",
+      description: "Failed to fetch department courses",
+      variant: "destructive",
+    });
+  }
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch department courses");
-      }
-
-      const data = await response.json();
-      setAllCourses(data.allCourses || []);
-      setSelectedCourses(data.selectedCourses || []);
-      setDepartment(data.department);
-    } catch (error) {
-      console.error("Error fetching department courses:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to fetch courses",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchLecturerAssignments = async () => {
-    try {
-      const response = await fetch("/api/admin/lecturer-assignment");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch lecturer assignments");
-      }
-
-      const data = await response.json();
-      setLecturers(data.lecturers || []);
-      setCourseAssignments(data.courseAssignments || []);
-    } catch (error) {
-      console.error("Error fetching lecturer assignments:", error);
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch lecturer assignments",
-        variant: "destructive",
-      });
-    }
-  };
+  if (assignmentsError) {
+    toast({
+      title: "Error",
+      description: "Failed to fetch lecturer assignments",
+      variant: "destructive",
+    });
+  }
 
   const handleSelectCourse = async (
     course: any,
     isRequired: boolean = false
   ) => {
+    const courseId = course.id;
+    const key = "/api/admin/department-course-selection";
+
+    // Optimistic update using SWR mutate
+    const optimisticSelectedCourse = {
+      id: `temp-${courseId}`,
+      courseId: courseId,
+      course: course,
+      isRequired,
+      selectedAt: new Date().toISOString(),
+    };
+
+    // Optimistically update the cache
+    mutate(
+      key,
+      (currentData: any) => {
+        if (!currentData) return currentData;
+
+        return {
+          ...currentData,
+          selectedCourses: [
+            ...currentData.selectedCourses,
+            optimisticSelectedCourse,
+          ],
+          allCourses: currentData.allCourses.map((c: any) =>
+            c.id === courseId ? { ...c, isSelected: true } : c
+          ),
+        };
+      },
+      false
+    ); // false = don't revalidate immediately
+
     try {
       const response = await fetch("/api/admin/department-course-selection", {
         method: "POST",
@@ -149,9 +183,12 @@ const DepartmentCourseSelectionInterface: React.FC<
         description: "Course added to department successfully",
       });
 
-      // Refresh the data
-      fetchDepartmentCourses();
+      // Revalidate to get fresh data from server
+      mutate(key);
     } catch (error) {
+      // Revert optimistic update on error
+      mutate(key); // This will restore the original data
+
       toast({
         title: "Error",
         description:
@@ -161,14 +198,39 @@ const DepartmentCourseSelectionInterface: React.FC<
     }
   };
 
-  const handleRemoveCourse = async (courseId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to remove this course from your department?"
-      )
-    ) {
-      return;
-    }
+  const handleRemoveCourse = (courseId: string) => {
+    const course = selectedCourses.find((sc) => sc.courseId === courseId);
+    const courseTitle = course?.course?.title || "this course";
+
+    setConfirmDialog({
+      open: true,
+      title: "Remove Course",
+      description: `Are you sure you want to remove "${courseTitle}" from your department? This action cannot be undone.`,
+      action: () => performRemoveCourse(courseId),
+    });
+  };
+
+  const performRemoveCourse = async (courseId: string) => {
+    const key = "/api/admin/department-course-selection";
+
+    // Optimistically update the cache
+    mutate(
+      key,
+      (currentData: any) => {
+        if (!currentData) return currentData;
+
+        return {
+          ...currentData,
+          selectedCourses: currentData.selectedCourses.filter(
+            (sc: any) => sc.courseId !== courseId
+          ),
+          allCourses: currentData.allCourses.map((c: any) =>
+            c.id === courseId ? { ...c, isSelected: false } : c
+          ),
+        };
+      },
+      false
+    ); // false = don't revalidate immediately
 
     try {
       const response = await fetch(
@@ -188,9 +250,12 @@ const DepartmentCourseSelectionInterface: React.FC<
         description: "Course removed from department successfully",
       });
 
-      // Refresh the data
-      fetchDepartmentCourses();
+      // Revalidate to get fresh data from server
+      mutate(key);
     } catch (error) {
+      // Revert optimistic update on error
+      mutate(key); // This will restore the original data
+
       toast({
         title: "Error",
         description:
@@ -202,6 +267,8 @@ const DepartmentCourseSelectionInterface: React.FC<
 
   const handleAssignLecturer = async (courseId: string, lecturerId: string) => {
     setAssigningLecturer(`${courseId}-${lecturerId}`);
+    const key = "/api/admin/lecturer-assignment";
+
     try {
       const response = await fetch("/api/admin/lecturer-assignment", {
         method: "POST",
@@ -226,8 +293,8 @@ const DepartmentCourseSelectionInterface: React.FC<
         description: "Lecturer assigned to course successfully",
       });
 
-      // Refresh the data
-      fetchLecturerAssignments();
+      // Revalidate to get fresh data from server
+      mutate(key);
     } catch (error) {
       toast({
         title: "Error",
@@ -240,10 +307,21 @@ const DepartmentCourseSelectionInterface: React.FC<
     }
   };
 
-  const handleRemoveLecturerAssignment = async (assignmentId: string) => {
-    if (!confirm("Are you sure you want to remove this lecturer assignment?")) {
-      return;
-    }
+  const handleRemoveLecturerAssignment = (assignmentId: string) => {
+    const assignment = courseAssignments.find((a) => a.id === assignmentId);
+    const courseTitle = assignment?.course?.title || "this course";
+    const lecturerName = assignment?.lecturer?.user?.name || "this lecturer";
+
+    setConfirmDialog({
+      open: true,
+      title: "Remove Lecturer Assignment",
+      description: `Are you sure you want to remove ${lecturerName} from "${courseTitle}"? This action cannot be undone.`,
+      action: () => performRemoveLecturerAssignment(assignmentId),
+    });
+  };
+
+  const performRemoveLecturerAssignment = async (assignmentId: string) => {
+    const key = "/api/admin/lecturer-assignment";
 
     try {
       const response = await fetch(
@@ -265,8 +343,8 @@ const DepartmentCourseSelectionInterface: React.FC<
         description: "Lecturer assignment removed successfully",
       });
 
-      // Refresh the data
-      fetchLecturerAssignments();
+      // Revalidate to get fresh data from server
+      mutate(key);
     } catch (error) {
       toast({
         title: "Error",
@@ -335,7 +413,7 @@ const DepartmentCourseSelectionInterface: React.FC<
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle>Select Courses for Department</DialogTitle>
           <DialogDescription>
@@ -369,7 +447,7 @@ const DepartmentCourseSelectionInterface: React.FC<
 
           <TabsContent value="courses" className="space-y-6">
             {/* Filters */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="search">Search</Label>
                 <div className="relative">
@@ -408,8 +486,6 @@ const DepartmentCourseSelectionInterface: React.FC<
                   <SelectContent>
                     <SelectItem value="all">All types</SelectItem>
                     <SelectItem value="DEPARTMENTAL">Departmental</SelectItem>
-                    <SelectItem value="FACULTY">Faculty</SelectItem>
-                    <SelectItem value="GENERAL">General</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -437,7 +513,7 @@ const DepartmentCourseSelectionInterface: React.FC<
                 <h3 className="text-lg font-semibold">
                   Selected Courses ({selectedCourses.length})
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {selectedCourses.map((sc) => (
                     <Card
                       key={sc.id}
@@ -493,15 +569,15 @@ const DepartmentCourseSelectionInterface: React.FC<
               <h3 className="text-lg font-semibold">
                 Available Courses ({filteredCourses.length})
               </h3>
-              {loading ? (
+              {coursesLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                  <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                   <p className="mt-2 text-sm text-muted-foreground">
                     Loading courses...
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {filteredCourses.map((course) => (
                     <Card
                       key={course.id}
@@ -576,7 +652,7 @@ const DepartmentCourseSelectionInterface: React.FC<
                 <h4 className="text-md font-semibold">
                   Current Assignments ({courseAssignments.length})
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {courseAssignments.map((assignment) => (
                     <Card
                       key={assignment.id}
@@ -742,6 +818,29 @@ const DepartmentCourseSelectionInterface: React.FC<
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) =>
+            setConfirmDialog((prev) => ({ ...prev, open }))
+          }
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{confirmDialog.title}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDialog.description}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDialog.action}>
+                Confirm
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

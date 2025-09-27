@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCourseSelection } from "@/hooks/useSWRData";
+import { mutate } from "swr";
 import {
   Card,
   CardContent,
@@ -54,72 +56,62 @@ const StudentCourseSelection = () => {
 
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
-  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
-  // Course data
-  const [requiredCourses, setRequiredCourses] = useState<any[]>([]);
-  const [electiveCourses, setElectiveCourses] = useState<any[]>([]);
-  const [carryOverCourses, setCarryOverCourses] = useState<any[]>([]);
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  const [existingRegistration, setExistingRegistration] = useState<any>(null);
+  // SWR hook for course selection data
+  const {
+    requiredCourses = [],
+    electiveCourses = [],
+    carryOverCourses = [],
+    selectedCourseIds = [],
+    existingRegistration,
+    currentCredits = 0,
+    remainingCredits = 24,
+    registrationStatus = "NOT_STARTED",
+    isLoading,
+    error,
+    mutate: mutateCourseSelection
+  } = useCourseSelection(academicYear, semester);
 
-  // Statistics
-  const [currentCredits, setCurrentCredits] = useState(0);
   const [maxCredits] = useState(24);
-  const [remainingCredits, setRemainingCredits] = useState(24);
-  const [registrationStatus, setRegistrationStatus] = useState("NOT_STARTED");
 
-  const fetchCourseSelection = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/student/course-selection?academicYear=${academicYear}&semester=${semester}`
-      );
+  // Local state for selected courses (for optimistic updates)
+  const [localSelectedCourseIds, setLocalSelectedCourseIds] = useState<string[]>([]);
+  const [localCurrentCredits, setLocalCurrentCredits] = useState(0);
+  const [localRemainingCredits, setLocalRemainingCredits] = useState(24);
 
-      if (response.ok) {
-        const data = await response.json();
-        setRequiredCourses(data.requiredCourses || []);
-        setElectiveCourses(data.electiveCourses || []);
-        setCarryOverCourses(data.carryOverCourses || []);
-        setSelectedCourseIds(data.selectedCourseIds || []);
-        setExistingRegistration(data.existingRegistration);
-        setCurrentCredits(data.currentCredits || 0);
-        setRemainingCredits(data.remainingCredits || 24);
-        setRegistrationStatus(data.registrationStatus || "NOT_STARTED");
-      } else {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to fetch course selection");
-      }
-    } catch (error: any) {
+  // Sync local state with SWR data
+  useEffect(() => {
+    if (selectedCourseIds.length > 0) {
+      setLocalSelectedCourseIds(selectedCourseIds);
+      setLocalCurrentCredits(currentCredits);
+      setLocalRemainingCredits(remainingCredits);
+    }
+  }, [selectedCourseIds, currentCredits, remainingCredits]);
+
+  // Handle SWR errors
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to load course selection",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [academicYear, semester, toast]);
-
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchCourseSelection();
-    }
-  }, [user, academicYear, semester, fetchCourseSelection]);
+  }, [error, toast]);
 
   const handleCourseToggle = (courseId: string, creditUnit: number) => {
-    const isSelected = selectedCourseIds.includes(courseId);
+    const isSelected = localSelectedCourseIds.includes(courseId);
 
     if (isSelected) {
       // Remove course
-      setSelectedCourseIds((prev) => prev.filter((id) => id !== courseId));
-      setCurrentCredits((prev) => prev - creditUnit);
-      setRemainingCredits((prev) => prev + creditUnit);
+      setLocalSelectedCourseIds((prev) => prev.filter((id) => id !== courseId));
+      setLocalCurrentCredits((prev) => prev - creditUnit);
+      setLocalRemainingCredits((prev) => prev + creditUnit);
     } else {
       // Add course (check credit limit)
-      if (currentCredits + creditUnit > maxCredits) {
+      if (localCurrentCredits + creditUnit > maxCredits) {
         toast({
           title: "Credit Limit Exceeded",
           description: `Adding this course would exceed the maximum credit limit of ${maxCredits} credits. Please remove another course first.`,
@@ -128,14 +120,14 @@ const StudentCourseSelection = () => {
         return;
       }
 
-      setSelectedCourseIds((prev) => [...prev, courseId]);
-      setCurrentCredits((prev) => prev + creditUnit);
-      setRemainingCredits((prev) => prev - creditUnit);
+      setLocalSelectedCourseIds((prev) => [...prev, courseId]);
+      setLocalCurrentCredits((prev) => prev + creditUnit);
+      setLocalRemainingCredits((prev) => prev - creditUnit);
     }
   };
 
   const handleSubmitRegistration = async () => {
-    if (selectedCourseIds.length === 0) {
+    if (localSelectedCourseIds.length === 0) {
       toast({
         title: "No Courses Selected",
         description: "Please select at least one course before submitting.",
@@ -153,7 +145,7 @@ const StudentCourseSelection = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          selectedCourseIds,
+          selectedCourseIds: localSelectedCourseIds,
           academicYear,
           semester,
         }),
@@ -166,7 +158,8 @@ const StudentCourseSelection = () => {
           description: data.message,
         });
         setShowSubmitDialog(false);
-        fetchCourseSelection(); // Refresh data
+        // Revalidate SWR data
+        mutateCourseSelection();
       } else {
         const error = await response.json();
         throw new Error(error.message || "Failed to submit registration");
@@ -208,7 +201,7 @@ const StudentCourseSelection = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -314,7 +307,7 @@ const StudentCourseSelection = () => {
               <Calculator className="h-4 w-4 text-muted-foreground" />
               <div className="ml-2">
                 <p className="text-sm font-medium">Current Credits</p>
-                <p className="text-2xl font-bold">{currentCredits}</p>
+                <p className="text-2xl font-bold">{localCurrentCredits}</p>
               </div>
             </div>
           </CardContent>
@@ -325,7 +318,7 @@ const StudentCourseSelection = () => {
               <Award className="h-4 w-4 text-muted-foreground" />
               <div className="ml-2">
                 <p className="text-sm font-medium">Remaining Credits</p>
-                <p className="text-2xl font-bold">{remainingCredits}</p>
+                <p className="text-2xl font-bold">{localRemainingCredits}</p>
               </div>
             </div>
           </CardContent>
@@ -336,7 +329,7 @@ const StudentCourseSelection = () => {
               <BookOpen className="h-4 w-4 text-muted-foreground" />
               <div className="ml-2">
                 <p className="text-sm font-medium">Selected Courses</p>
-                <p className="text-2xl font-bold">{selectedCourseIds.length}</p>
+                <p className="text-2xl font-bold">{localSelectedCourseIds.length}</p>
               </div>
             </div>
           </CardContent>
@@ -365,7 +358,7 @@ const StudentCourseSelection = () => {
                 >
                   <div className="flex items-center space-x-3">
                     <Checkbox
-                      checked={selectedCourseIds.includes(course.id)}
+                      checked={localSelectedCourseIds.includes(course.id)}
                       onCheckedChange={() =>
                         handleCourseToggle(course.id, course.creditUnit)
                       }
@@ -407,7 +400,7 @@ const StudentCourseSelection = () => {
               >
                 <div className="flex items-center space-x-3">
                   <Checkbox
-                    checked={selectedCourseIds.includes(course.id)}
+                    checked={localSelectedCourseIds.includes(course.id)}
                     onCheckedChange={() =>
                       handleCourseToggle(course.id, course.creditUnit)
                     }
@@ -446,7 +439,7 @@ const StudentCourseSelection = () => {
               >
                 <div className="flex items-center space-x-3">
                   <Checkbox
-                    checked={selectedCourseIds.includes(course.id)}
+                    checked={localSelectedCourseIds.includes(course.id)}
                     onCheckedChange={() =>
                       handleCourseToggle(course.id, course.creditUnit)
                     }
@@ -479,7 +472,7 @@ const StudentCourseSelection = () => {
         <Button
           onClick={() => setShowSubmitDialog(true)}
           disabled={
-            selectedCourseIds.length === 0 ||
+            localSelectedCourseIds.length === 0 ||
             registrationStatus === "DEPARTMENT_APPROVED"
           }
         >
@@ -498,11 +491,11 @@ const StudentCourseSelection = () => {
               {academicYear} {semester.toLowerCase()} semester.
               <br />
               <br />
-              <strong>Selected Courses:</strong> {selectedCourseIds.length}
+              <strong>Selected Courses:</strong> {localSelectedCourseIds.length}
               <br />
-              <strong>Total Credits:</strong> {currentCredits}
+              <strong>Total Credits:</strong> {localCurrentCredits}
               <br />
-              <strong>Remaining Credits:</strong> {remainingCredits}
+              <strong>Remaining Credits:</strong> {localRemainingCredits}
               <br />
               <br />
               Your registration will be sent to your department admin for review

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudentMaterials } from "@/hooks/useSWRData";
 import {
   Card,
   CardContent,
@@ -37,54 +38,28 @@ const StudentCourseMaterials = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [course, setCourse] = useState<any>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("ALL");
   const [filterWeek, setFilterWeek] = useState("ALL");
 
-  const fetchCourseData = useCallback(async () => {
-    try {
-      setLoading(true);
+  // SWR hook for course materials data
+  const {
+    course,
+    documents = [],
+    isLoading,
+    error
+  } = useStudentMaterials(courseId as string);
 
-      // Fetch course details
-      const courseResponse = await fetch("/api/student/course-registration");
-      if (courseResponse.ok) {
-        const courseData = await courseResponse.json();
-        const currentCourse = courseData.currentEnrollments?.find(
-          (enrollment: any) => enrollment.course.id === courseId
-        );
-        if (currentCourse) {
-          setCourse(currentCourse.course);
-        }
-      }
-
-      // Fetch documents
-      const docsResponse = await fetch(
-        `/api/student/documents?courseId=${courseId}`
-      );
-      if (docsResponse.ok) {
-        const docsData = await docsResponse.json();
-        setDocuments(docsData.documents || []);
-      }
-    } catch (error) {
-      console.error("Error fetching course data:", error);
+  // Handle SWR errors
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: "Failed to load course materials",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [courseId, toast]);
-
-  useEffect(() => {
-    if (courseId && user?.role === "STUDENT") {
-      fetchCourseData();
-    }
-  }, [courseId, user, fetchCourseData]);
+  }, [error, toast]);
 
   const handleDownload = async (document: any) => {
     try {
@@ -174,7 +149,7 @@ const StudentCourseMaterials = () => {
   ].sort((a, b) => a - b);
   const documentTypes = [...new Set(documents.map((doc) => doc.documentType))];
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

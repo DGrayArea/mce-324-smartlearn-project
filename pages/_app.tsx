@@ -3,9 +3,11 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SWRConfig } from "swr";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { SessionProvider } from "next-auth/react";
 import { ClientOnly } from "@/components/ClientOnly";
+import { swrConfig } from "@/lib/swr";
 import type { ReactElement, ReactNode } from "react";
 import type { AppProps } from "next/app";
 import type { NextPage } from "next";
@@ -28,25 +30,27 @@ export default function App({
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider
-        session={session}
-        refetchInterval={5 * 60} // Refetch session every 5 minutes
-        refetchOnWindowFocus={true} // Refetch when window regains focus
-      >
-        <ClientOnly>
-          <AuthProvider>
-            <TooltipProvider>
-              {getLayout(
-                <>
-                  <Toaster />
-                  <Sonner />
-                  <Component {...pageProps} />
-                </>
-              )}
-            </TooltipProvider>
-          </AuthProvider>
-        </ClientOnly>
-      </SessionProvider>
+      <SWRConfig value={swrConfig}>
+        <SessionProvider
+          session={session}
+          refetchInterval={5 * 60} // Refetch session every 5 minutes
+          refetchOnWindowFocus={true} // Refetch when window regains focus
+        >
+          <ClientOnly>
+            <AuthProvider>
+              <TooltipProvider>
+                {getLayout(
+                  <>
+                    <Toaster />
+                    <Sonner />
+                    <Component {...pageProps} />
+                  </>
+                )}
+              </TooltipProvider>
+            </AuthProvider>
+          </ClientOnly>
+        </SessionProvider>
+      </SWRConfig>
     </QueryClientProvider>
   );
 }

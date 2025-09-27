@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLecturerStudents, useLecturerDocuments, useLecturerQuizzes } from "@/hooks/useSWRData";
+import { mutate } from "swr";
 import {
   Card,
   CardContent,
@@ -64,10 +66,27 @@ const LecturerCourseManagement = () => {
   const { toast } = useToast();
 
   const [course, setCourse] = useState<any>(null);
-  const [documents, setDocuments] = useState<any[]>([]);
-  const [quizzes, setQuizzes] = useState<any[]>([]);
-  const [students, setStudents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  // SWR hooks for course data
+  const {
+    students = [],
+    isLoading: studentsLoading,
+    error: studentsError
+  } = useLecturerStudents(courseId as string);
+
+  const {
+    documents = [],
+    isLoading: documentsLoading,
+    error: documentsError,
+    mutate: mutateDocuments
+  } = useLecturerDocuments(courseId as string);
+
+  const {
+    quizzes = [],
+    isLoading: quizzesLoading,
+    error: quizzesError,
+    mutate: mutateQuizzes
+  } = useLecturerQuizzes(courseId as string);
 
   // Document upload states
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -98,63 +117,38 @@ const LecturerCourseManagement = () => {
   });
   const [questions, setQuestions] = useState<any[]>([]);
 
-  const fetchCourseData = useCallback(async () => {
-    try {
-      setLoading(true);
-
-      // Fetch course details
-      const courseResponse = await fetch("/api/lecturer/courses");
-      if (courseResponse.ok) {
-        const courseData = await courseResponse.json();
-        const currentCourse = courseData.courses.find(
-          (c: any) => c.id === courseId
-        );
-        setCourse(currentCourse);
+  // Fetch course details separately (not covered by SWR hooks yet)
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      try {
+        const courseResponse = await fetch("/api/lecturer/courses");
+        if (courseResponse.ok) {
+          const courseData = await courseResponse.json();
+          const currentCourse = courseData.courses.find(
+            (c: any) => c.id === courseId
+          );
+          setCourse(currentCourse);
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error);
       }
+    };
 
-      // Fetch documents
-      const docsResponse = await fetch(
-        `/api/lecturer/documents?courseId=${courseId}`
-      );
-      if (docsResponse.ok) {
-        const docsData = await docsResponse.json();
-        setDocuments(docsData.documents || []);
-      }
+    if (courseId && user?.role === "LECTURER") {
+      fetchCourseDetails();
+    }
+  }, [courseId, user]);
 
-      // Fetch quizzes
-      const quizzesResponse = await fetch(
-        `/api/lecturer/quizzes?courseId=${courseId}`
-      );
-      if (quizzesResponse.ok) {
-        const quizzesData = await quizzesResponse.json();
-        setQuizzes(quizzesData.quizzes || []);
-      }
-
-      // Fetch students (enrolled in this course)
-      const studentsResponse = await fetch(
-        `/api/lecturer/students?courseId=${courseId}`
-      );
-      if (studentsResponse.ok) {
-        const studentsData = await studentsResponse.json();
-        setStudents(studentsData.students || []);
-      }
-    } catch (error) {
-      console.error("Error fetching course data:", error);
+  // Handle SWR errors
+  useEffect(() => {
+    if (studentsError || documentsError || quizzesError) {
       toast({
         title: "Error",
         description: "Failed to load course data",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [courseId, toast]);
-
-  useEffect(() => {
-    if (courseId && user?.role === "LECTURER") {
-      fetchCourseData();
-    }
-  }, [courseId, user, fetchCourseData]);
+  }, [studentsError, documentsError, quizzesError, toast]);
 
   const handleDocumentUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,7 +197,8 @@ const LecturerCourseManagement = () => {
           topic: "",
           tags: "",
         });
-        fetchCourseData();
+        // Revalidate documents
+        mutateDocuments();
       } else {
         const error = await response.json();
         throw new Error(error.message || "Upload failed");
@@ -235,7 +230,8 @@ const LecturerCourseManagement = () => {
           title: "Success",
           description: "Document deleted successfully",
         });
-        fetchCourseData();
+        // Revalidate documents
+        mutateDocuments();
       } else {
         throw new Error("Delete failed");
       }
@@ -309,7 +305,8 @@ const LecturerCourseManagement = () => {
           showResults: true,
         });
         setQuestions([]);
-        fetchCourseData();
+        // Revalidate quizzes
+        mutateQuizzes();
       } else {
         const error = await response.json();
         throw new Error(error.message || "Quiz creation failed");
@@ -325,7 +322,7 @@ const LecturerCourseManagement = () => {
     }
   };
 
-  if (loading) {
+  if (studentsLoading || documentsLoading || quizzesLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

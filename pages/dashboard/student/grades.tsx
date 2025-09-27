@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudentGrades } from "@/hooks/useSWRData";
 import {
   Card,
   CardContent,
@@ -40,46 +41,27 @@ const StudentGrades = () => {
 
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("ALL");
-  const [loading, setLoading] = useState(true);
-  const [grades, setGrades] = useState<any[]>([]);
-  const [cgpa, setCgpa] = useState(0);
-  const [gpa, setGpa] = useState(0);
-  const [statistics, setStatistics] = useState<any>(null);
 
-  const fetchGrades = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        academicYear,
-        ...(semester !== "ALL" && { semester }),
-      });
+  // SWR hook for grades data
+  const {
+    grades = [],
+    cgpa = 0,
+    gpa = 0,
+    statistics = null,
+    isLoading,
+    error
+  } = useStudentGrades(academicYear, semester);
 
-      const response = await fetch(`/api/student/grades?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setGrades(data.grades || []);
-        setCgpa(data.cgpa || 0);
-        setGpa(data.gpa || 0);
-        setStatistics(data.statistics || null);
-      } else {
-        throw new Error("Failed to fetch grades");
-      }
-    } catch (error: any) {
+  // Handle SWR errors
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to load grades",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [academicYear, semester, toast]);
-
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchGrades();
-    }
-  }, [user, academicYear, semester, fetchGrades]);
+  }, [error, toast]);
 
   const getGradeColor = (grade: string) => {
     switch (grade) {
@@ -115,7 +97,7 @@ const StudentGrades = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

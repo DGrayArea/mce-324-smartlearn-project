@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudentMeetings } from "@/hooks/useSWRData";
 import {
   Card,
   CardContent,
@@ -60,40 +61,24 @@ const StudentMeetings = () => {
 
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
-  const [loading, setLoading] = useState(true);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
 
-  const fetchMeetings = useCallback(async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        academicYear,
-        semester,
-      });
+  // SWR hook for meetings data
+  const {
+    meetings = [],
+    isLoading,
+    error
+  } = useStudentMeetings(academicYear, semester);
 
-      const response = await fetch(`/api/student/meetings?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMeetings(data.meetings || []);
-      } else {
-        throw new Error("Failed to fetch meetings");
-      }
-    } catch (error: any) {
+  // Handle SWR errors
+  useEffect(() => {
+    if (error) {
       toast({
         title: "Error",
         description: error.message || "Failed to load meetings",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [academicYear, semester, toast]);
-
-  useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchMeetings();
-    }
-  }, [user, academicYear, semester, fetchMeetings]);
+  }, [error, toast]);
 
   const joinMeeting = (meeting: Meeting) => {
     if (meeting.status === "ENDED") {
@@ -172,7 +157,7 @@ const StudentMeetings = () => {
     return `In ${minutes}m`;
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

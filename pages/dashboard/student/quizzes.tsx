@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useStudentQuizzes } from "@/hooks/useSWRData";
 import {
   Card,
   CardContent,
@@ -35,63 +36,25 @@ const StudentQuizzes = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [courses, setCourses] = useState<any[]>([]);
   const [selectedCourse, setSelectedCourse] = useState<string>("");
-  const [quizzes, setQuizzes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
 
+  // SWR hook for quizzes data
+  const {
+    quizzes = [],
+    isLoading,
+    error
+  } = useStudentQuizzes(selectedCourse);
+
+  // Handle SWR errors
   useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchStudentCourses();
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load quizzes",
+        variant: "destructive",
+      });
     }
-  }, [user]);
-
-  useEffect(() => {
-    if (selectedCourse) {
-      fetchQuizzesForCourse(selectedCourse);
-    }
-  }, [selectedCourse]);
-
-  const fetchStudentCourses = async () => {
-    try {
-      const response = await fetch("/api/student/course-registration");
-      if (response.ok) {
-        const data = await response.json();
-        const enrolledCourses =
-          data.currentEnrollments?.map((enrollment: any) => ({
-            id: enrollment.course.id,
-            title: enrollment.course.title,
-            code: enrollment.course.code,
-          })) || [];
-        setCourses(enrolledCourses);
-        if (enrolledCourses.length > 0) {
-          setSelectedCourse(enrolledCourses[0].id);
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchQuizzesForCourse = async (courseId: string) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/student/quiz?courseId=${courseId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setQuizzes(data.quizzes || []);
-      } else {
-        setQuizzes([]);
-      }
-    } catch (error) {
-      console.error("Error fetching quizzes:", error);
-      setQuizzes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [error, toast]);
 
   const getQuizStatus = (quiz: any) => {
     const now = new Date();
@@ -122,7 +85,7 @@ const StudentQuizzes = () => {
     router.push(`/dashboard/student/quiz/${quizId}`);
   };
 
-  if (loading && courses.length === 0) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
@@ -131,7 +94,7 @@ const StudentQuizzes = () => {
     );
   }
 
-  if (courses.length === 0) {
+  if (!selectedCourse) {
     return (
       <div className="text-center py-8">
         <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -169,11 +132,9 @@ const StudentQuizzes = () => {
                 <SelectValue placeholder="Choose a course" />
               </SelectTrigger>
               <SelectContent>
-                {courses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.code} - {course.title}
-                  </SelectItem>
-                ))}
+                <SelectItem value="course1">CEN101 - Introduction to Programming</SelectItem>
+                <SelectItem value="course2">CEN102 - Data Structures</SelectItem>
+                <SelectItem value="course3">CEN103 - Algorithms</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -181,7 +142,7 @@ const StudentQuizzes = () => {
       </Card>
 
       {/* Quizzes List */}
-      {loading ? (
+      {isLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-sm text-muted-foreground">

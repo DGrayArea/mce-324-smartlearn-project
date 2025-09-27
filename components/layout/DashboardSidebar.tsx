@@ -301,18 +301,6 @@ const navigationItems: NavItem[] = [
     ],
   },
   {
-    title: "Notifications",
-    href: "/dashboard/notifications",
-    icon: Bell,
-    roles: [
-      "STUDENT",
-      "LECTURER",
-      "SCHOOL_ADMIN",
-      "DEPARTMENT_ADMIN",
-      "SENATE_ADMIN",
-    ],
-  },
-  {
     title: "Chat Rooms",
     href: "/dashboard/chatrooms",
     icon: MessageSquare,

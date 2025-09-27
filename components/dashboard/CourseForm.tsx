@@ -40,6 +40,7 @@ const CourseForm: React.FC<CourseFormProps> = ({
 }) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [formData, setFormData] = useState({
     title: "",
     code: "",
@@ -53,13 +54,27 @@ const CourseForm: React.FC<CourseFormProps> = ({
   });
 
   useEffect(() => {
+    // Clear errors when modal opens
+    setErrors({});
+
     if (editCourse) {
+      // Ensure course types match admin permissions
+      let courseType = editCourse.type || "";
+      if (
+        adminLevel === "department" &&
+        (courseType === "FACULTY" || courseType === "GENERAL")
+      ) {
+        courseType = "DEPARTMENTAL"; // Reset to departmental if they don't have permission
+      } else if (adminLevel === "school" && courseType === "GENERAL") {
+        courseType = "FACULTY"; // Reset to faculty if they don't have permission for general
+      }
+
       setFormData({
         title: editCourse.title || "",
         code: editCourse.code || "",
         creditUnit: editCourse.creditUnit?.toString() || "",
         description: editCourse.description || "",
-        type: editCourse.type || "",
+        type: courseType,
         level: editCourse.level || "",
         semester: editCourse.semester || "",
         schoolId: editCourse.school?.id || "",
@@ -78,19 +93,27 @@ const CourseForm: React.FC<CourseFormProps> = ({
         departmentId: "",
       });
     }
-  }, [editCourse, open]);
+  }, [editCourse, open, adminLevel]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrors({}); // Clear previous errors
 
     try {
       const url = editCourse ? "/api/admin/courses" : "/api/admin/courses";
       const method = editCourse ? "PUT" : "POST";
-      
-      const payload = editCourse 
-        ? { courseId: editCourse.id, ...formData }
-        : formData;
+
+      // Filter out empty string values for IDs to prevent foreign key issues
+      const cleanFormData = {
+        ...formData,
+        schoolId: formData.schoolId || undefined,
+        departmentId: formData.departmentId || undefined,
+      };
+
+      const payload = editCourse
+        ? { courseId: editCourse.id, ...cleanFormData }
+        : cleanFormData;
 
       const response = await fetch(url, {
         method,
@@ -103,13 +126,43 @@ const CourseForm: React.FC<CourseFormProps> = ({
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle specific error cases
+        if (
+          response.status === 409 &&
+          data.message?.includes("Course code already exists")
+        ) {
+          setErrors({
+            code: "This course code already exists. Please choose a different code.",
+          });
+          return; // Don't show toast, let the field error handle it
+        }
+
+        // Handle other validation errors
+        if (
+          response.status === 400 &&
+          data.message?.includes("Missing required fields")
+        ) {
+          setErrors({ general: "Please fill in all required fields." });
+          return;
+        }
+
+        // Handle foreign key validation errors
+        if (
+          response.status === 400 &&
+          (data.message?.includes("Invalid department ID") ||
+            data.message?.includes("Invalid school ID"))
+        ) {
+          setErrors({ general: data.message });
+          return;
+        }
+
         throw new Error(data.message || "Failed to save course");
       }
 
       toast({
         title: "Success",
-        description: editCourse 
-          ? "Course updated successfully!" 
+        description: editCourse
+          ? "Course updated successfully!"
           : "Course created successfully!",
       });
 
@@ -119,7 +172,8 @@ const CourseForm: React.FC<CourseFormProps> = ({
       console.error("Course save error:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save course",
+        description:
+          error instanceof Error ? error.message : "Failed to save course",
         variant: "destructive",
       });
     } finally {
@@ -128,7 +182,11 @@ const CourseForm: React.FC<CourseFormProps> = ({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear field-specific error when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   return (
@@ -139,14 +197,18 @@ const CourseForm: React.FC<CourseFormProps> = ({
             {editCourse ? "Edit Course" : "Create New Course"}
           </DialogTitle>
           <DialogDescription>
-            {editCourse 
+            {editCourse
               ? "Update the course information below."
-              : "Fill in the details to create a new course."
-            }
+              : "Fill in the details to create a new course."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {errors.general && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{errors.general}</p>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="title">Course Title *</Label>
@@ -164,10 +226,18 @@ const CourseForm: React.FC<CourseFormProps> = ({
               <Input
                 id="code"
                 value={formData.code}
-                onChange={(e) => handleInputChange("code", e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  handleInputChange("code", e.target.value.toUpperCase())
+                }
                 placeholder="e.g., CEN101"
                 required
+                className={
+                  errors.code ? "border-red-500 focus:border-red-500" : ""
+                }
               />
+              {errors.code && (
+                <p className="text-sm text-red-500">{errors.code}</p>
+              )}
             </div>
           </div>
 
@@ -180,7 +250,9 @@ const CourseForm: React.FC<CourseFormProps> = ({
                 min="1"
                 max="6"
                 value={formData.creditUnit}
-                onChange={(e) => handleInputChange("creditUnit", e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("creditUnit", e.target.value)
+                }
                 placeholder="3"
                 required
               />
@@ -188,7 +260,10 @@ const CourseForm: React.FC<CourseFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="level">Student Level *</Label>
-              <Select value={formData.level} onValueChange={(value) => handleInputChange("level", value)}>
+              <Select
+                value={formData.level}
+                onValueChange={(value) => handleInputChange("level", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
@@ -204,7 +279,10 @@ const CourseForm: React.FC<CourseFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="semester">Semester *</Label>
-              <Select value={formData.semester} onValueChange={(value) => handleInputChange("semester", value)}>
+              <Select
+                value={formData.semester}
+                onValueChange={(value) => handleInputChange("semester", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select semester" />
                 </SelectTrigger>
@@ -218,14 +296,23 @@ const CourseForm: React.FC<CourseFormProps> = ({
 
           <div className="space-y-2">
             <Label htmlFor="type">Course Type *</Label>
-            <Select value={formData.type} onValueChange={(value) => handleInputChange("type", value)}>
+            <Select
+              value={formData.type}
+              onValueChange={(value) => handleInputChange("type", value)}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select course type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="DEPARTMENTAL">Departmental</SelectItem>
-                <SelectItem value="FACULTY">Faculty</SelectItem>
-                <SelectItem value="GENERAL">General</SelectItem>
+                {/* School Admin can create Faculty courses */}
+                {(adminLevel === "school" || adminLevel === "senate") && (
+                  <SelectItem value="FACULTY">Faculty</SelectItem>
+                )}
+                {/* Only Senate Admin can create General courses */}
+                {adminLevel === "senate" && (
+                  <SelectItem value="GENERAL">General</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -234,7 +321,12 @@ const CourseForm: React.FC<CourseFormProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="school">School</Label>
-                <Select value={formData.schoolId} onValueChange={(value) => handleInputChange("schoolId", value)}>
+                <Select
+                  value={formData.schoolId}
+                  onValueChange={(value) =>
+                    handleInputChange("schoolId", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select school" />
                   </SelectTrigger>
@@ -250,7 +342,12 @@ const CourseForm: React.FC<CourseFormProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Select value={formData.departmentId} onValueChange={(value) => handleInputChange("departmentId", value)}>
+                <Select
+                  value={formData.departmentId}
+                  onValueChange={(value) =>
+                    handleInputChange("departmentId", value)
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select department" />
                   </SelectTrigger>
@@ -269,7 +366,12 @@ const CourseForm: React.FC<CourseFormProps> = ({
           {adminLevel === "school" && (
             <div className="space-y-2">
               <Label htmlFor="department">Department</Label>
-              <Select value={formData.departmentId} onValueChange={(value) => handleInputChange("departmentId", value)}>
+              <Select
+                value={formData.departmentId}
+                onValueChange={(value) =>
+                  handleInputChange("departmentId", value)
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -310,8 +412,10 @@ const CourseForm: React.FC<CourseFormProps> = ({
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   {editCourse ? "Updating..." : "Creating..."}
                 </>
+              ) : editCourse ? (
+                "Update Course"
               ) : (
-                editCourse ? "Update Course" : "Create Course"
+                "Create Course"
               )}
             </Button>
           </div>

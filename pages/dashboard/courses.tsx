@@ -3,6 +3,13 @@ import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
 import { studentCourses, lecturerCourses, allCourses } from "@/lib/dummyData";
 import {
+  useCourses,
+  useAdminCourses,
+  useAdminSchools,
+  useAdminDepartments,
+  revalidateCourseData,
+} from "@/hooks/useSWRData";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -53,9 +60,22 @@ const Courses = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [courses, setCourses] = useState<any[]>([]);
+  // SWR hooks for data fetching
+  const {
+    courses: swrCourses,
+    isLoading: coursesLoading,
+    error: coursesError,
+    mutate: mutateCourses,
+  } = useCourses(user?.role || "");
+
+  const { courses: adminCourses, mutate: mutateAdminCourses } =
+    useAdminCourses();
+
+  const { schools } = useAdminSchools();
+  const { departments } = useAdminDepartments();
+
+  // Local state for UI
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [academicYear, setAcademicYear] = useState("2024/2025");
@@ -71,9 +91,6 @@ const Courses = () => {
   // Course creation states for admins
   const [createCourseOpen, setCreateCourseOpen] = useState(false);
   const [editCourse, setEditCourse] = useState<any>(null);
-  const [adminCourses, setAdminCourses] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
-  const [schools, setSchools] = useState<any[]>([]);
   const [adminLevel, setAdminLevel] = useState<string>("");
 
   // Department course selection states
@@ -117,93 +134,26 @@ const Courses = () => {
     return role === "SENATE_ADMIN" || role === "senate_admin";
   };
 
-  // Fetch real courses for students, lecturers, and admins
-  const fetchStudentCourses = async () => {
-    if (user?.role === "LECTURER") {
-      try {
-        const response = await fetch("/api/lecturer/courses");
-        if (response.ok) {
-          const data = await response.json();
-          setCourses(data.courses || []);
-        } else {
-          // Fallback to dummy data
-          setCourses(getCourses());
-        }
-      } catch (error) {
-        console.error("Error fetching lecturer courses:", error);
-        setCourses(getCourses());
-      }
-      setLoading(false);
-      return;
-    }
-
-    try {
-      let response;
-      if (user?.role === "STUDENT") {
-        // For students, fetch available courses for registration
-        response = await fetch("/api/student/course-registration");
-      } else if (isAdmin(user?.role)) {
-        response = await fetch("/api/dashboard/admin");
-      } else {
-        setCourses(getCourses());
-        setLoading(false);
-        return;
-      }
-
-      if (response && response.ok) {
-        const data = await response.json();
-        if (user?.role === "STUDENT") {
-          // For students, combine available courses and current enrollments
-          const allStudentCourses = [
-            ...(data.availableCourses || []),
-            ...(data.currentEnrollments || []).map((enrollment: any) => ({
-              ...enrollment.course,
-              isEnrolled: true,
-              enrollmentId: enrollment.id,
-              enrollmentStatus: enrollment.status,
-            })),
-          ];
-          setCourses(allStudentCourses);
-        } else {
-          setCourses(data.courses || []);
-        }
-      } else {
-        // Fallback to dummy data
-        if (user?.role === "STUDENT") {
-          setCourses(studentCourses);
-        } else {
-          setCourses(getCourses());
-        }
-      }
-    } catch (error) {
-      console.error("Error fetching courses:", error);
-      if (user?.role === "STUDENT") {
-        setCourses(studentCourses);
-      } else {
-        setCourses(getCourses());
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStudentCourses();
-  }, [user]);
-
-  // Select courses based on user role (for non-students)
+  // Get courses based on user role and SWR data
   const getCourses = () => {
-    switch (user?.role) {
-      case "LECTURER":
-        return lecturerCourses;
-      case "DEPARTMENT_ADMIN":
-      case "SCHOOL_ADMIN":
-      case "SENATE_ADMIN":
-        return allCourses;
-      default:
-        return [];
+    if (coursesLoading) return [];
+
+    if (coursesError) {
+      // Fallback to dummy data on error
+      switch (user?.role) {
+        case "LECTURER":
+          return lecturerCourses;
+        case "STUDENT":
+          return studentCourses;
+        default:
+          return allCourses;
+      }
     }
+
+    return swrCourses || [];
   };
+
+  const courses = getCourses();
 
   const fetchAvailableCourses = async () => {
     if (!enrollmentOpen) return;
@@ -261,7 +211,7 @@ const Courses = () => {
       );
 
       // Refresh enrolled courses
-      fetchStudentCourses();
+      mutateCourses();
     } catch (error) {
       console.error("Enrollment error:", error);
       toast({
@@ -298,7 +248,7 @@ const Courses = () => {
         description: "Successfully dropped course!",
       });
 
-      fetchStudentCourses();
+      mutateCourses();
     } catch (error) {
       toast({
         title: "Error",
@@ -423,37 +373,25 @@ const Courses = () => {
   }, [assignmentOpen, academicYear, semester]);
 
   // Course management functions for admins
-  const fetchAdminCourses = async () => {
-    if (!createCourseOpen && !editCourse) return;
-
-    try {
-      const response = await fetch("/api/admin/courses");
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch courses");
+  // Set admin level when admin courses data is available
+  useEffect(() => {
+    if (adminCourses.length > 0) {
+      // Determine admin level based on user role
+      if (isDepartmentAdmin(user?.role)) {
+        setAdminLevel("department");
+      } else if (isSchoolAdmin(user?.role)) {
+        setAdminLevel("school");
+      } else if (isSenateAdmin(user?.role)) {
+        setAdminLevel("senate");
       }
-
-      const data = await response.json();
-      setAdminCourses(data.courses || []);
-      setDepartments(data.departments || []);
-      setSchools(data.schools || []);
-      setAdminLevel(data.adminLevel || "");
-    } catch (error) {
-      console.error("Error fetching admin courses:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load courses",
-        variant: "destructive",
-      });
     }
-  };
+  }, [adminCourses, user?.role]);
 
   const handleCourseSuccess = () => {
-    fetchAdminCourses();
-    // Also refresh the main courses list if it's an admin view
-    if (isAdmin(user?.role)) {
-      fetchStudentCourses();
-    }
+    // Revalidate all course-related SWR data
+    mutateCourses();
+    mutateAdminCourses();
+    revalidateCourseData();
   };
 
   const handleEditCourse = (course: any) => {
@@ -485,7 +423,9 @@ const Courses = () => {
         description: "Course deleted successfully!",
       });
 
-      fetchAdminCourses();
+      // Revalidate all course-related SWR data
+      mutateAdminCourses();
+      revalidateCourseData();
     } catch (error) {
       console.error("Delete course error:", error);
       toast({
@@ -497,9 +437,7 @@ const Courses = () => {
     }
   };
 
-  useEffect(() => {
-    fetchAdminCourses();
-  }, [createCourseOpen, editCourse]);
+  // Admin level is set automatically when adminCourses data is available
 
   // Seeding functions
   const handleSeedDatabase = async () => {
@@ -535,7 +473,7 @@ const Courses = () => {
             "Organized database has been populated with schools, departments, courses, and users",
         });
         // Refresh the courses list only if we seeded new data
-        fetchStudentCourses();
+        mutateCourses();
       }
     } catch (error) {
       console.error("Operation error:", error);
@@ -554,16 +492,16 @@ const Courses = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">
+      <div className="flex flex-col space-y-4 lg:flex-row lg:justify-between lg:items-center lg:space-y-0">
+        <div className="flex-1">
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">
             {user?.role === "LECTURER"
               ? "My Teaching Courses"
               : isAdmin(user?.role)
                 ? "All Courses"
                 : "My Enrolled Courses"}
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground mt-1">
             {user?.role === "LECTURER"
               ? "Manage your teaching courses and student progress."
               : isAdmin(user?.role)
@@ -572,21 +510,24 @@ const Courses = () => {
           </p>
         </div>
         {user?.role === "STUDENT" ? (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               onClick={() => router.push("/dashboard/student/course-selection")}
+              className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Course Selection
+              <span className="hidden sm:inline">Course Selection</span>
+              <span className="sm:hidden">Select Courses</span>
             </Button>
             <Dialog open={enrollmentOpen} onOpenChange={setEnrollmentOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
-                  Quick Enroll
+                  <span className="hidden sm:inline">Quick Enroll</span>
+                  <span className="sm:hidden">Enroll</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+              <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle>Enroll in Courses</DialogTitle>
                   <DialogDescription>
@@ -597,7 +538,7 @@ const Courses = () => {
 
                 <div className="space-y-4">
                   {/* Academic Period Selection */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="academicYear">Academic Year</Label>
                       <Select
@@ -644,7 +585,7 @@ const Courses = () => {
                         </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {availableCourses.map((course) => (
                           <Card key={course.id} className="relative">
                             <CardHeader className="pb-3">
@@ -709,15 +650,16 @@ const Courses = () => {
             </Dialog>
           </div>
         ) : isDepartmentAdmin(user?.role) ? (
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Dialog open={assignmentOpen} onOpenChange={setAssignmentOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <UserCheck className="mr-2 h-4 w-4" />
-                  Assign Courses
+                  <span className="hidden sm:inline">Assign Courses</span>
+                  <span className="sm:hidden">Assign</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
                 <DialogHeader>
                   <DialogTitle>Course Assignment Management</DialogTitle>
                   <DialogDescription>
@@ -728,7 +670,7 @@ const Courses = () => {
 
                 <div className="space-y-6">
                   {/* Academic Period Selection */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="academicYear">Academic Year</Label>
                       <Select
@@ -767,7 +709,7 @@ const Courses = () => {
                       <h3 className="text-lg font-semibold">
                         Current Assignments ({assignments.length})
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {assignments.map((assignment) => (
                           <Card
                             key={assignment.id}
@@ -896,23 +838,35 @@ const Courses = () => {
             <Button
               variant="outline"
               onClick={() => setDepartmentCourseOpen(true)}
+              className="w-full sm:w-auto"
             >
               <Settings className="mr-2 h-4 w-4" />
-              Manage Department Courses
+              <span className="hidden sm:inline">
+                Manage Department Courses
+              </span>
+              <span className="sm:hidden">Manage Courses</span>
             </Button>
             <Button
               variant="outline"
               onClick={() => setDepartmentCourseSelectionOpen(true)}
+              className="w-full sm:w-auto"
             >
               <BookOpen className="mr-2 h-4 w-4" />
-              Select Courses for Department
+              <span className="hidden sm:inline">
+                Select Courses for Department
+              </span>
+              <span className="sm:hidden">Select Courses</span>
             </Button>
           </div>
         ) : isSchoolAdmin(user?.role) || isSenateAdmin(user?.role) ? (
-          <div className="flex gap-2">
-            <Button onClick={() => setCreateCourseOpen(true)}>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              onClick={() => setCreateCourseOpen(true)}
+              className="w-full sm:w-auto"
+            >
               <Plus className="mr-2 h-4 w-4" />
-              Create Course
+              <span className="hidden sm:inline">Create Course</span>
+              <span className="sm:hidden">Create</span>
             </Button>
             {/* <Button variant="outline" onClick={() => setCreateCourseOpen(true)}>
               <Settings className="mr-2 h-4 w-4" />
@@ -937,7 +891,7 @@ const Courses = () => {
         )}
       </div>
 
-      {loading ? (
+      {coursesLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -945,65 +899,73 @@ const Courses = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
           {courses.map((course) => (
-            <Card key={course.id} className="overflow-hidden">
-              <CardHeader className="border-b bg-muted/40 p-4">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-col space-y-1">
-                    <Badge variant="outline" className="mb-2">
+            <Card
+              key={course.id}
+              className="overflow-hidden h-full flex flex-col"
+            >
+              <CardHeader className="border-b bg-muted/40 p-3 md:p-4">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex justify-between items-start">
+                    <Badge variant="outline" className="text-xs">
                       {course.code}
                     </Badge>
-                    {user?.role === "STUDENT" && (
-                      <div className="flex space-x-1">
-                        {course.isEnrolled && (
-                          <Badge variant="default" className="text-xs">
-                            Enrolled
-                          </Badge>
-                        )}
-                        {course.isRequired && (
-                          <Badge variant="destructive" className="text-xs">
-                            Required
-                          </Badge>
-                        )}
-                        {course.category && (
-                          <Badge variant="secondary" className="text-xs">
-                            {course.category}
-                          </Badge>
-                        )}
-                      </div>
-                    )}
+                    <Badge
+                      variant={
+                        course.status === "active"
+                          ? "default"
+                          : course.status === "completed"
+                            ? "outline"
+                            : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {course.status}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={
-                      course.status === "active"
-                        ? "default"
-                        : course.status === "completed"
-                          ? "outline"
-                          : "secondary"
-                    }
-                  >
-                    {course.status}
-                  </Badge>
+                  <CardTitle className="text-sm md:text-base leading-tight">
+                    {course.name}
+                  </CardTitle>
+                  {user?.role === "STUDENT" && (
+                    <div className="flex flex-wrap gap-1">
+                      {course.isEnrolled && (
+                        <Badge variant="default" className="text-xs">
+                          Enrolled
+                        </Badge>
+                      )}
+                      {course.isRequired && (
+                        <Badge variant="destructive" className="text-xs">
+                          Required
+                        </Badge>
+                      )}
+                      {course.category && (
+                        <Badge variant="secondary" className="text-xs">
+                          {course.category}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <CardTitle>{course.name}</CardTitle>
                 <CardDescription>
                   {course.credits} Credits • {course.semester}
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="p-4 space-y-3">
-                <div className="text-sm">{course.description}</div>
+              <CardContent className="p-3 md:p-4 space-y-3 flex-1">
+                <div className="text-xs md:text-sm text-muted-foreground line-clamp-2">
+                  {course.description}
+                </div>
 
                 <div className="flex items-center text-xs text-muted-foreground">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  <span>{course.schedule}</span>
+                  <Calendar className="h-3 w-3 md:h-4 md:w-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">{course.schedule}</span>
                 </div>
 
                 {!isAdmin(user?.role) && course.progress !== undefined && (
                   <div className="space-y-1">
                     <div className="flex justify-between text-xs">
-                      <span>Course Progress</span>
+                      <span>Progress</span>
                       <span>{course.progress}%</span>
                     </div>
                     <Progress value={course.progress} className="h-1" />
@@ -1013,35 +975,40 @@ const Courses = () => {
                 {(user?.role === "LECTURER" || isAdmin(user?.role)) &&
                   course.students && (
                     <div className="flex items-center text-xs text-muted-foreground">
-                      <Users className="h-4 w-4 mr-1" />
-                      <span>{course.students} Students Enrolled</span>
+                      <Users className="h-3 w-3 md:h-4 md:w-4 mr-1 flex-shrink-0" />
+                      <span>{course.students} Students</span>
                     </div>
                   )}
               </CardContent>
 
-              <CardFooter className="border-t p-4 flex justify-between">
-                <div className="flex space-x-2">
+              <CardFooter className="border-t p-3 md:p-4 flex flex-col space-y-2">
+                <div className="flex flex-wrap gap-2">
                   {user?.role === "STUDENT" ? (
                     course.isEnrolled ? (
                       <>
                         <Button
                           variant="outline"
                           size="sm"
+                          className="flex-1 min-w-0"
                           onClick={() =>
                             router.push(
                               `/dashboard/student/materials/${course.id}`
                             )
                           }
                         >
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          View Materials
+                          <BookOpen className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                          <span className="hidden sm:inline">
+                            View Materials
+                          </span>
+                          <span className="sm:hidden">Materials</span>
                         </Button>
                         <Button
                           variant="destructive"
                           size="sm"
+                          className="flex-1 min-w-0"
                           onClick={() => handleDropCourse(course.enrollmentId)}
                         >
-                          Drop Course
+                          Drop
                         </Button>
                         <CourseFeedback course={course} />
                       </>
@@ -1049,24 +1016,28 @@ const Courses = () => {
                       <Button
                         variant="default"
                         size="sm"
+                        className="w-full"
                         onClick={() => handleEnroll(course.id)}
                         disabled={enrolling === course.id}
                       >
                         {enrolling === course.id ? (
                           <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Enrolling...
+                            <div className="animate-spin rounded-full h-3 w-3 md:h-4 md:w-4 border-b-2 border-white mr-1 md:mr-2"></div>
+                            <span className="hidden sm:inline">
+                              Enrolling...
+                            </span>
+                            <span className="sm:hidden">...</span>
                           </>
                         ) : (
                           <>
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                             Enroll
                           </>
                         )}
                       </Button>
                     )
                   ) : user?.role === "LECTURER" ? (
-                    <div className="flex flex-col space-y-2">
+                    <div className="w-full space-y-2">
                       <Button
                         variant="outline"
                         size="sm"
@@ -1075,81 +1046,85 @@ const Courses = () => {
                           router.push(`/dashboard/lecturer/course/${course.id}`)
                         }
                       >
-                        <BookOpen className="h-4 w-4 mr-2" />
-                        Manage Course
+                        <BookOpen className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                        <span className="hidden sm:inline">Manage Course</span>
+                        <span className="sm:hidden">Manage</span>
                       </Button>
-                      <div className="flex space-x-1">
+                      <div className="grid grid-cols-3 gap-1">
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="text-xs"
                           onClick={() =>
                             router.push(
                               `/dashboard/lecturer/course/${course.id}?tab=materials`
                             )
                           }
                         >
-                          <FileText className="h-4 w-4 mr-1" />
-                          Materials
+                          <FileText className="h-3 w-3" />
+                          <span className="hidden sm:inline ml-1">
+                            Materials
+                          </span>
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="text-xs"
                           onClick={() =>
                             router.push(
                               `/dashboard/lecturer/course/${course.id}?tab=students`
                             )
                           }
                         >
-                          <Users className="h-4 w-4 mr-1" />
-                          Students
+                          <Users className="h-3 w-3" />
+                          <span className="hidden sm:inline ml-1">
+                            Students
+                          </span>
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="text-xs"
                           onClick={() =>
                             router.push(
                               `/dashboard/lecturer/course/${course.id}?tab=quizzes`
                             )
                           }
                         >
-                          <Award className="h-4 w-4 mr-1" />
-                          Quizzes
+                          <Award className="h-3 w-3" />
+                          <span className="hidden sm:inline ml-1">Quizzes</span>
                         </Button>
                       </div>
                     </div>
-                  ) : (
-                    <Button variant="outline" size="sm">
-                      <BookOpen className="h-4 w-4 mr-2" />
-                      Manage
-                    </Button>
-                  )}
+                  ) : null}
                   {isAdmin(user?.role) && (
-                    <>
+                    <div className="flex gap-2 w-full">
                       <Button
                         variant="outline"
                         size="sm"
+                        className="flex-1"
                         onClick={() => handleEditCourse(course)}
                       >
-                        <Settings className="h-4 w-4 mr-2" />
-                        Edit
+                        <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1" />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
                       <Button
                         variant="destructive"
                         size="sm"
+                        className="flex-1"
                         onClick={() => handleDeleteCourse(course.id)}
                       >
                         Delete
                       </Button>
-                    </>
+                    </div>
                   )}
                 </div>
                 {!isAdmin(user?.role) && (
-                  <Button variant="ghost" size="sm">
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
+                  <div className="flex justify-center">
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Bookmark className="h-3 w-3 md:h-4 md:w-4" />
+                    </Button>
+                  </div>
                 )}
               </CardFooter>
             </Card>
@@ -1178,13 +1153,13 @@ const Courses = () => {
         open={departmentCourseOpen}
         onOpenChange={setDepartmentCourseOpen}
         onSuccess={() => {
-          fetchStudentCourses();
+          mutateCourses();
         }}
       />
 
       {/* Database Seeding Dialog */}
       <Dialog open={seedingOpen} onOpenChange={setSeedingOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Database className="h-5 w-5" />
@@ -1430,7 +1405,7 @@ const Courses = () => {
         open={departmentCourseSelectionOpen}
         onOpenChange={setDepartmentCourseSelectionOpen}
         onSuccess={() => {
-          fetchStudentCourses();
+          mutateCourses();
         }}
       />
     </div>

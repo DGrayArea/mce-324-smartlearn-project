@@ -221,6 +221,18 @@ async function handlePost(
     let finalSchoolId = schoolId;
     let finalDepartmentId = departmentId;
 
+    // Validate course type permissions for creation
+    if (type === "GENERAL" && !permissions.isSenateAdmin) {
+      return res.status(403).json({
+        message: "Only Senate admins can create General courses.",
+      });
+    }
+    if (type === "FACULTY" && !permissions.isSenateAdmin) {
+      return res.status(403).json({
+        message: "Only Senate admins can create Faculty courses.",
+      });
+    }
+
     if (permissions.isDepartmentAdmin) {
       // Department admin cannot create courses - they can only select from existing ones
       return res.status(403).json({
@@ -248,6 +260,29 @@ async function handlePost(
     }
     // Senate admin can create courses for any school/department
 
+    // Validate foreign key constraints for course creation
+    if (finalDepartmentId) {
+      const department = await prisma.department.findUnique({
+        where: { id: finalDepartmentId },
+      });
+      if (!department) {
+        return res.status(400).json({
+          message: "Invalid department ID provided",
+        });
+      }
+    }
+
+    if (finalSchoolId) {
+      const school = await prisma.school.findUnique({
+        where: { id: finalSchoolId },
+      });
+      if (!school) {
+        return res.status(400).json({
+          message: "Invalid school ID provided",
+        });
+      }
+    }
+
     // Create the course
     const course = await prisma.course.create({
       data: {
@@ -258,8 +293,8 @@ async function handlePost(
         type,
         level,
         semester,
-        schoolId: finalSchoolId,
-        departmentId: finalDepartmentId,
+        schoolId: finalSchoolId || null,
+        departmentId: finalDepartmentId || null,
         isActive: true,
       },
       include: {
@@ -311,6 +346,7 @@ async function handlePut(
   try {
     const { courseId, ...updateData } = req.body;
 
+
     if (!courseId) {
       return res.status(400).json({
         message: "Course ID is required",
@@ -336,6 +372,25 @@ async function handlePut(
       });
     }
 
+    // Validate course type permissions
+    if (updateData.type) {
+      if (
+        permissions.isDepartmentAdmin &&
+        (updateData.type === "FACULTY" || updateData.type === "GENERAL")
+      ) {
+        return res.status(403).json({
+          message:
+            "Department admins cannot set course type to Faculty or General. Only Senate admins can do this.",
+        });
+      }
+      if (permissions.isSchoolAdmin && updateData.type === "GENERAL") {
+        return res.status(403).json({
+          message:
+            "School admins cannot set course type to General. Only Senate admins can do this.",
+        });
+      }
+    }
+
     // If updating code, check for duplicates
     if (updateData.code && updateData.code !== existingCourse.code) {
       const duplicateCourse = await prisma.course.findUnique({
@@ -349,11 +404,59 @@ async function handlePut(
       }
     }
 
+    // Validate foreign key constraints
+    if (updateData.departmentId) {
+      const department = await prisma.department.findUnique({
+        where: { id: updateData.departmentId },
+      });
+      if (!department) {
+        return res.status(400).json({
+          message: "Invalid department ID provided",
+        });
+      }
+    }
+
+    if (updateData.schoolId) {
+      const school = await prisma.school.findUnique({
+        where: { id: updateData.schoolId },
+      });
+      if (!school) {
+        return res.status(400).json({
+          message: "Invalid school ID provided",
+        });
+      }
+    }
+
+    // Filter out undefined values to prevent foreign key issues
+    // But keep required fields like code, title, etc. even if they're empty strings
+    const cleanUpdateData = Object.fromEntries(
+      Object.entries(updateData).filter(([key, value]) => {
+        if (value === undefined) return false;
+        // Keep required fields even if empty
+        if (
+          [
+            "code",
+            "title",
+            "description",
+            "type",
+            "level",
+            "semester",
+            "creditUnit",
+          ].includes(key)
+        ) {
+          return true;
+        }
+        // Filter out empty strings for optional fields
+        return value !== "";
+      })
+    );
+
+
     // Update the course
     const updatedCourse = await prisma.course.update({
       where: { id: courseId },
       data: {
-        ...updateData,
+        ...cleanUpdateData,
         creditUnit: updateData.creditUnit
           ? parseInt(updateData.creditUnit)
           : undefined,

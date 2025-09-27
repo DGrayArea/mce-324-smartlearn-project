@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useChatRooms, useChatMessages } from "@/hooks/useSWRData";
 import {
   Card,
   CardContent,
@@ -49,68 +50,49 @@ const StudentChat = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const [selectedRoom, setSelectedRoom] = useState<string>("general");
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
-  const fetchChatRooms = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/student/chat-rooms");
-      if (response.ok) {
-        const data = await response.json();
-        setChatRooms(data.chatRooms || []);
-      } else {
-        throw new Error("Failed to fetch chat rooms");
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to load chat rooms",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // SWR hooks for chat data
+  const {
+    chatRooms = [],
+    isLoading: roomsLoading,
+    error: roomsError
+  } = useChatRooms();
 
-  const fetchMessages = async () => {
-    try {
-      const response = await fetch(
-        `/api/student/chat-messages?roomId=${selectedRoom}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages || []);
-      } else {
-        throw new Error("Failed to fetch messages");
-      }
-    } catch (error: any) {
+  const {
+    messages = [],
+    isLoading: messagesLoading,
+    error: messagesError,
+    mutate: mutateMessages
+  } = useChatMessages(selectedRoom);
+
+  // Handle SWR errors
+  useEffect(() => {
+    if (roomsError) {
       toast({
         title: "Error",
-        description: error.message || "Failed to load messages",
+        description: "Failed to load chat rooms",
         variant: "destructive",
       });
     }
-  };
+  }, [roomsError, toast]);
 
   useEffect(() => {
-    if (user?.role === "STUDENT") {
-      fetchChatRooms();
+    if (messagesError) {
+      toast({
+        title: "Error",
+        description: "Failed to load messages",
+        variant: "destructive",
+      });
     }
-  }, [user, fetchChatRooms]);
+  }, [messagesError, toast]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (selectedRoom) {
-      fetchMessages();
-    }
-  }, [selectedRoom, fetchMessages]);
-
-  useEffect(() => {
-    scrollToBottom();
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -134,17 +116,9 @@ const StudentChat = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setMessages((prev) => [...prev, data.message]);
         setNewMessage("");
-
-        // Update last message in chat rooms
-        setChatRooms((prev) =>
-          prev.map((room) =>
-            room.id === selectedRoom
-              ? { ...room, lastMessage: data.message }
-              : room
-          )
-        );
+        // Revalidate messages
+        mutateMessages();
       } else {
         const error = await response.json();
         throw new Error(error.message || "Failed to send message");
@@ -176,7 +150,7 @@ const StudentChat = () => {
 
   const currentRoom = chatRooms.find((room) => room.id === selectedRoom);
 
-  if (loading) {
+  if (roomsLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

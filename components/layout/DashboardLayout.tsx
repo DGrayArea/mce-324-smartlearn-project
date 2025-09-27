@@ -128,7 +128,7 @@ export const DashboardLayout = ({
                   variant="ghost"
                   className="flex items-center space-x-2 px-3"
                 >
-                  <Avatar className="h-8 w-8">
+                  <Avatar className="h-12 w-12 p-1">
                     <AvatarFallback className={getRoleColor(user?.role || "")}>
                       <span className="text-white font-medium">
                         {user?.name

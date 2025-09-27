@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCourseRegistrations } from "@/hooks/useSWRData";
+import { mutate } from "swr";
 import {
   Card,
   CardContent,
@@ -65,11 +67,8 @@ const CourseRegistrations = () => {
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
 
-  const [registrations, setRegistrations] = useState<any[]>([]);
-  const [statistics, setStatistics] = useState<any>(null);
   const [selectedRegistration, setSelectedRegistration] = useState<any>(null);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [reviewAction, setReviewAction] = useState<"approve" | "reject" | null>(
@@ -77,39 +76,26 @@ const CourseRegistrations = () => {
   );
   const [reviewComments, setReviewComments] = useState("");
 
+  // SWR hook for course registrations data
+  const {
+    registrations = [],
+    statistics = null,
+    isLoading,
+    error,
+    mutate: mutateRegistrations
+  } = useAdminCourseRegistrations(academicYear, semester, statusFilter);
+
+  // Handle SWR errors
   useEffect(() => {
-    if (user?.role === "DEPARTMENT_ADMIN") {
-      fetchRegistrations();
-    }
-  }, [user, academicYear, semester, statusFilter]);
-
-  const fetchRegistrations = async () => {
-    try {
-      setLoading(true);
-      const params = new URLSearchParams({
-        academicYear,
-        semester,
-        ...(statusFilter !== "ALL" && { status: statusFilter }),
-      });
-
-      const response = await fetch(`/api/admin/course-registrations?${params}`);
-      if (response.ok) {
-        const data = await response.json();
-        setRegistrations(data.registrations || []);
-        setStatistics(data.statistics || null);
-      } else {
-        throw new Error("Failed to fetch registrations");
-      }
-    } catch (error: any) {
+    if (error) {
       toast({
         title: "Error",
-        description: error.message || "Failed to load course registrations",
+        description: "Failed to load course registrations",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [error, toast]);
+
 
   const handleReview = (registration: any, action: "approve" | "reject") => {
     setSelectedRegistration(registration);
@@ -142,7 +128,8 @@ const CourseRegistrations = () => {
           description: data.message,
         });
         setReviewDialogOpen(false);
-        fetchRegistrations(); // Refresh data
+        // Revalidate registrations
+        mutateRegistrations();
       } else {
         const error = await response.json();
         throw new Error(error.message || "Failed to review registration");
@@ -184,7 +171,7 @@ const CourseRegistrations = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

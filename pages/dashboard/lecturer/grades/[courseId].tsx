@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLecturerStudents, useLecturerResults } from "@/hooks/useSWRData";
+import { mutate } from "swr";
 import {
   Card,
   CardContent,
@@ -66,9 +68,7 @@ const LecturerGrades = () => {
   const { toast } = useToast();
 
   const [course, setCourse] = useState<any>(null);
-  const [students, setStudents] = useState<any[]>([]);
   const [grades, setGrades] = useState<Record<string, any>>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
@@ -76,83 +76,91 @@ const LecturerGrades = () => {
   const [semester, setSemester] = useState("FIRST");
   const [exporting, setExporting] = useState(false);
 
-  const fetchCourseData = useCallback(async () => {
-    try {
-      setLoading(true);
+  // SWR hooks for course data
+  const {
+    students = [],
+    isLoading: studentsLoading,
+    error: studentsError
+  } = useLecturerStudents(courseId as string);
 
-      // Fetch course details
-      const courseResponse = await fetch("/api/lecturer/courses");
-      if (courseResponse.ok) {
-        const courseData = await courseResponse.json();
-        const currentCourse = courseData.courses.find(
-          (c: any) => c.id === courseId
-        );
-        setCourse(currentCourse);
+  const {
+    results = [],
+    isLoading: resultsLoading,
+    error: resultsError,
+    mutate: mutateResults
+  } = useLecturerResults(courseId as string, academicYear, semester);
+
+  // Fetch course details separately (not covered by SWR hooks yet)
+  useEffect(() => {
+    const fetchCourseDetails = async () => {
+      try {
+        const courseResponse = await fetch("/api/lecturer/courses");
+        if (courseResponse.ok) {
+          const courseData = await courseResponse.json();
+          const currentCourse = courseData.courses.find(
+            (c: any) => c.id === courseId
+          );
+          setCourse(currentCourse);
+        }
+      } catch (error) {
+        console.error("Error fetching course details:", error);
       }
+    };
 
-      // Fetch students and their current grades
-      const studentsResponse = await fetch(
-        `/api/lecturer/students?courseId=${courseId}`
-      );
-      if (studentsResponse.ok) {
-        const studentsData = await studentsResponse.json();
-        setStudents(studentsData.students || []);
+    if (courseId && user?.role === "LECTURER") {
+      fetchCourseDetails();
+    }
+  }, [courseId, user]);
 
-        // Initialize grades for each student
-        const initialGrades: Record<string, any> = {};
-        studentsData.students.forEach((student: any) => {
-          initialGrades[student.id] = {
-            caScore: 0,
-            examScore: 0,
-            totalScore: 0,
-            grade: "F",
-            includeQuizzes: true,
-            quizScores: [],
-          };
+  // Initialize grades when students data changes
+  useEffect(() => {
+    if (students.length > 0) {
+      const initialGrades: Record<string, any> = {};
+      students.forEach((student: any) => {
+        initialGrades[student.id] = {
+          caScore: 0,
+          examScore: 0,
+          totalScore: 0,
+          grade: "F",
+          includeQuizzes: true,
+          quizScores: [],
+        };
+      });
+      setGrades(initialGrades);
+    }
+  }, [students]);
+
+  // Update grades with existing results
+  useEffect(() => {
+    if (results.length > 0) {
+      setGrades((prevGrades) => {
+        const updatedGrades = { ...prevGrades };
+        results.forEach((result: any) => {
+          if (updatedGrades[result.studentId]) {
+            updatedGrades[result.studentId] = {
+              ...updatedGrades[result.studentId],
+              caScore: result.caScore || 0,
+              examScore: result.examScore || 0,
+              totalScore: result.totalScore || 0,
+              grade: result.grade || "F",
+            };
+          }
         });
-        setGrades(initialGrades);
-      }
+        return updatedGrades;
+      });
+    }
+  }, [results]);
 
-      // Fetch existing results for this course
-      const resultsResponse = await fetch(
-        `/api/lecturer/results?courseId=${courseId}&academicYear=${academicYear}&semester=${semester}`
-      );
-      if (resultsResponse.ok) {
-        const resultsData = await resultsResponse.json();
-        // Update grades with existing data
-        setGrades((prevGrades) => {
-          const updatedGrades = { ...prevGrades };
-          resultsData.results.forEach((result: any) => {
-            if (updatedGrades[result.studentId]) {
-              updatedGrades[result.studentId] = {
-                ...updatedGrades[result.studentId],
-                caScore: result.caScore || 0,
-                examScore: result.examScore || 0,
-                totalScore: result.totalScore || 0,
-                grade: result.grade || "F",
-              };
-            }
-          });
-          return updatedGrades;
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching course data:", error);
+  // Handle SWR errors
+  useEffect(() => {
+    if (studentsError || resultsError) {
       toast({
         title: "Error",
         description: "Failed to load course data",
         variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
-  }, [courseId, academicYear, semester, toast]);
-
-  useEffect(() => {
-    if (courseId && user?.role === "LECTURER") {
-      fetchCourseData();
-    }
-  }, [courseId, user, academicYear, semester, fetchCourseData]);
+  }, [studentsError, resultsError, toast]);
 
   const handleGradeChange = (
     studentId: string,
@@ -334,7 +342,7 @@ const LecturerGrades = () => {
     }
   };
 
-  if (loading) {
+  if (studentsLoading || resultsLoading) {
     return (
       <div className="text-center py-8">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>

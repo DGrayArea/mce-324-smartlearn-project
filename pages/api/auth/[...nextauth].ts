@@ -3,8 +3,8 @@
 
 import NextAuth, { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
+import * as bcrypt from "bcryptjs";
+import { prisma } from "../../../lib/prisma";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -162,19 +162,23 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.role = token.role as
+        (session.user as any).id = token.id as string;
+        (session.user as any).role = token.role as
           | "STUDENT"
           | "LECTURER"
           | "DEPARTMENT_ADMIN"
           | "SCHOOL_ADMIN"
           | "SENATE_ADMIN";
-        session.user.isActive = token.isActive as boolean;
+        (session.user as any).isActive = token.isActive as boolean;
       }
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // Redirect based on user role
+      // If it's a relative URL, make it absolute
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // If it's already an absolute URL on the same origin, use it
       if (url.startsWith(baseUrl)) {
         return url;
       }
