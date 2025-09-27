@@ -9,12 +9,14 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to login page and API routes
+        // Allow access to login page, API routes, and auth callback
         if (
           req.nextUrl.pathname.startsWith("/login") ||
           req.nextUrl.pathname.startsWith("/api/") ||
           req.nextUrl.pathname.startsWith("/register") ||
-          req.nextUrl.pathname.startsWith("/forgotpassword")
+          req.nextUrl.pathname.startsWith("/forgotpassword") ||
+          req.nextUrl.pathname.startsWith("/dashboard") ||
+          req.nextUrl.pathname === "/"
         ) {
           return true;
         }

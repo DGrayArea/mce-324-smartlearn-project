@@ -182,6 +182,11 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      // Handle login page redirects - always go to dashboard after successful login
+      if (url.includes("/login") || url.includes("signin")) {
+        return `${baseUrl}/dashboard`;
+      }
+
       // Handle mobile app redirects
       if (url.includes("mobile") || url.includes("app")) {
         return `${baseUrl}/dashboard`;
@@ -223,8 +228,6 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: process.env.NODE_ENV === "production",
-        domain:
-          process.env.NODE_ENV === "production" ? ".vercel.app" : "localhost",
       },
     },
     callbackUrl: {

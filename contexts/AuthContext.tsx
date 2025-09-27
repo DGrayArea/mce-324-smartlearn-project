@@ -86,9 +86,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       const callbackUrl = urlParams.get("callbackUrl");
+      const currentPath = window.location.pathname;
 
-      if (callbackUrl && isAuthenticated && user) {
-        // Force redirect to dashboard if we have a callback URL and are authenticated
+      // Only handle callback if we're on the login page and have a callback URL
+      if (currentPath === "/login" && callbackUrl && isAuthenticated && user) {
+        // Clear the callback URL from the URL to prevent loops
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("callbackUrl");
+        window.history.replaceState({}, "", newUrl.toString());
+
+        // Force redirect to dashboard
         setTimeout(() => {
           window.location.href = "/dashboard";
         }, 100);
@@ -109,10 +116,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         return { success: false, error: result.error };
       }
 
-      // Force a page reload on mobile to ensure proper navigation
-      if (isMobile()) {
-        forceMobileNavigation("/dashboard");
-        return { success: true };
+      // Force a page reload to ensure proper navigation and clear any callback URLs
+      if (typeof window !== "undefined") {
+        // Clear any callback URL from the current URL
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete("callbackUrl");
+        window.history.replaceState({}, "", newUrl.toString());
+
+        // Force navigation to dashboard
+        setTimeout(() => {
+          window.location.href = "/dashboard";
+        }, 100);
       }
 
       return { success: true };
