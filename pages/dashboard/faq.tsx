@@ -45,8 +45,8 @@ interface FAQ {
   question: string;
   answer: string;
   category: string;
-  order: number;
-  tags: string[];
+  order?: number;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -114,7 +114,7 @@ const FAQPage = () => {
       faq.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
       faq.answer.toLowerCase().includes(searchTerm.toLowerCase()) ||
       faq.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      faq.tags.some((tag) =>
+      faq.tags?.some((tag) =>
         tag.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
@@ -268,17 +268,17 @@ const FAQPage = () => {
                   <CardContent>
                     <Accordion type="single" collapsible className="w-full">
                       {categoryFAQs
-                        .sort((a, b) => a.order - b.order)
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
                         .map((faq) => (
-                          <AccordionItem key={faq.id} value={faq.id}>
+                          <AccordionItem key={faq?.id} value={faq?.id}>
                             <AccordionTrigger className="text-left">
                               <div className="flex items-start space-x-3">
                                 <div className="flex-1">
-                                  <p className="font-medium">{faq.question}</p>
-                                  {faq.tags.length > 0 && (
+                                  <p className="font-medium">{faq?.question}</p>
+                                  {(faq?.tags?.length || 0) > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-1">
-                                      {faq.tags
-                                        .slice(0, 3)
+                                      {faq?.tags
+                                        ?.slice(0, 3)
                                         .map((tag, index) => (
                                           <Badge
                                             key={index}
@@ -288,12 +288,12 @@ const FAQPage = () => {
                                             {tag}
                                           </Badge>
                                         ))}
-                                      {faq.tags.length > 3 && (
+                                      {(faq?.tags?.length || 0) > 3 && (
                                         <Badge
                                           variant="outline"
                                           className="text-xs"
                                         >
-                                          +{faq.tags.length - 3} more
+                                          +{(faq?.tags?.length || 0) - 3} more
                                         </Badge>
                                       )}
                                     </div>
@@ -305,7 +305,7 @@ const FAQPage = () => {
                               <div className="pt-2">
                                 <div className="prose prose-sm max-w-none">
                                   <p className="whitespace-pre-wrap">
-                                    {faq.answer}
+                                    {faq?.answer}
                                   </p>
                                 </div>
                                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
@@ -313,12 +313,12 @@ const FAQPage = () => {
                                     <Calendar className="h-3 w-3 mr-1" />
                                     Updated{" "}
                                     {new Date(
-                                      faq.updatedAt
+                                      faq?.updatedAt
                                     ).toLocaleDateString()}
                                   </div>
-                                  {faq.tags.length > 0 && (
+                                  {(faq?.tags?.length || 0) > 0 && (
                                     <div className="flex flex-wrap gap-1">
-                                      {faq.tags.map((tag, index) => (
+                                      {faq?.tags?.map((tag, index) => (
                                         <Badge
                                           key={index}
                                           variant="secondary"

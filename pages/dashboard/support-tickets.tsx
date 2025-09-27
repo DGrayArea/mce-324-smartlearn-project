@@ -79,14 +79,15 @@ interface SupportTicket {
   _count: {
     responses: number;
   };
+  userId: any;
 }
 
 interface SupportResponse {
   id: string;
-  content: string;
+  message: string;
   isInternal: boolean;
   createdAt: string;
-  author: {
+  user: {
     id: string;
     name: string;
     role: string;
@@ -132,8 +133,8 @@ const SupportTickets = () => {
         params.append("category", selectedCategory);
 
       const response = await fetch(`/api/support/tickets?${params}`);
-      if (response.ok) {
-        const data = await response.json();
+      if (response?.ok) {
+        const data = await response?.json();
         setTickets(data.tickets);
       } else {
         toast({
@@ -163,8 +164,8 @@ const SupportTickets = () => {
       const response = await fetch(
         `/api/support/responses?ticketId=${ticketId}`
       );
-      if (response.ok) {
-        const data = await response.json();
+      if (response?.ok) {
+        const data = await response?.json();
         setResponses(data.responses);
       }
     } catch (error) {
@@ -183,7 +184,7 @@ const SupportTickets = () => {
         body: JSON.stringify(formData),
       });
 
-      if (response.ok) {
+      if (response?.ok) {
         toast({
           title: "Success",
           description: "Support ticket created successfully",
@@ -197,7 +198,7 @@ const SupportTickets = () => {
         });
         fetchTickets();
       } else {
-        const error = await response.json();
+        const error = await response?.json();
         toast({
           title: "Error",
           description: error.message || "Failed to create support ticket",
@@ -225,13 +226,13 @@ const SupportTickets = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ticketId: selectedTicket.id,
+          ticketId: selectedTicket?.id,
           content: responseData.content,
           isInternal: responseData.isInternal,
         }),
       });
 
-      if (response.ok) {
+      if (response?.ok) {
         toast({
           title: "Success",
           description: "Response submitted successfully",
@@ -241,10 +242,10 @@ const SupportTickets = () => {
           content: "",
           isInternal: false,
         });
-        fetchResponses(selectedTicket.id);
+        fetchResponses(selectedTicket?.id);
         fetchTickets(); // Refresh tickets to update status
       } else {
-        const error = await response.json();
+        const error = await response?.json();
         toast({
           title: "Error",
           description: error.message || "Failed to submit response",
@@ -273,14 +274,14 @@ const SupportTickets = () => {
         }
       );
 
-      if (response.ok) {
+      if (response?.ok) {
         toast({
           title: "Success",
           description: "Support ticket deleted successfully",
         });
         fetchTickets();
       } else {
-        const error = await response.json();
+        const error = await response?.json();
         toast({
           title: "Error",
           description: error.message || "Failed to delete support ticket",
@@ -300,7 +301,7 @@ const SupportTickets = () => {
   const openViewDialog = (ticket: SupportTicket) => {
     setSelectedTicket(ticket);
     setIsViewDialogOpen(true);
-    fetchResponses(ticket.id);
+    fetchResponses(ticket?.id);
   };
 
   const openResponseDialog = (ticket: SupportTicket) => {
@@ -370,13 +371,14 @@ const SupportTickets = () => {
 
   const filteredTickets = tickets.filter(
     (ticket) =>
-      ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      ticket.student.name.toLowerCase().includes(searchTerm.toLowerCase())
+      ticket?.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket?.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      ticket?.student?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const canCreateTicket = user?.role === "STUDENT";
   const canRespondToTickets = user?.role && !["STUDENT"].includes(user.role);
+  const isStudent = user?.role === "STUDENT";
 
   return (
     <div className="space-y-6">
@@ -556,25 +558,28 @@ const SupportTickets = () => {
       ) : (
         <div className="space-y-4">
           {filteredTickets.map((ticket) => (
-            <Card key={ticket.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={ticket?.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
-                      <CardTitle className="text-lg">{ticket.title}</CardTitle>
-                      <Badge className={getStatusColor(ticket.status)}>
-                        {getStatusIcon(ticket.status)}
+                      <CardTitle className="text-lg">{ticket?.title}</CardTitle>
+                      <Badge className={getStatusColor(ticket?.status)}>
+                        {getStatusIcon(ticket?.status)}
                         <span className="ml-1">
-                          {ticket.status.replace("_", " ")}
+                          {ticket?.status.replace("_", " ")}
                         </span>
                       </Badge>
-                      <Badge className={getPriorityColor(ticket.priority)}>
-                        {getPriorityIcon(ticket.priority)}
-                        <span className="ml-1">{ticket.priority}</span>
+                      <Badge className={getPriorityColor(ticket?.priority)}>
+                        {getPriorityIcon(ticket?.priority)}
+                        <span className="ml-1">{ticket?.priority}</span>
                       </Badge>
                     </div>
                     <CardDescription className="line-clamp-2">
-                      {ticket.description}
+                      {ticket?.description}
                     </CardDescription>
                   </div>
                   <div className="flex items-center space-x-1">
@@ -594,11 +599,11 @@ const SupportTickets = () => {
                         <MessageSquare className="h-4 w-4" />
                       </Button>
                     )}
-                    {ticket.student.id === user?.id && (
+                    {ticket?.student?.id === user?.id && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDeleteTicket(ticket.id)}
+                        onClick={() => handleDeleteTicket(ticket?.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -611,25 +616,25 @@ const SupportTickets = () => {
                   <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                     <div className="flex items-center">
                       <User className="h-4 w-4 mr-1" />
-                      {ticket.student.name}
+                      {ticket?.student?.name}
                     </div>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-1" />
-                      {new Date(ticket.createdAt).toLocaleDateString()}
+                      {new Date(ticket?.createdAt).toLocaleDateString()}
                     </div>
                     <div className="flex items-center">
                       <MessageSquare className="h-4 w-4 mr-1" />
-                      {ticket._count.responses} responses
+                      {ticket?._count?.responses} responses
                     </div>
-                    {ticket.assignedTo && (
+                    {ticket?.assignedTo && (
                       <div className="flex items-center">
                         <User className="h-4 w-4 mr-1" />
-                        Assigned to {ticket.assignedTo.name}
+                        Assigned to {ticket?.assignedTo.name}
                       </div>
                     )}
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    {ticket.category}
+                    {ticket?.category}
                   </div>
                 </div>
               </CardContent>
@@ -668,28 +673,28 @@ const SupportTickets = () => {
               <div className="space-y-4">
                 <div className="flex items-center space-x-2">
                   <h3 className="text-lg font-semibold">
-                    {selectedTicket.title}
+                    {selectedTicket?.title}
                   </h3>
-                  <Badge className={getStatusColor(selectedTicket.status)}>
-                    {getStatusIcon(selectedTicket.status)}
+                  <Badge className={getStatusColor(selectedTicket?.status)}>
+                    {getStatusIcon(selectedTicket?.status)}
                     <span className="ml-1">
-                      {selectedTicket.status.replace("_", " ")}
+                      {selectedTicket?.status.replace("_", " ")}
                     </span>
                   </Badge>
-                  <Badge className={getPriorityColor(selectedTicket.priority)}>
-                    {getPriorityIcon(selectedTicket.priority)}
-                    <span className="ml-1">{selectedTicket.priority}</span>
+                  <Badge className={getPriorityColor(selectedTicket?.priority)}>
+                    {getPriorityIcon(selectedTicket?.priority)}
+                    <span className="ml-1">{selectedTicket?.priority}</span>
                   </Badge>
                 </div>
                 <p className="text-muted-foreground">
-                  {selectedTicket.description}
+                  {selectedTicket?.description}
                 </p>
                 <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                  <div>Created by: {selectedTicket.student.name}</div>
-                  <div>Category: {selectedTicket.category}</div>
+                  <div>Created by: {selectedTicket?.student?.name}</div>
+                  <div>Category: {selectedTicket?.category}</div>
                   <div>
                     Created:{" "}
-                    {new Date(selectedTicket.createdAt).toLocaleDateString()}
+                    {new Date(selectedTicket?.createdAt).toLocaleDateString()}
                   </div>
                 </div>
               </div>
@@ -697,42 +702,59 @@ const SupportTickets = () => {
               <div className="space-y-4">
                 <h4 className="text-md font-semibold">Conversation History</h4>
                 <div className="space-y-3">
-                  {responses.map((response) => (
-                    <div
-                      key={response.id}
-                      className={`p-4 rounded-lg ${
-                        response.isInternal
-                          ? "bg-yellow-50 border border-yellow-200"
-                          : "bg-gray-50 border border-gray-200"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="font-medium">
-                            {response.author.name}
+                  {responses
+                    .filter((response) => {
+                      // Students should not see internal responses
+                      if (isStudent && response?.isInternal) {
+                        return false;
+                      }
+                      return true;
+                    })
+                    .map((response) => (
+                      <div
+                        key={response?.id}
+                        className={`p-4 rounded-lg ${
+                          response?.isInternal
+                            ? "bg-yellow-50 border border-yellow-200"
+                            : "bg-gray-50 border border-gray-200"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium">
+                              {isStudent && response?.user?.id === user?.id
+                                ? user?.name || "You"
+                                : response?.user?.name || "Technical Support"}
+                            </span>
+                            <Badge variant="outline">
+                              {isStudent && response?.user?.id === user?.id
+                                ? user?.role
+                                : response?.user?.role}
+                            </Badge>
+                            {response?.isInternal && (
+                              <Badge variant="secondary">Internal</Badge>
+                            )}
+                          </div>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(response?.createdAt).toLocaleString()}
                           </span>
-                          <Badge variant="outline">
-                            {response.author.role}
-                          </Badge>
-                          {response.isInternal && (
-                            <Badge variant="secondary">Internal</Badge>
-                          )}
                         </div>
-                        <span className="text-sm text-muted-foreground">
-                          {new Date(response.createdAt).toLocaleString()}
-                        </span>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {response?.message}
+                        </p>
                       </div>
-                      <p className="text-sm">{response.content}</p>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
 
-              {canRespondToTickets && (
+              {(canRespondToTickets ||
+                (isStudent && selectedTicket?.userId === user?.id)) && (
                 <div className="flex justify-end">
                   <Button onClick={() => openResponseDialog(selectedTicket)}>
                     <MessageSquare className="mr-2 h-4 w-4" />
-                    Add Response
+                    {isStudent && selectedTicket?.userId === user?.id
+                      ? "Reply"
+                      : "Add Response"}
                   </Button>
                 </div>
               )}
@@ -781,6 +803,12 @@ const SupportTickets = () => {
                 <Label htmlFor="isInternal">
                   Internal note (not visible to student)
                 </Label>
+              </div>
+            )}
+            {isStudent && selectedTicket?.userId === user?.id && (
+              <div className="text-sm text-muted-foreground bg-blue-50 p-3 rounded-lg border border-blue-200">
+                💬 Your reply will be visible to support staff and help them
+                assist you better.
               </div>
             )}
             <div className="flex justify-end space-x-2">

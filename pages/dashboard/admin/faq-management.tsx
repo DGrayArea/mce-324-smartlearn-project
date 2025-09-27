@@ -65,12 +65,12 @@ interface FAQ {
   question: string;
   answer: string;
   category: string;
-  order: number;
-  isPublished: boolean;
-  tags: string[];
+  order?: number;
+  isPublished?: boolean;
+  tags?: string[];
   createdAt: string;
   updatedAt: string;
-  createdBy: {
+  createdBy?: {
     name: string;
     email: string;
   };
@@ -562,7 +562,7 @@ const FAQManagement = () => {
                           </div>
                           <div className="flex items-center text-xs text-muted-foreground">
                             <User className="h-3 w-3 mr-1" />
-                            {faq.createdBy.name}
+                            {faq?.createdBy?.name}
                           </div>
                         </div>
                       </TableCell>

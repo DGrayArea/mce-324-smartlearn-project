@@ -56,7 +56,7 @@ export default async function handler(
 // Get all FAQs
 async function handleGet(req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { category, active } = req.query;
+    const { category, published } = req.query;
 
     const whereClause: any = {};
 
@@ -64,8 +64,8 @@ async function handleGet(req: NextApiRequest, res: NextApiResponse) {
       whereClause.category = category;
     }
 
-    if (active !== undefined) {
-      whereClause.isActive = active === "true";
+    if (published && published !== "ALL") {
+      whereClause.isPublished = published === "true";
     }
 
     const faqs = await prisma.fAQ.findMany({
@@ -109,7 +109,14 @@ async function handlePost(
   userId: string
 ) {
   try {
-    const { question, answer, category, isActive = true } = req.body;
+    const {
+      question,
+      answer,
+      category,
+      order = 0,
+      isPublished = true,
+      tags = [],
+    } = req.body;
 
     if (!question || !answer || !category) {
       return res.status(400).json({
@@ -117,14 +124,14 @@ async function handlePost(
       });
     }
 
-    // Order is not needed since FAQ model doesn't have order field
-
     const newFAQ = await prisma.fAQ.create({
       data: {
         question: question.trim(),
         answer: answer.trim(),
         category: category.trim(),
-        isActive,
+        order,
+        isPublished,
+        tags,
       },
     });
 
@@ -152,7 +159,7 @@ async function handlePut(
 ) {
   try {
     const { id } = req.query;
-    const { question, answer, category, isActive } = req.body;
+    const { question, answer, category, order, isPublished, tags } = req.body;
 
     if (!id || typeof id !== "string") {
       return res.status(400).json({ message: "FAQ ID is required" });
@@ -171,7 +178,9 @@ async function handlePut(
     if (question !== undefined) updateData.question = question.trim();
     if (answer !== undefined) updateData.answer = answer.trim();
     if (category !== undefined) updateData.category = category.trim();
-    if (isActive !== undefined) updateData.isActive = isActive;
+    if (order !== undefined) updateData.order = order;
+    if (isPublished !== undefined) updateData.isPublished = isPublished;
+    if (tags !== undefined) updateData.tags = tags;
 
     const updatedFAQ = await prisma.fAQ.update({
       where: { id },

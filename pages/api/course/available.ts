@@ -65,24 +65,47 @@ export default async function handler(
     const requiredCourseIds = departmentCourses.map((dc) => dc.courseId);
 
     // Get course availability configuration for this department
-    // Note: courseAvailability table doesn't exist in current schema
-    // For now, we'll use department courses as available courses
-    const availableCourseIds = requiredCourseIds;
-
-    // Get available courses based on department configuration
-    const availableCourses = await prisma.course.findMany({
+    const courseAvailability = await prisma.courseAvailability.findMany({
       where: {
-        isActive: true,
-        // Filter by student level
-        level: user.student?.level,
-        // Only show courses that are configured as available for this department
-        // and not already enrolled
-        id: {
-          in: availableCourseIds.filter(
-            (id) => !enrolledCourseIds.includes(id)
-          ),
+        departmentId: user.student.departmentId,
+        isAvailable: true,
+      },
+      include: {
+        course: true,
+        admin: {
+          select: { name: true },
         },
       },
+    });
+
+    const availableCourseIds = courseAvailability.map((ca) => ca.courseId);
+
+    // Get available courses based on department configuration
+    // If no admin configuration exists, show all courses for the student's level and department
+    const whereClause: any = {
+      isActive: true,
+      // Filter by student level
+      level: user.student?.level,
+      // Not already enrolled
+      id: {
+        notIn: enrolledCourseIds,
+      },
+    };
+
+    // If admin has configured availability, only show those courses
+    if (availableCourseIds.length > 0) {
+      whereClause.id.in = availableCourseIds;
+    } else {
+      // If no admin configuration, show courses from student's department or general courses
+      whereClause.OR = [
+        { departmentId: user.student.departmentId },
+        { type: "GENERAL" },
+        { type: "FACULTY" },
+      ];
+    }
+
+    const availableCourses = await prisma.course.findMany({
+      where: whereClause,
       include: {
         department: {
           select: { name: true, code: true },
@@ -105,10 +128,9 @@ export default async function handler(
     });
 
     // Create a map of course availability configurations
-    // Note: courseAvailability table doesn't exist, so we'll use department courses
     const availabilityMap = new Map();
-    departmentCourses.forEach((dc) => {
-      availabilityMap.set(dc.courseId, dc);
+    courseAvailability.forEach((ca) => {
+      availabilityMap.set(ca.courseId, ca);
     });
 
     // Add recommendation scoring and categorization
@@ -142,7 +164,7 @@ export default async function handler(
           category = "elective";
         }
       }
-      // Fallback to default scoring
+      // If no availability configuration, use default scoring
       else {
         if (course.departmentId === user.student?.departmentId) {
           recommendationScore = 80;
@@ -152,6 +174,10 @@ export default async function handler(
           recommendationScore = 60;
           recommendationReason = "General education course";
           category = "general";
+        } else if (course.type === "FACULTY") {
+          recommendationScore = 50;
+          recommendationReason = "Faculty-wide course";
+          category = "faculty";
         } else {
           recommendationScore = 40;
           recommendationReason = "From other departments";
@@ -179,13 +205,14 @@ export default async function handler(
       };
     });
 
-    // Sort by recommendation score (highest first)
-    coursesWithRecommendations.sort(
-      (a, b) => b.recommendationScore - a.recommendationScore
+    // Filter out null values and sort by recommendation score (highest first)
+    const validCourses = coursesWithRecommendations.filter(
+      (course) => course !== null
     );
+    validCourses.sort((a, b) => b.recommendationScore - a.recommendationScore);
 
     return res.status(200).json({
-      courses: coursesWithRecommendations.map((course) => ({
+      courses: validCourses.map((course) => ({
         id: course.id,
         title: course.title,
         code: course.code,
@@ -203,6 +230,7 @@ export default async function handler(
         isRecommended: course.isRecommended,
         isRequired: course.isRequired,
         adminNotes: course.adminNotes,
+        configuredBy: availabilityMap.get(course.id)?.admin?.name,
       })),
     });
   } catch (error) {

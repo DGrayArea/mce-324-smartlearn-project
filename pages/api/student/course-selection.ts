@@ -30,6 +30,12 @@ export default async function handler(
   });
 
   if (!currentUser || currentUser.role !== "STUDENT" || !currentUser.student) {
+    console.error("Course selection access denied:", {
+      hasUser: !!currentUser,
+      role: currentUser?.role,
+      hasStudent: !!currentUser?.student,
+      email: session.user?.email,
+    });
     return res
       .status(403)
       .json({ message: "Forbidden: Student access required" });
@@ -38,6 +44,19 @@ export default async function handler(
   const studentId = currentUser.student.id;
   const departmentId = currentUser.student.departmentId;
   const studentLevel = currentUser.student.level;
+
+  // Validate required student data
+  if (!studentId || !departmentId || !studentLevel) {
+    console.error("Missing student data:", {
+      studentId,
+      departmentId,
+      studentLevel,
+      student: currentUser.student,
+    });
+    return res.status(400).json({
+      message: "Student profile incomplete. Please contact support.",
+    });
+  }
 
   try {
     switch (req.method) {
@@ -83,7 +102,7 @@ async function handleGet(
 
     // Check if registration is open
     const currentDate = new Date();
-    const registrationDeadline = new Date("2024-10-15");
+    const registrationDeadline = new Date("2025-12-31"); // Extended deadline for development
 
     if (currentDate > registrationDeadline) {
       return res.status(400).json({
@@ -233,6 +252,13 @@ async function handleGet(
     });
   } catch (error) {
     console.error("Get course selection error:", error);
+    console.error("Error details:", {
+      studentId,
+      departmentId,
+      studentLevel,
+      academicYear: req.query.academicYear,
+      semester: req.query.semester,
+    });
     return res.status(500).json({
       message: "Failed to fetch course selection",
       error:
@@ -254,8 +280,23 @@ async function handlePost(
       selectedCourseIds,
       academicYear = "2024/2025",
       semester = "FIRST",
+      firstSemesterCourses,
+      secondSemesterCourses,
     } = req.body;
 
+    // Handle new format with both semesters
+    if (firstSemesterCourses && secondSemesterCourses) {
+      return handleBothSemesters(
+        req,
+        res,
+        studentId,
+        academicYear,
+        firstSemesterCourses,
+        secondSemesterCourses
+      );
+    }
+
+    // Handle legacy format with single semester
     if (!selectedCourseIds || !Array.isArray(selectedCourseIds)) {
       return res.status(400).json({
         message: "Selected course IDs are required",
@@ -264,7 +305,7 @@ async function handlePost(
 
     // Check if registration is open
     const currentDate = new Date();
-    const registrationDeadline = new Date("2024-10-15");
+    const registrationDeadline = new Date("2025-12-31"); // Extended deadline for development
 
     if (currentDate > registrationDeadline) {
       return res.status(400).json({
@@ -401,7 +442,7 @@ async function handleUpdate(
 
     // Check if registration is open
     const currentDate = new Date();
-    const registrationDeadline = new Date("2024-10-15");
+    const registrationDeadline = new Date("2025-12-31"); // Extended deadline for development
 
     if (currentDate > registrationDeadline) {
       return res.status(400).json({
@@ -485,6 +526,219 @@ async function handleUpdate(
     console.error("Course selection update error:", error);
     return res.status(500).json({
       message: "Failed to update course selection",
+      error:
+        process.env.NODE_ENV === "development"
+          ? (error as Error).message
+          : undefined,
+    });
+  }
+}
+
+// Handle course selection for both semesters
+async function handleBothSemesters(
+  req: NextApiRequest,
+  res: NextApiResponse,
+  studentId: string,
+  academicYear: string,
+  firstSemesterCourses: string[],
+  secondSemesterCourses: string[]
+) {
+  try {
+    // Check if registration is open
+    const currentDate = new Date();
+    const registrationDeadline = new Date("2025-12-31"); // Extended deadline for development
+
+    if (currentDate > registrationDeadline) {
+      return res.status(400).json({
+        message: "Course registration period has ended for this session",
+      });
+    }
+
+    // Get course details to calculate total credits
+    const allCourseIds = [...firstSemesterCourses, ...secondSemesterCourses];
+    const courses = await prisma.course.findMany({
+      where: {
+        id: { in: allCourseIds },
+      },
+    });
+
+    // Calculate credits per semester
+    const firstSemesterCredits = courses
+      .filter((course) => firstSemesterCourses.includes(course.id))
+      .reduce((sum, course) => sum + course.creditUnit, 0);
+
+    const secondSemesterCredits = courses
+      .filter((course) => secondSemesterCourses.includes(course.id))
+      .reduce((sum, course) => sum + course.creditUnit, 0);
+
+    const totalCredits = firstSemesterCredits + secondSemesterCredits;
+
+    // Validate credit limits
+    if (firstSemesterCredits > 18) {
+      return res.status(400).json({
+        message: `First semester credits (${firstSemesterCredits}) exceeds the maximum limit of 18 credits.`,
+        firstSemesterCredits,
+        maxCredits: 18,
+      });
+    }
+
+    if (secondSemesterCredits > 18) {
+      return res.status(400).json({
+        message: `Second semester credits (${secondSemesterCredits}) exceeds the maximum limit of 18 credits.`,
+        secondSemesterCredits,
+        maxCredits: 18,
+      });
+    }
+
+    if (totalCredits > 36) {
+      return res.status(400).json({
+        message: `Total credits (${totalCredits}) exceeds the maximum limit of 36 credits.`,
+        totalCredits,
+        maxCredits: 36,
+      });
+    }
+
+    // Check if student already has registrations for this academic year
+    const existingRegistrations = await prisma.courseRegistration.findMany({
+      where: {
+        studentId,
+        academicYear,
+      },
+    });
+
+    if (existingRegistrations.length > 0) {
+      return res.status(409).json({
+        message:
+          "You have already submitted course registrations for this academic year. Please contact your department admin to modify them.",
+      });
+    }
+
+    // Create course registrations for both semesters in a transaction
+    const registrations = await prisma.$transaction(async (tx) => {
+      const registrations = [];
+
+      // Create first semester registration
+      if (firstSemesterCourses.length > 0) {
+        const firstSemRegistration = await tx.courseRegistration.create({
+          data: {
+            studentId,
+            academicYear,
+            semester: "FIRST",
+            status: "PENDING",
+          },
+        });
+
+        // Create course selections for first semester
+        await Promise.all(
+          firstSemesterCourses.map((courseId) =>
+            tx.courseSelection.create({
+              data: {
+                courseRegistrationId: firstSemRegistration.id,
+                courseId,
+              },
+            })
+          )
+        );
+
+        registrations.push(firstSemRegistration);
+      }
+
+      // Create second semester registration
+      if (secondSemesterCourses.length > 0) {
+        const secondSemRegistration = await tx.courseRegistration.create({
+          data: {
+            studentId,
+            academicYear,
+            semester: "SECOND",
+            status: "PENDING",
+          },
+        });
+
+        // Create course selections for second semester
+        await Promise.all(
+          secondSemesterCourses.map((courseId) =>
+            tx.courseSelection.create({
+              data: {
+                courseRegistrationId: secondSemRegistration.id,
+                courseId,
+              },
+            })
+          )
+        );
+
+        registrations.push(secondSemRegistration);
+      }
+
+      return registrations;
+    });
+
+    // Create notification for department admin
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        department: {
+          include: {
+            admins: true,
+          },
+        },
+      },
+    });
+
+    if (student?.department?.admins) {
+      await Promise.all(
+        student.department.admins.map((admin) =>
+          prisma.notification.create({
+            data: {
+              title: "New Course Registration",
+              message: `${student.name} has submitted course registrations for both semesters (${academicYear}). Please review and approve.`,
+              type: "COURSE_REGISTRATION",
+              isRead: false,
+              metadata: {
+                studentId: studentId,
+                academicYear: academicYear,
+                registrationIds: registrations.map((r) => r.id),
+              },
+            },
+          })
+        )
+      );
+    }
+
+    return res.status(201).json({
+      message:
+        "Course selection submitted successfully for both semesters! Your registrations are now under review.",
+      registrations: registrations.map((reg) => ({
+        id: reg.id,
+        semester: reg.semester,
+        status: reg.status,
+        courseCount:
+          reg.semester === "FIRST"
+            ? firstSemesterCourses.length
+            : secondSemesterCourses.length,
+        credits:
+          reg.semester === "FIRST"
+            ? firstSemesterCredits
+            : secondSemesterCredits,
+      })),
+      summary: {
+        firstSemester: {
+          courseCount: firstSemesterCourses.length,
+          credits: firstSemesterCredits,
+        },
+        secondSemester: {
+          courseCount: secondSemesterCourses.length,
+          credits: secondSemesterCredits,
+        },
+        total: {
+          courseCount: allCourseIds.length,
+          credits: totalCredits,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Both semesters course selection error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
       error:
         process.env.NODE_ENV === "development"
           ? (error as Error).message

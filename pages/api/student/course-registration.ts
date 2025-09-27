@@ -197,7 +197,7 @@ async function handlePost(
 
     // Check if registration is open for this session
     const currentDate = new Date();
-    const registrationDeadline = new Date("2024-10-15"); // This should come from session settings
+    const registrationDeadline = new Date("2026-10-15"); // This should come from session settings
 
     if (currentDate > registrationDeadline) {
       return res.status(400).json({
@@ -322,7 +322,8 @@ async function handlePost(
     }
 
     return res.status(201).json({
-      message: "Course added to registration successfully. Your registration will be reviewed by your department admin.",
+      message:
+        "Course added to registration successfully. Your registration will be reviewed by your department admin.",
       registration: {
         id: courseRegistration.id,
         status: courseRegistration.status,

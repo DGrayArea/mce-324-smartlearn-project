@@ -30,7 +30,47 @@ export default async function handler(
     }
 
     if (req.method === "GET") {
-      // Get support tickets
+      // Check if requesting a specific ticket
+      const { ticketId } = req.query;
+
+      if (ticketId) {
+        // Get specific ticket with responses
+        const ticket = await prisma.supportTicket.findUnique({
+          where: { id: ticketId as string },
+          include: {
+            user: {
+              select: { id: true, name: true, role: true },
+            },
+            assignedTo: {
+              select: { id: true, name: true, role: true },
+            },
+            responses: {
+              include: {
+                user: {
+                  select: { id: true, name: true, role: true },
+                },
+              },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+        });
+
+        if (!ticket) {
+          return res.status(404).json({ message: "Ticket not found" });
+        }
+
+        // Check if user can view this ticket
+        if (
+          currentUser.role === "STUDENT" &&
+          ticket.userId !== currentUser.id
+        ) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+
+        return res.status(200).json({ ticket });
+      }
+
+      // Get support tickets list
       const {
         status,
         priority,
@@ -120,6 +160,14 @@ export default async function handler(
           assignedTo: {
             select: { id: true, name: true, role: true },
           },
+          responses: {
+            include: {
+              user: {
+                select: { id: true, name: true, role: true },
+              },
+            },
+            orderBy: { createdAt: "asc" },
+          },
           _count: {
             select: { responses: true },
           },
@@ -166,15 +214,20 @@ export default async function handler(
           .json({ message: "Only students can create support tickets" });
       }
 
+      // Generate a unique ticket number
+      const ticketCount = await prisma.supportTicket.count();
+      const ticketNumber = `TKT-${String(ticketCount + 1).padStart(6, "0")}`;
+
       const ticket = await prisma.supportTicket.create({
         data: {
+          ticketNumber,
           title,
           description,
           category,
           priority: priority || "MEDIUM",
           status: "OPEN",
           userId: session.user.id,
-        } as any,
+        },
       });
 
       return res.status(201).json({ ticket });

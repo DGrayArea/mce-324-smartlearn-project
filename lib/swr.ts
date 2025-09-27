@@ -50,10 +50,20 @@ export const fetcherWithParams =
 // SWR key generators
 export const swrKeys = {
   // Dashboard data
-  dashboard: (role: string) => `/api/dashboard/${role}`,
+  dashboard: (role: string) => {
+    // Normalize role to lowercase for API consistency
+    const normalizedRole = role.toLowerCase();
+    return `/api/dashboard/${normalizedRole}`;
+  },
 
   // Courses
-  courses: (role: string) => `/api/${role}/courses`,
+  courses: (role: string) => {
+    // For students, use the available courses endpoint
+    if (role === "STUDENT") {
+      return `/api/course/available`;
+    }
+    return `/api/${role}/courses`;
+  },
   course: (id: string) => `/api/courses/${id}`,
   courseSelection: (academicYear: string, semester: string) =>
     `/api/student/course-selection?academicYear=${academicYear}&semester=${semester}`,
@@ -71,6 +81,7 @@ export const swrKeys = {
   studentMaterials: (courseId: string) => `/api/student/materials/${courseId}`,
   studentMeetings: (academicYear: string, semester: string) =>
     `/api/student/meetings?academicYear=${academicYear}&semester=${semester}`,
+  enrolledCourses: () => `/api/student/enrolled-courses`,
 
   // Lecturer
   lecturerCourses: () => `/api/lecturer/courses`,

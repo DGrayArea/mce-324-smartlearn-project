@@ -13,7 +13,7 @@ export default async function handler(
     const { category } = req.query;
 
     const whereClause: any = {
-      isPublished: true, // Only show published FAQs
+      isPublished: true,
     };
 
     if (category && category !== "ALL") {

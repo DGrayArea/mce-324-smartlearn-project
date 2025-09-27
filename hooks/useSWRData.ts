@@ -57,6 +57,25 @@ export const useCourseSelection = (academicYear: string, semester: string) => {
   };
 };
 
+export const useEnrolledCourses = () => {
+  const { data, error, isLoading, mutate } = useSWR(
+    swrKeys.enrolledCourses(),
+    fetcher
+  );
+
+  return {
+    enrolledCourses: data?.enrolledCourses || [],
+    pendingCourses: data?.pendingCourses || [],
+    totalEnrolled: data?.totalEnrolled || 0,
+    totalPending: data?.totalPending || 0,
+    student: data?.student,
+    error,
+    isLoading,
+    errorMessage: error ? getErrorMessage(error) : null,
+    mutate,
+  };
+};
+
 // Student hooks
 export const useStudentGrades = (academicYear: string, semester?: string) => {
   const { data, error, isLoading, mutate } = useSWR(

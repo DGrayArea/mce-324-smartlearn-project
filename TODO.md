@@ -13,18 +13,18 @@
 
 ### **Overall Progress: 75% COMPLETE** 🎯
 
-| Group        | Module                                     | Status                 | Completion |
-| ------------ | ------------------------------------------ | ---------------------- | ---------- |
-| **Group 1**  | Student Information Management System      | ✅ **COMPLETE**        | 100%       |
-| **Group 2**  | Course Registration System                 | ✅ **COMPLETE**        | 100%       |
-| **Group 3**  | LMS Content Management                     | ✅ **COMPLETE**        | 100%       |
-| **Group 4**  | Assessment and Result Computation          | ✅ **COMPLETE**        | 100%       |
-| **Group 5**  | Virtual Meetings and Chat Rooms            | 🟡 **PARTIAL**         | 60%        |
-| **Group 6**  | System Integration and UI/UX Design        | ✅ **COMPLETE**        | 100%       |
-| **Group 7**  | Admin Dashboard and Analytics              | 🟡 **PARTIAL**         | 70%        |
-| **Group 8**  | Results Consideration and Approval         | ✅ **COMPLETE**        | 100%       |
-| **Group 9**  | Feedback, Evaluation & Notification System | 🟡 **PARTIAL**         | 60%        |
-| **Group 10** | User Support and Help Center               | 🟡 **PARTIAL**         | 50%        |
+| Group        | Module                                     | Status          | Completion |
+| ------------ | ------------------------------------------ | --------------- | ---------- |
+| **Group 1**  | Student Information Management System      | ✅ **COMPLETE** | 100%       |
+| **Group 2**  | Course Registration System                 | ✅ **COMPLETE** | 100%       |
+| **Group 3**  | LMS Content Management                     | ✅ **COMPLETE** | 100%       |
+| **Group 4**  | Assessment and Result Computation          | ✅ **COMPLETE** | 100%       |
+| **Group 5**  | Virtual Meetings and Chat Rooms            | 🟡 **PARTIAL**  | 60%        |
+| **Group 6**  | System Integration and UI/UX Design        | ✅ **COMPLETE** | 100%       |
+| **Group 7**  | Admin Dashboard and Analytics              | 🟡 **PARTIAL**  | 70%        |
+| **Group 8**  | Results Consideration and Approval         | ✅ **COMPLETE** | 100%       |
+| **Group 9**  | Feedback, Evaluation & Notification System | 🟡 **PARTIAL**  | 60%        |
+| **Group 10** | User Support and Help Center               | 🟡 **PARTIAL**  | 50%        |
 
 ### **MCE 324 Evaluation Criteria Status:**
 
@@ -595,3 +595,8 @@ Before production deployment, the following areas require thorough testing:
 5. **Security Validation** - Authentication, authorization, and data protection
 
 The platform is ready for comprehensive testing and validation before production deployment.
+
+- [ ] Map support tickets (individual user) to departmental admins (remove for senate)
+- [ ] Map contact support for admins to senate
+- [ ] Add user manual to knowledge base
+- [ ] Chat-bot (Hopefully)

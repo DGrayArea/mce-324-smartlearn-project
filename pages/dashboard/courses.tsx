@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { studentCourses, lecturerCourses, allCourses } from "@/lib/dummyData";
 import {
   useCourses,
+  useEnrolledCourses,
   useAdminCourses,
   useAdminSchools,
   useAdminDepartments,
@@ -36,6 +37,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   BookOpen,
   Calendar,
@@ -48,6 +60,8 @@ import {
   Database,
   FileText,
   Award,
+  Calculator,
+  GraduationCap,
 } from "lucide-react";
 import CourseFeedback from "@/components/dashboard/CourseFeedback";
 import CourseForm from "@/components/dashboard/CourseForm";
@@ -61,13 +75,25 @@ const Courses = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   // SWR hooks for data fetching
+  // For students, use enrolled courses; for others, use the regular courses hook
   const {
     courses: swrCourses,
     isLoading: coursesLoading,
     error: coursesError,
     mutate: mutateCourses,
-  } = useCourses(user?.role || "");
+  } = useCourses(user?.role === "STUDENT" ? "LECTURER" : user?.role || ""); // Use lecturer role to avoid student courses
 
+  const {
+    enrolledCourses,
+    pendingCourses,
+    totalEnrolled,
+    totalPending,
+    isLoading: enrolledLoading,
+    error: enrolledError,
+    mutate: mutateEnrolled,
+  } = useEnrolledCourses();
+
+  // Only fetch admin data if user is an admin
   const { courses: adminCourses, mutate: mutateAdminCourses } =
     useAdminCourses();
 
@@ -78,8 +104,22 @@ const Courses = () => {
   const [availableCourses, setAvailableCourses] = useState<any[]>([]);
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const [enrolling, setEnrolling] = useState<string | null>(null);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [submittingEnrollment, setSubmittingEnrollment] = useState(false);
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
+  
+  // New comprehensive course selection states
+  const [courseSelectionOpen, setCourseSelectionOpen] = useState(false);
+  const [selectedCoursesForRegistration, setSelectedCoursesForRegistration] = useState<{
+    firstSemester: string[];
+    secondSemester: string[];
+  }>({
+    firstSemester: [],
+    secondSemester: [],
+  });
+  const [submittingRegistration, setSubmittingRegistration] = useState(false);
+  const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
   // Course assignment states for department admins
   const [assignmentOpen, setAssignmentOpen] = useState(false);
@@ -136,6 +176,12 @@ const Courses = () => {
 
   // Get courses based on user role and SWR data
   const getCourses = () => {
+    if (user?.role === "STUDENT") {
+      if (enrolledLoading) return [];
+      if (enrolledError) return studentCourses; // Fallback to dummy data
+      return [...enrolledCourses, ...pendingCourses]; // Combine enrolled and pending courses
+    }
+
     if (coursesLoading) return [];
 
     if (coursesError) {
@@ -143,8 +189,6 @@ const Courses = () => {
       switch (user?.role) {
         case "LECTURER":
           return lecturerCourses;
-        case "STUDENT":
-          return studentCourses;
         default:
           return allCourses;
       }
@@ -178,7 +222,7 @@ const Courses = () => {
       });
     }
   }, [enrollmentOpen, academicYear, semester, toast]);
-
+  console.log(availableCourses);
   const handleEnroll = async (courseId: string) => {
     setEnrolling(courseId);
     try {
@@ -223,6 +267,249 @@ const Courses = () => {
       });
     } finally {
       setEnrolling(null);
+    }
+  };
+
+  // Handle course selection with checkboxes
+  const handleCourseToggle = (courseId: string) => {
+    setSelectedCourses((prev) => {
+      if (prev.includes(courseId)) {
+        return prev.filter((id) => id !== courseId);
+      } else {
+        return [...prev, courseId];
+      }
+    });
+  };
+
+  // Handle batch enrollment for selected courses
+  const handleBatchEnroll = async () => {
+    if (selectedCourses.length === 0) {
+      toast({
+        title: "No Courses Selected",
+        description: "Please select at least one course to enroll.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingEnrollment(true);
+    try {
+      // Enroll in each selected course
+      const enrollmentPromises = selectedCourses.map((courseId) =>
+        fetch("/api/student/course-registration", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            courseId,
+            academicYear,
+            semester,
+          }),
+        })
+      );
+
+      const responses = await Promise.all(enrollmentPromises);
+      const results = await Promise.all(responses.map((res) => res.json()));
+
+      // Check for any failures
+      const failures = responses.filter((res) => !res.ok);
+      if (failures.length > 0) {
+        throw new Error(
+          `Failed to enroll in ${failures.length} course(s). Please try again.`
+        );
+      }
+
+      toast({
+        title: "Success",
+        description: `Successfully enrolled in ${selectedCourses.length} course(s)! Your registration is under review.`,
+      });
+
+      // Clear selected courses and close dialog
+      setSelectedCourses([]);
+      setEnrollmentOpen(false);
+
+      // Refresh course data
+      mutateCourses();
+      if (user?.role === "STUDENT") {
+        mutateEnrolled();
+      }
+    } catch (error) {
+      console.error("Batch enrollment error:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to enroll in courses",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingEnrollment(false);
+    }
+  };
+
+  // Comprehensive course selection functions
+  const fetchAvailableCoursesForSelection = useCallback(async () => {
+    if (!courseSelectionOpen) return;
+
+    try {
+      const response = await fetch("/api/course/available");
+      if (!response.ok) {
+        throw new Error("Failed to fetch available courses");
+      }
+      const data = await response.json();
+      setAvailableCourses(data.courses || []);
+    } catch (error) {
+      console.error("Error fetching available courses:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load available courses",
+        variant: "destructive",
+      });
+    }
+  }, [courseSelectionOpen, toast]);
+
+  useEffect(() => {
+    fetchAvailableCoursesForSelection();
+  }, [fetchAvailableCoursesForSelection]);
+
+  // Get courses by semester
+  const firstSemesterCourses = availableCourses.filter(
+    (course) => course.semester === "FIRST"
+  );
+  const secondSemesterCourses = availableCourses.filter(
+    (course) => course.semester === "SECOND"
+  );
+
+  // Calculate total credits
+  const getTotalCredits = (courseIds: string[], courses: any[]) => {
+    return courseIds.reduce((total, courseId) => {
+      const course = courses.find((c) => c.id === courseId);
+      return total + (course?.creditUnit || 0);
+    }, 0);
+  };
+
+  const firstSemesterCredits = getTotalCredits(
+    selectedCoursesForRegistration.firstSemester,
+    firstSemesterCourses
+  );
+  const secondSemesterCredits = getTotalCredits(
+    selectedCoursesForRegistration.secondSemester,
+    secondSemesterCourses
+  );
+  const totalCredits = firstSemesterCredits + secondSemesterCredits;
+
+  // Credit limits
+  const maxCreditsPerSemester = 24;
+  const maxTotalCredits = 48;
+
+  // Handle course selection
+  const handleCourseToggleForRegistration = (
+    courseId: string,
+    semester: "firstSemester" | "secondSemester"
+  ) => {
+    const isSelected = selectedCoursesForRegistration[semester].includes(courseId);
+    const courses = semester === "firstSemester" ? firstSemesterCourses : secondSemesterCourses;
+    const course = courses.find((c) => c.id === courseId);
+
+    if (!course) return;
+
+    if (isSelected) {
+      // Remove course
+      setSelectedCoursesForRegistration((prev) => ({
+        ...prev,
+        [semester]: prev[semester].filter((id) => id !== courseId),
+      }));
+    } else {
+      // Check credit limits
+      const currentCredits = getTotalCredits(
+        selectedCoursesForRegistration[semester],
+        courses
+      );
+      if (currentCredits + course.creditUnit > maxCreditsPerSemester) {
+        toast({
+          title: "Credit Limit Exceeded",
+          description: `Maximum ${maxCreditsPerSemester} credits allowed per semester`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add course
+      setSelectedCoursesForRegistration((prev) => ({
+        ...prev,
+        [semester]: [...prev[semester], courseId],
+      }));
+    }
+  };
+
+  // Submit course registration
+  const handleSubmitCourseRegistration = async () => {
+    const allSelectedCourses = [
+      ...selectedCoursesForRegistration.firstSemester,
+      ...selectedCoursesForRegistration.secondSemester,
+    ];
+
+    if (allSelectedCourses.length === 0) {
+      toast({
+        title: "No Courses Selected",
+        description: "Please select at least one course to register.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSubmittingRegistration(true);
+    try {
+      const response = await fetch("/api/student/course-selection", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          academicYear,
+          firstSemesterCourses: selectedCoursesForRegistration.firstSemester,
+          secondSemesterCourses: selectedCoursesForRegistration.secondSemester,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit course registration");
+      }
+
+      toast({
+        title: "Success",
+        description: "Course registration submitted successfully! Your registration is now under review.",
+      });
+
+      // Clear selection and close dialog
+      setSelectedCoursesForRegistration({
+        firstSemester: [],
+        secondSemester: [],
+      });
+      setCourseSelectionOpen(false);
+      setShowSubmitDialog(false);
+
+      // Refresh data
+      mutateCourses();
+      if (user?.role === "STUDENT") {
+        mutateEnrolled();
+      }
+    } catch (error) {
+      console.error("Course registration error:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to submit course registration",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingRegistration(false);
     }
   };
 
@@ -516,14 +803,22 @@ const Courses = () => {
         {user?.role === "STUDENT" ? (
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              onClick={() => router.push("/dashboard/student/course-selection")}
+              onClick={() => setCourseSelectionOpen(true)}
               className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">Course Selection</span>
               <span className="sm:hidden">Select Courses</span>
             </Button>
-            <Dialog open={enrollmentOpen} onOpenChange={setEnrollmentOpen}>
+            <Dialog
+              open={enrollmentOpen}
+              onOpenChange={(open) => {
+                setEnrollmentOpen(open);
+                if (!open) {
+                  setSelectedCourses([]); // Clear selection when dialog closes
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full sm:w-auto">
                   <Plus className="mr-2 h-4 w-4" />
@@ -591,22 +886,40 @@ const Courses = () => {
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {availableCourses.map((course) => (
-                          <Card key={course.id} className="relative">
+                          <Card
+                            key={course.id}
+                            className={`relative ${selectedCourses.includes(course.id) ? "ring-2 ring-primary" : ""}`}
+                          >
                             <CardHeader className="pb-3">
-                              <div className="flex justify-between items-start">
-                                <Badge variant="outline" className="mb-2">
-                                  {course.code}
-                                </Badge>
-                                <Badge variant="secondary">
-                                  {course.creditUnit} Credits
-                                </Badge>
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3">
+                                  <Checkbox
+                                    checked={selectedCourses.includes(
+                                      course.id
+                                    )}
+                                    onCheckedChange={() =>
+                                      handleCourseToggle(course.id)
+                                    }
+                                    className="mt-1"
+                                  />
+                                  <div className="flex-1">
+                                    <div className="flex justify-between items-start mb-2">
+                                      <Badge variant="outline">
+                                        {course.code}
+                                      </Badge>
+                                      <Badge variant="secondary">
+                                        {course.creditUnit} Credits
+                                      </Badge>
+                                    </div>
+                                    <CardTitle className="text-lg">
+                                      {course.title}
+                                    </CardTitle>
+                                    <CardDescription>
+                                      {course.department?.name} • {course.type}
+                                    </CardDescription>
+                                  </div>
+                                </div>
                               </div>
-                              <CardTitle className="text-lg">
-                                {course.title}
-                              </CardTitle>
-                              <CardDescription>
-                                {course.department?.name} • {course.type}
-                              </CardDescription>
                             </CardHeader>
 
                             <CardContent className="space-y-3">
@@ -624,34 +937,411 @@ const Courses = () => {
                                   <span>{course.semester}</span>
                                 </div>
                               </div>
-
-                              <Button
-                                onClick={() => handleEnroll(course.id)}
-                                disabled={enrolling === course.id}
-                                className="w-full"
-                                size="sm"
-                              >
-                                {enrolling === course.id ? (
-                                  <>
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                    Enrolling...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Plus className="h-4 w-4 mr-2" />
-                                    Enroll
-                                  </>
-                                )}
-                              </Button>
                             </CardContent>
                           </Card>
                         ))}
                       </div>
                     )}
                   </div>
+
+                  {/* Selection Summary and Submit Button */}
+                  {availableCourses.length > 0 && (
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="text-sm text-muted-foreground">
+                          {selectedCourses.length} of {availableCourses.length}{" "}
+                          courses selected
+                        </div>
+                        <div className="text-sm font-medium">
+                          Total Credits:{" "}
+                          {selectedCourses.reduce((total, courseId) => {
+                            const course = availableCourses.find(
+                              (c) => c.id === courseId
+                            );
+                            return total + (course?.creditUnit || 0);
+                          }, 0)}
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => setSelectedCourses([])}
+                          disabled={selectedCourses.length === 0}
+                          className="flex-1"
+                        >
+                          Clear Selection
+                        </Button>
+                        <Button
+                          onClick={handleBatchEnroll}
+                          disabled={
+                            selectedCourses.length === 0 || submittingEnrollment
+                          }
+                          className="flex-1"
+                        >
+                          {submittingEnrollment ? (
+                            <>
+                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                              Enrolling...
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Enroll Selected ({selectedCourses.length})
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
+
+            {/* Comprehensive Course Selection Dialog */}
+            <Dialog
+              open={courseSelectionOpen}
+              onOpenChange={(open) => {
+                setCourseSelectionOpen(open);
+                if (!open) {
+                  setSelectedCoursesForRegistration({
+                    firstSemester: [],
+                    secondSemester: [],
+                  });
+                }
+              }}
+            >
+              <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5" />
+                    Course Selection for Both Semesters
+                  </DialogTitle>
+                  <DialogDescription>
+                    Select courses for both first and second semesters. Your selection will be submitted for department admin review.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-6">
+                  {/* Academic Year Selection */}
+                  <div className="flex items-center gap-4">
+                    <Label htmlFor="academicYear">Academic Year:</Label>
+                    <Select value={academicYear} onValueChange={setAcademicYear}>
+                      <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select academic year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="2024/2025">2024/2025</SelectItem>
+                        <SelectItem value="2023/2024">2023/2024</SelectItem>
+                        <SelectItem value="2025/2026">2025/2026</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Progress Summary */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" />
+                        Selection Summary
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-blue-600">
+                            {firstSemesterCredits}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            First Semester Credits
+                          </div>
+                          <Progress
+                            value={(firstSemesterCredits / maxCreditsPerSemester) * 100}
+                            className="mt-2"
+                          />
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-green-600">
+                            {secondSemesterCredits}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Second Semester Credits
+                          </div>
+                          <Progress
+                            value={(secondSemesterCredits / maxCreditsPerSemester) * 100}
+                            className="mt-2"
+                          />
+                        </div>
+                        <div className="text-center">
+                          <div className="text-2xl font-bold text-purple-600">
+                            {totalCredits}
+                          </div>
+                          <div className="text-sm text-muted-foreground">Total Credits</div>
+                          <Progress
+                            value={(totalCredits / maxTotalCredits) * 100}
+                            className="mt-2"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4 text-sm text-muted-foreground">
+                        <p>• Maximum {maxCreditsPerSemester} credits per semester</p>
+                        <p>• Maximum {maxTotalCredits} credits total</p>
+                        <p>
+                          • Selected{" "}
+                          {selectedCoursesForRegistration.firstSemester.length +
+                            selectedCoursesForRegistration.secondSemester.length}{" "}
+                          courses
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* First Semester Courses */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" />
+                        <span>First Semester Courses</span>
+                        <Badge variant="outline">
+                          {firstSemesterCourses.length} available
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Select courses for the first semester. Maximum{" "}
+                        {maxCreditsPerSemester} credits.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {firstSemesterCourses.length === 0 ? (
+                        <div className="text-center py-8">
+                          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">
+                            No courses available for first semester
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {firstSemesterCourses.map((course) => (
+                            <Card
+                              key={course.id}
+                              className={`relative ${
+                                selectedCoursesForRegistration.firstSemester.includes(course.id)
+                                  ? "ring-2 ring-primary"
+                                  : ""
+                              }`}
+                            >
+                              <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start space-x-3">
+                                    <Checkbox
+                                      checked={selectedCoursesForRegistration.firstSemester.includes(
+                                        course.id
+                                      )}
+                                      onCheckedChange={() =>
+                                        handleCourseToggleForRegistration(
+                                          course.id,
+                                          "firstSemester"
+                                        )
+                                      }
+                                      className="mt-1"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <Badge variant="outline">
+                                          {course.code}
+                                        </Badge>
+                                        <Badge variant="secondary">
+                                          {course.creditUnit} Credits
+                                        </Badge>
+                                      </div>
+                                      <CardTitle className="text-lg">
+                                        {course.title}
+                                      </CardTitle>
+                                      <CardDescription>
+                                        {course.department?.name} • {course.type}
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {course.description}
+                                </p>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="flex items-center">
+                                    <Users className="h-4 w-4 mr-1" />
+                                    <span>{course.enrolledCount} enrolled</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Clock className="h-4 w-4 mr-1" />
+                                    <span>{course.semester}</span>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Second Semester Courses */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5" />
+                        <span>Second Semester Courses</span>
+                        <Badge variant="outline">
+                          {secondSemesterCourses.length} available
+                        </Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Select courses for the second semester. Maximum{" "}
+                        {maxCreditsPerSemester} credits.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {secondSemesterCourses.length === 0 ? (
+                        <div className="text-center py-8">
+                          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                          <p className="text-muted-foreground">
+                            No courses available for second semester
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {secondSemesterCourses.map((course) => (
+                            <Card
+                              key={course.id}
+                              className={`relative ${
+                                selectedCoursesForRegistration.secondSemester.includes(course.id)
+                                  ? "ring-2 ring-primary"
+                                  : ""
+                              }`}
+                            >
+                              <CardHeader className="pb-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex items-start space-x-3">
+                                    <Checkbox
+                                      checked={selectedCoursesForRegistration.secondSemester.includes(
+                                        course.id
+                                      )}
+                                      onCheckedChange={() =>
+                                        handleCourseToggleForRegistration(
+                                          course.id,
+                                          "secondSemester"
+                                        )
+                                      }
+                                      className="mt-1"
+                                    />
+                                    <div className="flex-1">
+                                      <div className="flex justify-between items-start mb-2">
+                                        <Badge variant="outline">
+                                          {course.code}
+                                        </Badge>
+                                        <Badge variant="secondary">
+                                          {course.creditUnit} Credits
+                                        </Badge>
+                                      </div>
+                                      <CardTitle className="text-lg">
+                                        {course.title}
+                                      </CardTitle>
+                                      <CardDescription>
+                                        {course.department?.name} • {course.type}
+                                      </CardDescription>
+                                    </div>
+                                  </div>
+                                </div>
+                              </CardHeader>
+                              <CardContent>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  {course.description}
+                                </p>
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="flex items-center">
+                                    <Users className="h-4 w-4 mr-1" />
+                                    <span>{course.enrolledCount} enrolled</span>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <Clock className="h-4 w-4 mr-1" />
+                                    <span>{course.semester}</span>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Submit Button */}
+                  <div className="flex justify-center">
+                    <Button
+                      size="lg"
+                      onClick={() => setShowSubmitDialog(true)}
+                      disabled={
+                        selectedCoursesForRegistration.firstSemester.length === 0 &&
+                        selectedCoursesForRegistration.secondSemester.length === 0
+                      }
+                      className="px-8"
+                    >
+                      <Plus className="mr-2 h-5 w-5" />
+                      Submit Course Selection
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            {/* Submit Confirmation Dialog */}
+            <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Submit Course Selection</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    You are about to submit your course selection for review. This
+                    will include:
+                    <br />
+                    <br />
+                    <strong>First Semester:</strong>{" "}
+                    {selectedCoursesForRegistration.firstSemester.length} courses (
+                    {firstSemesterCredits} credits)
+                    <br />
+                    <strong>Second Semester:</strong>{" "}
+                    {selectedCoursesForRegistration.secondSemester.length} courses (
+                    {secondSemesterCredits} credits)
+                    <br />
+                    <strong>Total:</strong>{" "}
+                    {selectedCoursesForRegistration.firstSemester.length +
+                      selectedCoursesForRegistration.secondSemester.length}{" "}
+                    courses ({totalCredits} credits)
+                    <br />
+                    <br />
+                    Your selection will be reviewed by your department admin before
+                    approval.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleSubmitCourseRegistration}
+                    disabled={submittingRegistration}
+                  >
+                    {submittingRegistration ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Selection"
+                    )}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         ) : isDepartmentAdmin(user?.role) ? (
           <div className="flex flex-col sm:flex-row gap-2">
@@ -917,25 +1607,36 @@ const Courses = () => {
                     </Badge>
                     <Badge
                       variant={
-                        course.status === "active"
+                        course.status === "ENROLLED"
                           ? "default"
-                          : course.status === "completed"
-                            ? "outline"
-                            : "secondary"
+                          : course.status === "PENDING"
+                            ? "secondary"
+                            : course.status === "active"
+                              ? "default"
+                              : course.status === "completed"
+                                ? "outline"
+                                : "secondary"
                       }
                       className="text-xs"
                     >
-                      {course.status}
+                      {course.status === "ENROLLED" ? "Enrolled" : 
+                       course.status === "PENDING" ? "Pending" : 
+                       course.status}
                     </Badge>
                   </div>
                   <CardTitle className="text-sm md:text-base leading-tight">
-                    {course.name}
+                    {course.title || course.name}
                   </CardTitle>
                   {user?.role === "STUDENT" && (
                     <div className="flex flex-wrap gap-1">
-                      {course.isEnrolled && (
+                      {course.status === "ENROLLED" && (
                         <Badge variant="default" className="text-xs">
                           Enrolled
+                        </Badge>
+                      )}
+                      {course.status === "PENDING" && (
+                        <Badge variant="secondary" className="text-xs">
+                          Pending Approval
                         </Badge>
                       )}
                       {course.isRequired && (
@@ -943,16 +1644,16 @@ const Courses = () => {
                           Required
                         </Badge>
                       )}
-                      {course.category && (
-                        <Badge variant="secondary" className="text-xs">
-                          {course.category}
+                      {course.type && (
+                        <Badge variant="outline" className="text-xs">
+                          {course.type}
                         </Badge>
                       )}
                     </div>
                   )}
                 </div>
                 <CardDescription>
-                  {course.credits} Credits • {course.semester}
+                  {course.creditUnit || course.credits} Credits • {course.semester}
                 </CardDescription>
               </CardHeader>
 
