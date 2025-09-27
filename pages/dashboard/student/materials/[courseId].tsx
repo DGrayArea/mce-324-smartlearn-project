@@ -47,7 +47,7 @@ const StudentCourseMaterials = () => {
     course,
     materials = [],
     isLoading,
-    error
+    error,
   } = useStudentMaterials(courseId as string);
 
   // Handle SWR errors
