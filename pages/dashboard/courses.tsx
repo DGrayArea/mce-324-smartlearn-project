@@ -108,16 +108,17 @@ const Courses = () => {
   const [submittingEnrollment, setSubmittingEnrollment] = useState(false);
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
-  
+
   // New comprehensive course selection states
   const [courseSelectionOpen, setCourseSelectionOpen] = useState(false);
-  const [selectedCoursesForRegistration, setSelectedCoursesForRegistration] = useState<{
-    firstSemester: string[];
-    secondSemester: string[];
-  }>({
-    firstSemester: [],
-    secondSemester: [],
-  });
+  const [selectedCoursesForRegistration, setSelectedCoursesForRegistration] =
+    useState<{
+      firstSemester: string[];
+      secondSemester: string[];
+    }>({
+      firstSemester: [],
+      secondSemester: [],
+    });
   const [submittingRegistration, setSubmittingRegistration] = useState(false);
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
 
@@ -409,8 +410,12 @@ const Courses = () => {
     courseId: string,
     semester: "firstSemester" | "secondSemester"
   ) => {
-    const isSelected = selectedCoursesForRegistration[semester].includes(courseId);
-    const courses = semester === "firstSemester" ? firstSemesterCourses : secondSemesterCourses;
+    const isSelected =
+      selectedCoursesForRegistration[semester].includes(courseId);
+    const courses =
+      semester === "firstSemester"
+        ? firstSemesterCourses
+        : secondSemesterCourses;
     const course = courses.find((c) => c.id === courseId);
 
     if (!course) return;
@@ -482,7 +487,8 @@ const Courses = () => {
 
       toast({
         title: "Success",
-        description: "Course registration submitted successfully! Your registration is now under review.",
+        description:
+          "Course registration submitted successfully! Your registration is now under review.",
       });
 
       // Clear selection and close dialog
@@ -1018,7 +1024,8 @@ const Courses = () => {
                     Course Selection for Both Semesters
                   </DialogTitle>
                   <DialogDescription>
-                    Select courses for both first and second semesters. Your selection will be submitted for department admin review.
+                    Select courses for both first and second semesters. Your
+                    selection will be submitted for department admin review.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -1026,7 +1033,10 @@ const Courses = () => {
                   {/* Academic Year Selection */}
                   <div className="flex items-center gap-4">
                     <Label htmlFor="academicYear">Academic Year:</Label>
-                    <Select value={academicYear} onValueChange={setAcademicYear}>
+                    <Select
+                      value={academicYear}
+                      onValueChange={setAcademicYear}
+                    >
                       <SelectTrigger className="w-48">
                         <SelectValue placeholder="Select academic year" />
                       </SelectTrigger>
@@ -1056,7 +1066,10 @@ const Courses = () => {
                             First Semester Credits
                           </div>
                           <Progress
-                            value={(firstSemesterCredits / maxCreditsPerSemester) * 100}
+                            value={
+                              (firstSemesterCredits / maxCreditsPerSemester) *
+                              100
+                            }
                             className="mt-2"
                           />
                         </div>
@@ -1068,7 +1081,10 @@ const Courses = () => {
                             Second Semester Credits
                           </div>
                           <Progress
-                            value={(secondSemesterCredits / maxCreditsPerSemester) * 100}
+                            value={
+                              (secondSemesterCredits / maxCreditsPerSemester) *
+                              100
+                            }
                             className="mt-2"
                           />
                         </div>
@@ -1076,7 +1092,9 @@ const Courses = () => {
                           <div className="text-2xl font-bold text-purple-600">
                             {totalCredits}
                           </div>
-                          <div className="text-sm text-muted-foreground">Total Credits</div>
+                          <div className="text-sm text-muted-foreground">
+                            Total Credits
+                          </div>
                           <Progress
                             value={(totalCredits / maxTotalCredits) * 100}
                             className="mt-2"
@@ -1085,12 +1103,15 @@ const Courses = () => {
                       </div>
 
                       <div className="mt-4 text-sm text-muted-foreground">
-                        <p>• Maximum {maxCreditsPerSemester} credits per semester</p>
+                        <p>
+                          • Maximum {maxCreditsPerSemester} credits per semester
+                        </p>
                         <p>• Maximum {maxTotalCredits} credits total</p>
                         <p>
                           • Selected{" "}
                           {selectedCoursesForRegistration.firstSemester.length +
-                            selectedCoursesForRegistration.secondSemester.length}{" "}
+                            selectedCoursesForRegistration.secondSemester
+                              .length}{" "}
                           courses
                         </p>
                       </div>
@@ -1126,7 +1147,9 @@ const Courses = () => {
                             <Card
                               key={course.id}
                               className={`relative ${
-                                selectedCoursesForRegistration.firstSemester.includes(course.id)
+                                selectedCoursesForRegistration.firstSemester.includes(
+                                  course.id
+                                )
                                   ? "ring-2 ring-primary"
                                   : ""
                               }`}
@@ -1159,7 +1182,8 @@ const Courses = () => {
                                         {course.title}
                                       </CardTitle>
                                       <CardDescription>
-                                        {course.department?.name} • {course.type}
+                                        {course.department?.name} •{" "}
+                                        {course.type}
                                       </CardDescription>
                                     </div>
                                   </div>
@@ -1216,7 +1240,9 @@ const Courses = () => {
                             <Card
                               key={course.id}
                               className={`relative ${
-                                selectedCoursesForRegistration.secondSemester.includes(course.id)
+                                selectedCoursesForRegistration.secondSemester.includes(
+                                  course.id
+                                )
                                   ? "ring-2 ring-primary"
                                   : ""
                               }`}
@@ -1249,7 +1275,8 @@ const Courses = () => {
                                         {course.title}
                                       </CardTitle>
                                       <CardDescription>
-                                        {course.department?.name} • {course.type}
+                                        {course.department?.name} •{" "}
+                                        {course.type}
                                       </CardDescription>
                                     </div>
                                   </div>
@@ -1283,8 +1310,10 @@ const Courses = () => {
                       size="lg"
                       onClick={() => setShowSubmitDialog(true)}
                       disabled={
-                        selectedCoursesForRegistration.firstSemester.length === 0 &&
-                        selectedCoursesForRegistration.secondSemester.length === 0
+                        selectedCoursesForRegistration.firstSemester.length ===
+                          0 &&
+                        selectedCoursesForRegistration.secondSemester.length ===
+                          0
                       }
                       className="px-8"
                     >
@@ -1297,22 +1326,25 @@ const Courses = () => {
             </Dialog>
 
             {/* Submit Confirmation Dialog */}
-            <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
+            <AlertDialog
+              open={showSubmitDialog}
+              onOpenChange={setShowSubmitDialog}
+            >
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Submit Course Selection</AlertDialogTitle>
                   <AlertDialogDescription>
-                    You are about to submit your course selection for review. This
-                    will include:
+                    You are about to submit your course selection for review.
+                    This will include:
                     <br />
                     <br />
                     <strong>First Semester:</strong>{" "}
-                    {selectedCoursesForRegistration.firstSemester.length} courses (
-                    {firstSemesterCredits} credits)
+                    {selectedCoursesForRegistration.firstSemester.length}{" "}
+                    courses ({firstSemesterCredits} credits)
                     <br />
                     <strong>Second Semester:</strong>{" "}
-                    {selectedCoursesForRegistration.secondSemester.length} courses (
-                    {secondSemesterCredits} credits)
+                    {selectedCoursesForRegistration.secondSemester.length}{" "}
+                    courses ({secondSemesterCredits} credits)
                     <br />
                     <strong>Total:</strong>{" "}
                     {selectedCoursesForRegistration.firstSemester.length +
@@ -1320,8 +1352,8 @@ const Courses = () => {
                     courses ({totalCredits} credits)
                     <br />
                     <br />
-                    Your selection will be reviewed by your department admin before
-                    approval.
+                    Your selection will be reviewed by your department admin
+                    before approval.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -1619,9 +1651,11 @@ const Courses = () => {
                       }
                       className="text-xs"
                     >
-                      {course.status === "ENROLLED" ? "Enrolled" : 
-                       course.status === "PENDING" ? "Pending" : 
-                       course.status}
+                      {course.status === "ENROLLED"
+                        ? "Enrolled"
+                        : course.status === "PENDING"
+                          ? "Pending"
+                          : course.status}
                     </Badge>
                   </div>
                   <CardTitle className="text-sm md:text-base leading-tight">
@@ -1653,7 +1687,8 @@ const Courses = () => {
                   )}
                 </div>
                 <CardDescription>
-                  {course.creditUnit || course.credits} Credits • {course.semester}
+                  {course.creditUnit || course.credits} Credits •{" "}
+                  {course.semester}
                 </CardDescription>
               </CardHeader>
 
