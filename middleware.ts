@@ -9,13 +9,13 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to login page, API routes, and auth callback
+        // Allow public pages (login/register/password pages, home) and NextAuth/api routes
         if (
           req.nextUrl.pathname.startsWith("/login") ||
-          req.nextUrl.pathname.startsWith("/api/") ||
+          req.nextUrl.pathname.startsWith("/auth/forgot-password") ||
+          req.nextUrl.pathname.startsWith("/auth/reset-password") ||
+          req.nextUrl.pathname.startsWith("/api/auth") ||
           req.nextUrl.pathname.startsWith("/register") ||
-          req.nextUrl.pathname.startsWith("/forgotpassword") ||
-          req.nextUrl.pathname.startsWith("/dashboard") ||
           req.nextUrl.pathname === "/"
         ) {
           return true;
@@ -38,6 +38,6 @@ export const config = {
      * - login, register, forgotpassword, 404, index pages
      * - api/seed-users, api/seed-comprehensive, api/seed-organized, api/seed-course, api/purge-database (development only - should be protected in production)
      */
-    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/seed-course|api/purge-database|_next/static|_next/image|favicon.ico|login|register|forgotpassword|404|$).*)",
+    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/seed-course|api/seed-seet-mce|api/seed-more-students|api/admin/auto-register-and-grade|api/admin/course-registrations|api/purge-database|api/debug|_next/static|_next/image|favicon.ico|login|register|auth/forgot-password|auth/reset-password|404|$).*)",
   ],
 };

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -36,11 +37,19 @@ import { withDashboardLayout } from "@/lib/layoutWrappers";
 const Settings = () => {
   const { user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState({
     // Account settings
     firstName: (user?.name ? user.name.split(" ")[0] : "") || "",
     lastName: (user?.name ? user.name.split(" ").slice(1).join(" ") : "") || "",
     email: user?.email || "",
+    title: "",
+    matricNumber: "",
+    staffId: "",
+    adminId: "",
+    phone: "",
+    address: "",
+    emergencyContact: "",
     bio: "",
 
     // Notification settings
@@ -65,6 +74,47 @@ const Settings = () => {
     sessionTimeout: "30",
   });
 
+  // Load role-specific profile fields from API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        setSettings((prev) => ({
+          ...prev,
+          firstName:
+            (data?.firstName ?? (user?.name ? user.name.split(" ")[0] : "")) ||
+            "",
+          lastName:
+            (data?.lastName ??
+              (user?.name ? user.name.split(" ").slice(1).join(" ") : "")) ||
+            "",
+          email: data?.email ?? user?.email ?? "",
+          title: data?.title ?? "",
+          matricNumber: data?.matricNumber ?? "",
+          staffId: data?.staffId ?? "",
+          adminId: data?.adminId ?? "",
+          phone: data?.phone ?? "",
+          address: data?.address ?? "",
+          emergencyContact: data?.emergencyContact ?? "",
+          // department label stored separately below
+        }));
+        // Store department/school label in a derived state field
+        const deptLabel = data?.department?.name
+          ? `${data.department.name} (${data.department.code})`
+          : data?.school?.name
+            ? `${data.school.name} (${data.school.code})`
+            : "";
+        setDepartmentLabel(deptLabel);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, [user]);
+
+  const [departmentLabel, setDepartmentLabel] = useState("");
+
   const handleSettingChange = (key: string, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
@@ -78,9 +128,61 @@ const Settings = () => {
             Manage your account settings and preferences.
           </p>
         </div>
-        <Button>
+        <Button
+          onClick={async () => {
+            const fn = (settings.firstName || "").trim();
+            const ln = (settings.lastName || "").trim();
+            if (!fn || !ln) return;
+            const body = {
+              firstName: fn,
+              lastName: ln,
+              email: settings.email,
+              ...(settings.title ? { title: settings.title } : {}),
+              ...(settings.matricNumber
+                ? { matricNumber: settings.matricNumber }
+                : {}),
+              ...(settings.staffId ? { staffId: settings.staffId } : {}),
+              ...(settings.adminId ? { adminId: settings.adminId } : {}),
+              ...(settings.phone ? { phone: settings.phone } : {}),
+              ...(settings.address ? { address: settings.address } : {}),
+              ...(settings.emergencyContact
+                ? { emergencyContact: settings.emergencyContact }
+                : {}),
+            };
+            try {
+              setIsSaving(true);
+              const resp = await fetch("/api/user/profile", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              });
+              const data = await resp.json().catch(() => ({}));
+              if (!resp.ok) {
+                toast({
+                  title: "Update failed",
+                  description: data?.message || "Unable to save profile",
+                  variant: "destructive",
+                });
+                return;
+              }
+              toast({
+                title: "Profile updated",
+                description: "Your profile changes were saved successfully.",
+              });
+            } catch (e) {
+              toast({
+                title: "Network error",
+                description: "Please check your connection and try again.",
+                variant: "destructive",
+              });
+            } finally {
+              setIsSaving(false);
+            }
+          }}
+          disabled={isSaving}
+        >
           <Save className="mr-2 h-4 w-4" />
-          Save Changes
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>
       </div>
 
@@ -121,6 +223,18 @@ const Settings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {(user?.role === "LECTURER" || user?.role?.includes("ADMIN")) && (
+                <div className="space-y-2">
+                  <Label htmlFor="title">Title (e.g., Engr, Dr, Prof)</Label>
+                  <Input
+                    id="title"
+                    value={settings.title}
+                    onChange={(e) =>
+                      handleSettingChange("title", e.target.value)
+                    }
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
@@ -154,6 +268,87 @@ const Settings = () => {
                 />
               </div>
 
+              {user?.role === "STUDENT" && (
+                <div className="space-y-2">
+                  <Label htmlFor="matricNumber">
+                    Matric Number (e.g., 2022/1/82345ET)
+                  </Label>
+                  <Input
+                    id="matricNumber"
+                    value={settings.matricNumber}
+                    onChange={(e) =>
+                      handleSettingChange("matricNumber", e.target.value)
+                    }
+                    disabled
+                  />
+                </div>
+              )}
+
+              {user?.role === "LECTURER" && (
+                <div className="space-y-2">
+                  <Label htmlFor="staffId">Staff ID</Label>
+                  <Input
+                    id="staffId"
+                    value={settings.staffId}
+                    onChange={(e) =>
+                      handleSettingChange("staffId", e.target.value)
+                    }
+                    disabled
+                  />
+                </div>
+              )}
+
+              {user?.role === "STUDENT" && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={settings.phone}
+                      onChange={(e) =>
+                        handleSettingChange("phone", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={settings.address}
+                      onChange={(e) =>
+                        handleSettingChange("address", e.target.value)
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="emergencyContact">Emergency Contact</Label>
+                    <Input
+                      id="emergencyContact"
+                      value={settings.emergencyContact}
+                      onChange={(e) =>
+                        handleSettingChange("emergencyContact", e.target.value)
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(user?.role === "DEPARTMENT_ADMIN" ||
+                user?.role === "SCHOOL_ADMIN" ||
+                user?.role === "SENATE_ADMIN") && (
+                <div className="space-y-2">
+                  <Label htmlFor="adminId">Admin ID</Label>
+                  <Input
+                    id="adminId"
+                    value={settings.adminId}
+                    onChange={(e) =>
+                      handleSettingChange("adminId", e.target.value)
+                    }
+                    disabled
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="bio">Bio</Label>
                 <Textarea
@@ -166,7 +361,7 @@ const Settings = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="department">Department</Label>
-                <Input id="department" value={""} disabled />
+                <Input id="department" value={departmentLabel} disabled />
               </div>
             </CardContent>
           </Card>
@@ -456,7 +651,34 @@ const Settings = () => {
                   />
                 </div>
 
-                <Button>Update Password</Button>
+                <Button
+                  onClick={async () => {
+                    const current = (
+                      document.getElementById(
+                        "currentPassword"
+                      ) as HTMLInputElement
+                    )?.value;
+                    const nextPw = (
+                      document.getElementById("newPassword") as HTMLInputElement
+                    )?.value;
+                    const confirm = (
+                      document.getElementById(
+                        "confirmPassword"
+                      ) as HTMLInputElement
+                    )?.value;
+                    if (!nextPw || nextPw !== confirm) return;
+                    await fetch("/api/user/change-password", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        currentPassword: current,
+                        newPassword: nextPw,
+                      }),
+                    });
+                  }}
+                >
+                  Update Password
+                </Button>
               </div>
 
               <div className="flex items-center justify-between">

@@ -146,19 +146,33 @@ export const LoginForm = () => {
     }
   };
 
-  const fillQuickLoginCredentials = async (role: string) => {
+  const fillQuickLoginCredentials = async (roleOrKey: string) => {
     let email = "";
-    let password = "password123";
+    const password = "password123";
 
-    switch (role) {
-      case "STUDENT":
-        email = "mce.student1@university.edu";
+    switch (roleOrKey) {
+      // Students
+      case "STUDENT_100":
+        email = "isa-muby@university.edu"; // 100L (Muhammed Isa-Mubaraq)
         break;
+      case "STUDENT_200":
+        email = "mce.200l@university.edu";
+        break;
+      case "STUDENT_300":
+        email = "mce.300l@university.edu";
+        break;
+      case "STUDENT_400":
+        email = "mce.400l@university.edu";
+        break;
+      case "STUDENT_500":
+        email = "mce.500l@university.edu";
+        break;
+      // Staff
       case "LECTURER":
-        email = "mce.lecturer1@university.edu";
+        email = "folorunsho@university.edu"; // Engr. Dr. T.A Folorunsho
         break;
       case "DEPARTMENT_ADMIN":
-        email = "mce.admin@university.edu";
+        email = "mce.admin@university.edu"; // Engr. Dr. Gray
         break;
       case "SCHOOL_ADMIN":
         email = "seet.admin@university.edu";
@@ -167,20 +181,13 @@ export const LoginForm = () => {
         email = "senate.admin@university.edu";
         break;
       default:
-        console.warn(`Unknown role: ${role}`);
+        console.warn(`Unknown quick login key: ${roleOrKey}`);
         return;
     }
 
-    if (!email) {
-      console.error(`No email found for role: ${role}`);
-      return;
-    }
-
-    // Set the state to populate the form fields
     setEmail(email);
     setPassword(password);
 
-    // Use a small delay to ensure state is updated before login
     setTimeout(async () => {
       await handleQuickLogin(email, password);
     }, 100);
@@ -276,11 +283,11 @@ export const LoginForm = () => {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => fillQuickLoginCredentials("STUDENT")}
+                  onClick={() => fillQuickLoginCredentials("STUDENT_100")}
                   className="text-xs"
                   disabled={isLoading}
                 >
-                  Student
+                  Student 100L
                 </Button>
                 <Button
                   type="button"
@@ -321,6 +328,48 @@ export const LoginForm = () => {
                   disabled={isLoading}
                 >
                   Senate Admin
+                </Button>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fillQuickLoginCredentials("STUDENT_200")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  200L
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fillQuickLoginCredentials("STUDENT_300")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  300L
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fillQuickLoginCredentials("STUDENT_400")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  400L
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => fillQuickLoginCredentials("STUDENT_500")}
+                  className="text-xs"
+                  disabled={isLoading}
+                >
+                  500L
                 </Button>
               </div>
             </div>

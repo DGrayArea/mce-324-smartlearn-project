@@ -49,6 +49,8 @@ model VerificationToken {
 model User {
   id                         String              @id @default(cuid())
   name                       String?
+  firstName                  String?
+  lastName                   String?
   email                      String?             @unique
   emailVerified              DateTime?           @map("email_verified")
   image                      String?
@@ -145,7 +147,12 @@ model Student {
   id                      String                   @id @default(cuid())
   userId                  String                   @unique
   name                    String
+  firstName               String?
+  lastName                String?
   matricNumber            String                   @unique
+  phone                   String?
+  address                 String?
+  emergencyContact        String?
   level                   StudentLevel
   departmentId            String
   profileCompleted        Boolean                  @default(false)
@@ -172,6 +179,10 @@ model Lecturer {
   id                String             @id @default(cuid())
   userId            String             @unique
   name              String
+  firstName         String?
+  lastName          String?
+  title             String?
+  staffId           String?            @unique
   departmentId      String
   profileCompleted  Boolean            @default(false)
   createdAt         DateTime           @default(now())
@@ -194,6 +205,10 @@ model DepartmentAdmin {
   id                  String               @id @default(cuid())
   userId              String               @unique
   name                String
+  firstName           String?
+  lastName            String?
+  title               String?
+  adminId             String?              @unique
   departmentId        String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -213,6 +228,10 @@ model SchoolAdmin {
   id                  String               @id @default(cuid())
   userId              String               @unique
   name                String
+  firstName           String?
+  lastName            String?
+  title               String?
+  adminId             String?              @unique
   schoolId            String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -229,6 +248,10 @@ model SenateAdmin {
   id              String           @id @default(cuid())
   userId          String           @unique
   name            String
+  firstName       String?
+  lastName        String?
+  title           String?
+  adminId         String?          @unique
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   resultApprovals ResultApproval[]

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Card,
@@ -27,6 +27,19 @@ import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 const Profile = () => {
   const { user } = useAuth();
+  const [roleData, setRoleData] = useState<any>({});
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        setRoleData(data);
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
 
   const getProfileData = () => {
     switch (user?.role) {
@@ -142,12 +155,10 @@ const Profile = () => {
               : "Manage your profile information and view your achievements."}
           </p>
         </div>
-        {user?.role !== "STUDENT" && (
-          <Button>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit Profile
-          </Button>
-        )}
+        <Button onClick={() => (window.location.href = "/dashboard/settings")}>
+          <Edit className="mr-2 h-4 w-4" />
+          Edit Profile
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -180,16 +191,47 @@ const Profile = () => {
             </div>
             <div className="flex items-center text-sm">
               <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-              <span>Department</span>
+              <span>
+                {roleData?.department?.name
+                  ? `${roleData.department.name} (${roleData.department.code})`
+                  : roleData?.school?.name
+                    ? `${roleData.school.name} (${roleData.school.code})`
+                    : "Department"}
+              </span>
             </div>
             <div className="flex items-center text-sm">
               <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
               <span>Joined {new Date().toLocaleDateString()}</span>
             </div>
             {user?.role === "STUDENT" && (
+              <>
+                <div className="flex items-center text-sm">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span>Student</span>
+                </div>
+                <div className="flex items-center text-sm">
+                  <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <span>
+                    Matric No:{" "}
+                    {(user as any)?.studentId ||
+                      (user as any)?.matricNumber ||
+                      "—"}
+                  </span>
+                </div>
+              </>
+            )}
+            {user?.role === "LECTURER" && (
               <div className="flex items-center text-sm">
                 <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                <span>Student</span>
+                <span>Staff ID: {roleData?.staffId || "—"}</span>
+              </div>
+            )}
+            {(user?.role === "DEPARTMENT_ADMIN" ||
+              user?.role === "SCHOOL_ADMIN" ||
+              user?.role === "SENATE_ADMIN") && (
+              <div className="flex items-center text-sm">
+                <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                <span>Admin ID: {roleData?.adminId || "—"}</span>
               </div>
             )}
           </CardContent>

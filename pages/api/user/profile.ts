@@ -1,129 +1,390 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  if (req.method !== "GET") {
-    return res.status(405).json({ message: "Method not allowed" });
+  const session = (await getServerSession(req, res, authOptions as any)) as any;
+  if (!session || !session.user?.id) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
+  const userId = session.user.id as string;
 
   try {
-    const session = await getServerSession(req, res, authOptions);
+    if (req.method === "GET") {
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          isActive: true,
+        },
+      });
+      if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!session?.user?.id) {
-      return res.status(401).json({ message: "Unauthorized" });
+      const [firstName = "", ...rest] = (user.name || "").split(" ");
+      const lastName = rest.join(" ");
+
+      let roleData: any = {};
+      if (user.role === "STUDENT") {
+        const stu = await prisma.student.findFirst({
+          where: { userId },
+          select: {
+            matricNumber: true,
+            phone: true,
+            address: true,
+            emergencyContact: true,
+            departmentId: true,
+          },
+        });
+        let department: any = null;
+        if (stu?.departmentId) {
+          department = await prisma.department.findUnique({
+            where: { id: stu.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        }
+        roleData = {
+          matricNumber: stu?.matricNumber || null,
+          phone: stu?.phone || null,
+          address: stu?.address || null,
+          emergencyContact: stu?.emergencyContact || null,
+          department,
+        };
+      } else if (user.role === "LECTURER") {
+        const lec = await prisma.lecturer.findFirst({
+          where: { userId },
+          select: {
+            title: true,
+            staffId: true,
+            departmentId: true,
+          },
+        });
+        let department: any = null;
+        if (lec?.departmentId) {
+          department = await prisma.department.findUnique({
+            where: { id: lec.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        }
+        roleData = {
+          title: lec?.title || null,
+          staffId: lec?.staffId || null,
+          department,
+        };
+      } else if (user.role === "DEPARTMENT_ADMIN") {
+        const da = await prisma.departmentAdmin.findFirst({
+          where: { userId },
+          select: {
+            title: true,
+            adminId: true,
+            departmentId: true,
+          },
+        });
+        let department: any = null;
+        if (da?.departmentId) {
+          department = await prisma.department.findUnique({
+            where: { id: da.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        }
+        roleData = {
+          title: da?.title || null,
+          adminId: da?.adminId || null,
+          department,
+        };
+      } else if (user.role === "SCHOOL_ADMIN") {
+        const sa = await prisma.schoolAdmin.findFirst({
+          where: { userId },
+          select: {
+            title: true,
+            adminId: true,
+            schoolId: true,
+          },
+        });
+        let school: any = null;
+        if (sa?.schoolId) {
+          school = await prisma.school.findUnique({
+            where: { id: sa.schoolId },
+            select: { id: true, name: true, code: true },
+          });
+        }
+        roleData = {
+          title: sa?.title || null,
+          adminId: sa?.adminId || null,
+          school,
+        };
+      } else if (user.role === "SENATE_ADMIN") {
+        const sena = await prisma.senateAdmin.findFirst({
+          where: { userId },
+          select: {
+            title: true,
+            adminId: true,
+          },
+        });
+        roleData = {
+          title: sena?.title || null,
+          adminId: sena?.adminId || null,
+        };
+      }
+
+      return res.status(200).json({
+        id: user.id,
+        email: user.email,
+        firstName,
+        lastName,
+        role: user.role,
+        isActive: user.isActive,
+        ...roleData,
+      });
     }
 
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: {
-        student: {
-          include: {
-            department: {
-              include: {
-                school: true,
-              },
-            },
-          },
-        },
-        lecturer: {
-          include: {
-            department: {
-              include: {
-                school: true,
-              },
-            },
-          },
-        },
-        departmentAdmin: {
-          include: {
-            department: {
-              include: {
-                school: true,
-              },
-            },
-          },
-        },
-        schoolAdmin: {
-          include: {
-            school: true,
-          },
-        },
-        senateAdmin: true,
-      },
-    });
+    if (req.method === "PUT") {
+      const {
+        firstName,
+        lastName,
+        email,
+        title,
+        matricNumber,
+        staffId,
+        adminId,
+        phone,
+        address,
+        emergencyContact,
+      } = req.body as {
+        firstName?: string;
+        lastName?: string;
+        email?: string | null;
+        title?: string | null;
+        matricNumber?: string | null;
+        staffId?: string | null;
+        adminId?: string | null;
+        phone?: string | null;
+        address?: string | null;
+        emergencyContact?: string | null;
+      };
+      const fn = (firstName || "").trim();
+      const ln = (lastName || "").trim();
+      if (!fn || !ln) {
+        return res
+          .status(400)
+          .json({ message: "First name and last name are required" });
+      }
 
-    if (!dbUser) {
-      console.warn(`User not found in database: ${session.user.id}`);
-      return res.status(404).json({ message: "User not found" });
+      const fullName = [fn, ln].join(" ");
+      // Update User.name/email and propagate name to role-specific profile tables
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+
+      const tx: any[] = [
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            name: fullName,
+            email: email ?? undefined,
+            firstName: fn,
+            lastName: ln,
+          },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+          },
+        }),
+      ];
+
+      switch (dbUser?.role) {
+        case "STUDENT":
+          tx.push(
+            prisma.student.updateMany({
+              where: { userId },
+              data: {
+                name: fullName || "",
+                firstName: fn,
+                lastName: ln,
+                ...(phone ? { phone } : {}),
+                ...(address ? { address } : {}),
+                ...(emergencyContact ? { emergencyContact } : {}),
+              },
+            })
+          );
+          break;
+        case "LECTURER":
+          tx.push(
+            prisma.lecturer.updateMany({
+              where: { userId },
+              data: {
+                name: fullName || "",
+                firstName: fn,
+                lastName: ln,
+                ...(title ? { title } : {}),
+                ...(staffId ? { staffId } : {}),
+              },
+            })
+          );
+          break;
+        case "DEPARTMENT_ADMIN":
+          tx.push(
+            prisma.departmentAdmin.updateMany({
+              where: { userId },
+              data: {
+                name: fullName || "",
+                firstName: fn,
+                lastName: ln,
+                ...(title ? { title } : {}),
+                ...(adminId ? { adminId } : {}),
+              },
+            })
+          );
+          break;
+        case "SCHOOL_ADMIN":
+          tx.push(
+            prisma.schoolAdmin.updateMany({
+              where: { userId },
+              data: {
+                name: fullName || "",
+                firstName: fn,
+                lastName: ln,
+                ...(title ? { title } : {}),
+                ...(adminId ? { adminId } : {}),
+              },
+            })
+          );
+          break;
+        case "SENATE_ADMIN":
+          tx.push(
+            prisma.senateAdmin.updateMany({
+              where: { userId },
+              data: {
+                name: fullName || "",
+                firstName: fn,
+                lastName: ln,
+                ...(title ? { title } : {}),
+                ...(adminId ? { adminId } : {}),
+              },
+            })
+          );
+          break;
+        default:
+          break;
+      }
+
+      const [updated] = await prisma.$transaction(tx);
+      const [firstOut = "", ...lnRest] = (updated.name || "").split(" ");
+
+      // Re-read role-specific data to return fresh snapshot
+      const freshReq = { ...req, method: "GET" } as NextApiRequest;
+      // Instead of recursively calling handler, we manually reconstruct minimal payload
+      const role = dbUser?.role;
+      let roleData: any = {};
+      if (role === "STUDENT") {
+        const stu = await prisma.student.findFirst({
+          where: { userId },
+          select: {
+            matricNumber: true,
+            phone: true,
+            address: true,
+            emergencyContact: true,
+            departmentId: true,
+          },
+        });
+        let department: any = null;
+        if (stu?.departmentId)
+          department = await prisma.department.findUnique({
+            where: { id: stu.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        roleData = {
+          matricNumber: stu?.matricNumber || null,
+          phone: stu?.phone || null,
+          address: stu?.address || null,
+          emergencyContact: stu?.emergencyContact || null,
+          department,
+        };
+      } else if (role === "LECTURER") {
+        const lec = await prisma.lecturer.findFirst({
+          where: { userId },
+          select: { title: true, staffId: true, departmentId: true },
+        });
+        let department: any = null;
+        if (lec?.departmentId)
+          department = await prisma.department.findUnique({
+            where: { id: lec.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        roleData = {
+          title: lec?.title || null,
+          staffId: lec?.staffId || null,
+          department,
+        };
+      } else if (role === "DEPARTMENT_ADMIN") {
+        const da = await prisma.departmentAdmin.findFirst({
+          where: { userId },
+          select: { title: true, adminId: true, departmentId: true },
+        });
+        let department: any = null;
+        if (da?.departmentId)
+          department = await prisma.department.findUnique({
+            where: { id: da.departmentId },
+            select: { id: true, name: true, code: true },
+          });
+        roleData = {
+          title: da?.title || null,
+          adminId: da?.adminId || null,
+          department,
+        };
+      } else if (role === "SCHOOL_ADMIN") {
+        const sa = await prisma.schoolAdmin.findFirst({
+          where: { userId },
+          select: { title: true, adminId: true, schoolId: true },
+        });
+        let school: any = null;
+        if (sa?.schoolId)
+          school = await prisma.school.findUnique({
+            where: { id: sa.schoolId },
+            select: { id: true, name: true, code: true },
+          });
+        roleData = {
+          title: sa?.title || null,
+          adminId: sa?.adminId || null,
+          school,
+        };
+      } else if (role === "SENATE_ADMIN") {
+        const sena = await prisma.senateAdmin.findFirst({
+          where: { userId },
+          select: { title: true, adminId: true },
+        });
+        roleData = {
+          title: sena?.title || null,
+          adminId: sena?.adminId || null,
+        };
+      }
+
+      return res.status(200).json({
+        id: updated.id,
+        email: updated.email,
+        firstName: firstOut,
+        lastName: lnRest.join(" "),
+        role,
+        ...roleData,
+      });
     }
 
-    // Get the appropriate name and department based on role
-    let name = "Unknown User";
-    let department = "";
-    let studentId = "";
-    let staffId = "";
-
-    switch (dbUser.role) {
-      case "STUDENT":
-        name = dbUser.student?.name || "Student";
-        department = dbUser.student?.department?.name || "";
-        studentId = dbUser.student?.matricNumber || "";
-        break;
-      case "LECTURER":
-        name = dbUser.lecturer?.name || "Lecturer";
-        department = dbUser.lecturer?.department?.name || "";
-        staffId = `LEC-${dbUser.lecturer?.id.slice(-4) || ""}`;
-        break;
-      case "DEPARTMENT_ADMIN":
-        name = dbUser.departmentAdmin?.name || "Department Admin";
-        department = dbUser.departmentAdmin?.department?.name || "";
-        staffId = `DEPT-${dbUser.departmentAdmin?.id.slice(-4) || ""}`;
-        break;
-      case "SCHOOL_ADMIN":
-        name = dbUser.schoolAdmin?.name || "School Admin";
-        department = dbUser.schoolAdmin?.school?.name || "";
-        staffId = `SCHOOL-${dbUser.schoolAdmin?.id.slice(-4) || ""}`;
-        break;
-      case "SENATE_ADMIN":
-        name = dbUser.senateAdmin?.name || "Senate Admin";
-        department = "University Administration";
-        staffId = `SENATE-${dbUser.senateAdmin?.id.slice(-4) || ""}`;
-        break;
+    res.setHeader("Allow", ["GET", "PUT"]);
+    return res.status(405).json({ message: "Method Not Allowed" });
+  } catch (err: any) {
+    if (err?.code === "P2002") {
+      return res.status(409).json({ message: "Email already in use" });
     }
-
-    // Return user data in the format expected by the frontend
-    const userData = {
-      id: dbUser.id,
-      email: dbUser.email || "",
-      firstName: name.split(" ")[0] || "",
-      lastName: name.split(" ").slice(1).join(" ") || "",
-      role: dbUser.role,
-      department: department,
-      studentId: studentId || undefined,
-      staffId: staffId || undefined,
-      isActive: dbUser.isActive,
-      isVerified: true,
-      createdAt: dbUser.createdAt.toISOString(),
-      // Include additional profile data
-      profile: {
-        student: dbUser.student,
-        lecturer: dbUser.lecturer,
-        departmentAdmin: dbUser.departmentAdmin,
-        schoolAdmin: dbUser.schoolAdmin,
-        senateAdmin: dbUser.senateAdmin,
-      },
-    };
-
-    res.status(200).json(userData);
-  } catch (error: any) {
-    console.error("Error fetching user profile:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching user profile", error: error.message });
+    return res.status(500).json({ message: "Internal Server Error" });
   }
 }

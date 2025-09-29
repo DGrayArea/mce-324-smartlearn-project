@@ -1,6 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import * as bcrypt from "bcryptjs";
 
 export default async function handler(
   req: NextApiRequest,
@@ -122,11 +123,8 @@ async function handleResetPassword(req: NextApiRequest, res: NextApiResponse) {
       return res.status(400).json({ message: "Reset token has expired" });
     }
 
-    // Hash new password (you should use bcrypt in production)
-    const hashedPassword = crypto
-      .createHash("sha256")
-      .update(newPassword)
-      .digest("hex");
+    // Hash new password with bcrypt to align with NextAuth credentials
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update user password
     await prisma.user.update({
