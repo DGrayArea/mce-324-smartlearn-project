@@ -600,3 +600,86 @@ The platform is ready for comprehensive testing and validation before production
 - [ ] Map contact support for admins to senate
 - [ ] Add user manual to knowledge base
 - [ ] Chat-bot (Hopefully)
+
+This is a technical documentation outline for a smart learning platform designed to manage educational operations for students, lecturers, and various administrative departments. It uses a component-based microservices architecture to ensure scalability and maintainability, with specialized modules handling different functionalities.
+System overview
+The Smart Learning Platform is a web-based and mobile-accessible application that digitizes and streamlines university operations, from course registration to student progression. The system is built around several interconnected modules, each handling specific functionalities while ensuring secure, role-based access for all users.
+Core modules
+User and Access Management: Manages all user accounts (students, lecturers, admins) and enforces role-based permissions.
+Course Management: Handles the lifecycle of academic courses, including creation, modification, and content delivery.
+Registration and Enrollment: Manages the student course registration process.
+Assignment and Quiz Handling: Supports the creation, submission, and grading of assessments.
+Communication: Facilitates real-time interaction through chat rooms and meeting scheduling features.
+Student Progression: Tracks and manages student academic progress, including promotions and degree completion.
+Integration Services: Connects the platform with other university systems (e.g., Student Information System, Finance).
+Key actors
+Student: Registers for courses, submits assignments, takes quizzes, attends meetings, and participates in chat rooms.
+Lecturer: Creates and manages courses, designs quizzes and assignments, grades submissions, and communicates with students.
+Departmental Admin: Manages department-specific courses, assigns lecturers, and oversees student registrations within their department.
+Faculty Admin: Administers all departments and courses within a faculty, handles exceptions, and reviews departmental reports.
+Senate Admin: Has a system-wide overview, manages all faculties, and handles university-level academic rules and policies.
+System architecture
+The platform uses a microservices architecture to ensure high availability, scalability, and modularity.
+Frontend: A responsive, cross-platform user interface (UI) built with a modern framework (e.g., React, Vue.js), accessible via web browsers and mobile apps.
+Backend: A collection of microservices, each handling a specific module (e.g., Course Service, User Service, Communication Service).
+API Gateway: Routes and manages all incoming API requests to the appropriate microservices.
+Database: A relational database (e.g., PostgreSQL, MySQL) is used for structured data (users, courses), while a NoSQL database (e.g., MongoDB) is used for less-structured data (chat messages).
+Real-time Communication Service: A dedicated WebSocket service manages live communication features like chat and meeting handling.
+Authentication Service: Manages user authentication and authorization using a standard protocol like OAuth2 or JSON Web Tokens (JWT).
+Module documentation
+Course management
+Purpose: Enable lecturers and admins to manage all aspects of a course.
+Lecturer functionalities:
+Create a new course and define its details (title, description, syllabus).
+Upload course materials in various formats (PDF, video, presentations).
+Create, schedule, and publish assignments and quizzes.
+Publish grades and provide feedback on submitted work.
+Admin functionalities:
+Create or retire course offerings.
+Assign and remove lecturers from courses.
+View course enrollment statistics.
+Data schema (CourseService.db): Includes tables for Courses, CourseMaterials, Assignments, and Quizzes, with foreign keys linking to the Users table for lecturers.
+Course registration
+Purpose: Allow students to register for courses during specified periods.
+Process flow:
+Student: Views available courses and checks eligibility.
+Student: Selects courses to add to their registration cart.
+Departmental Admin: Reviews and approves or rejects student course registrations based on departmental rules.
+Data schema (RegistrationService.db): Includes tables for Registrations, Enrollments, AcademicCalendar, and CourseApprovalStatus.
+Assignment and quiz handling
+Purpose: Facilitate the creation, submission, and automated or manual grading of academic assessments.
+Functionalities:
+Assignment Submission: Students submit files, and the system records the timestamp and stores the submission securely.
+Quiz Engine: Lecturers create quizzes with multiple-choice, true/false, and short-answer questions. The engine automatically grades objective questions.
+Plagiarism Detection: (Optional) Integration with a third-party service to check assignments for plagiarism.
+Data schema (AssessmentService.db): Tables include Quizzes, QuizQuestions, StudentSubmissions, and Grades.
+Meeting handling
+Purpose: Allow users to schedule and conduct virtual meetings.
+Technical design:
+Integration: Uses a third-party video conferencing service (e.g., Jitsi, Zoom SDK) for video/audio streams.
+API: The platform communicates with the meeting service via REST APIs to create, manage, and retrieve meeting data.
+Functionality:
+Users can schedule and join meetings directly from the platform.
+Integration with user calendars for notifications.
+Data schema (CommunicationService.db): Tables include Meetings, MeetingParticipants, and MeetingRecordings.
+Chat rooms
+Purpose: Provide real-time communication channels for courses, departments, and other user groups.
+Technical design:
+WebSockets: Uses WebSockets for low-latency, real-time message exchange.
+Scalability: Implements a pub/sub model to handle a large number of concurrent users and messages.
+Functionality:
+Course-based Chats: Automatic creation of chat rooms for each course enrollment.
+Group Chats: Users can create custom group chats.
+Persistent Storage: Messages are stored in a database for message history.
+Data schema (CommunicationService.db): Tables include ChatRooms, Messages, and ChatParticipants.
+Student progression integration
+Purpose: Automate the tracking and management of student academic status.
+Process:
+Data Aggregation: The module pulls data from the Grades and Enrollments tables to calculate a student's standing.
+Status Update: Uses predefined university rules to automatically update a student's status (e.g., promoted, at-risk, graduated).
+Admin Dashboard: Provides faculty and senate admins with analytics and dashboards to monitor student progress across departments and faculties.
+Data schema (ProgressionService.db): Tables include StudentProgressRecords, AcademicRules, and ProgressionLogs.
+Deployment
+The application is deployed using cloud-native technologies (e.g., Docker, Kubernetes) for scalability and reliability.
+Continuous Integration/Continuous Deployment (CI/CD) pipelines ensure code changes are automatically tested and deployed.
+The use of a secure, cloud-hosted environment ensures high availability and regular data backups.

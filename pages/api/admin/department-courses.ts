@@ -326,6 +326,38 @@ async function handlePost(
         },
       });
 
+      // Automatically sync course availability when a course is added
+      try {
+        await prisma.courseAvailability.upsert({
+          where: {
+            departmentId_courseId: {
+              departmentId,
+              courseId,
+            },
+          },
+          update: {
+            isAvailable: true,
+            isRecommended: isRequired ?? false,
+            priority: isRequired ? 90 : 70,
+            notes: "Selected by department admin",
+            configuredBy: adminId,
+            updatedAt: new Date(),
+          },
+          create: {
+            departmentId,
+            courseId,
+            isAvailable: true,
+            isRecommended: isRequired ?? false,
+            priority: isRequired ? 90 : 70,
+            notes: "Selected by department admin",
+            configuredBy: adminId,
+          },
+        });
+      } catch (syncError) {
+        console.error("Error syncing course availability:", syncError);
+        // Don't fail the main operation if sync fails
+      }
+
       return res.status(201).json({
         message: "Course added to department successfully",
         departmentCourse: newSelection,
@@ -395,6 +427,20 @@ async function handleDelete(
     await prisma.departmentCourse.delete({
       where: { id: departmentCourse.id },
     });
+
+    // Also remove course availability if it was set by department admin
+    try {
+      await prisma.courseAvailability.deleteMany({
+        where: {
+          departmentId,
+          courseId,
+          notes: "Selected by department admin",
+        },
+      });
+    } catch (syncError) {
+      console.error("Error removing course availability:", syncError);
+      // Don't fail the main operation if sync fails
+    }
 
     return res.status(200).json({
       message: "Course removed from department successfully",

@@ -81,11 +81,13 @@ export default async function handler(
     const availableCourseIds = courseAvailability.map((ca) => ca.courseId);
 
     // Get available courses based on department configuration
-    // If no admin configuration exists, show all courses for the student's level and department
+    // Students should see courses for their level and semester, filtered by department admin selections
     const whereClause: any = {
       isActive: true,
-      // Filter by student level
+      // Filter by student level (100L, 200L, 300L, 400L, 500L)
       level: user.student?.level,
+      // Filter by semester if specified
+      ...(semester && { semester: semester as any }),
       // Not already enrolled
       id: {
         notIn: enrolledCourseIds,
@@ -96,11 +98,21 @@ export default async function handler(
     if (availableCourseIds.length > 0) {
       whereClause.id.in = availableCourseIds;
     } else {
-      // If no admin configuration, show courses from student's department or general courses
+      // If no admin configuration, show courses based on department and course type
       whereClause.OR = [
+        // Department's own courses (courses created under this department)
         { departmentId: user.student.departmentId },
+        // General education courses (available to all departments)
         { type: "GENERAL" },
+        // Faculty-wide courses (available to all departments in the faculty)
         { type: "FACULTY" },
+        // Courses that belong to the department by code (e.g., MCE courses for MCE department)
+        {
+          AND: [
+            { code: { startsWith: user.student.department?.code || "" } },
+            { departmentId: null }, // Courses not assigned to any specific department
+          ],
+        },
       ];
     }
 
@@ -156,6 +168,11 @@ export default async function handler(
         // Determine category based on course type and department
         if (course.departmentId === user.student?.departmentId) {
           category = "departmental";
+        } else if (
+          course.code.startsWith(user.student.department?.code || "")
+        ) {
+          // Course belongs to department by code (e.g., MCE101 for MCE department)
+          category = "departmental";
         } else if (course.type === "GENERAL") {
           category = "general";
         } else if (course.type === "FACULTY") {
@@ -169,6 +186,13 @@ export default async function handler(
         if (course.departmentId === user.student?.departmentId) {
           recommendationScore = 80;
           recommendationReason = "From your department";
+          category = "departmental";
+        } else if (
+          course.code.startsWith(user.student.department?.code || "")
+        ) {
+          // Course belongs to department by code (e.g., MCE101 for MCE department)
+          recommendationScore = 80;
+          recommendationReason = "From your department (by course code)";
           category = "departmental";
         } else if (course.type === "GENERAL") {
           recommendationScore = 60;

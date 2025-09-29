@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCourseRegistrations } from "@/hooks/useSWRData";
 import { mutate } from "swr";
@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -64,6 +65,7 @@ const CourseRegistrations = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
+  // State declarations
   const [academicYear, setAcademicYear] = useState("2024/2025");
   const [semester, setSemester] = useState("FIRST");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -76,14 +78,119 @@ const CourseRegistrations = () => {
   );
   const [reviewComments, setReviewComments] = useState("");
 
+  // Batch approval states
+  const [selectedRegistrations, setSelectedRegistrations] = useState<string[]>(
+    []
+  );
+  const [batchAction, setBatchAction] = useState<"approve" | "reject" | null>(
+    null
+  );
+  const [batchComments, setBatchComments] = useState("");
+  const [batchDialogOpen, setBatchDialogOpen] = useState(false);
+  const [processingBatch, setProcessingBatch] = useState(false);
+
   // SWR hook for course registrations data
   const {
     registrations = [],
     statistics = null,
     isLoading,
     error,
-    mutate: mutateRegistrations
+    mutate: mutateRegistrations,
   } = useAdminCourseRegistrations(academicYear, semester, statusFilter);
+
+  // Batch approval functions
+  const handleSelectRegistration = useCallback((registrationId: string) => {
+    setSelectedRegistrations((prev) =>
+      prev.includes(registrationId)
+        ? prev.filter((id) => id !== registrationId)
+        : [...prev, registrationId]
+    );
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const pendingRegistrations = registrations.filter(
+      (r) => r.status === "PENDING"
+    );
+    if (selectedRegistrations.length === pendingRegistrations.length) {
+      setSelectedRegistrations([]);
+    } else {
+      setSelectedRegistrations(pendingRegistrations.map((r) => r.id));
+    }
+  }, [registrations, selectedRegistrations.length]);
+
+  const handleBatchAction = useCallback(
+    async (action: "approve" | "reject") => {
+      if (selectedRegistrations.length === 0) {
+        toast({
+          title: "No Registrations Selected",
+          description: "Please select at least one registration to process.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setBatchAction(action);
+      setBatchDialogOpen(true);
+    },
+    [selectedRegistrations, toast]
+  );
+
+  const processBatchAction = useCallback(async () => {
+    if (!batchAction || selectedRegistrations.length === 0) return;
+
+    setProcessingBatch(true);
+    try {
+      const response = await fetch("/api/admin/course-registration-approval", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          registrationIds: selectedRegistrations,
+          action: batchAction,
+          comments: batchComments,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to process batch action");
+      }
+
+      toast({
+        title: "Success",
+        description: data.message,
+      });
+
+      // Clear selections and close dialog
+      setSelectedRegistrations([]);
+      setBatchDialogOpen(false);
+      setBatchAction(null);
+      setBatchComments("");
+
+      // Refresh data
+      mutateRegistrations();
+    } catch (error) {
+      console.error("Batch action error:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to process batch action",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingBatch(false);
+    }
+  }, [
+    batchAction,
+    selectedRegistrations,
+    batchComments,
+    toast,
+    mutateRegistrations,
+  ]);
 
   // Handle SWR errors
   useEffect(() => {
@@ -95,7 +202,6 @@ const CourseRegistrations = () => {
       });
     }
   }, [error, toast]);
-
 
   const handleReview = (registration: any, action: "approve" | "reject") => {
     setSelectedRegistration(registration);
@@ -302,10 +408,50 @@ const CourseRegistrations = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Batch Actions */}
+          {selectedRegistrations.length > 0 && (
+            <div className="mb-4 p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {selectedRegistrations.length} registration(s) selected
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => handleBatchAction("approve")}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Batch Approve
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleBatchAction("reject")}
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Batch Reject
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={
+                        selectedRegistrations.length > 0 &&
+                        selectedRegistrations.length ===
+                          registrations.filter((r) => r.status === "PENDING")
+                            .length
+                      }
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Student</TableHead>
                   <TableHead>Matric Number</TableHead>
                   <TableHead>Level</TableHead>
@@ -319,6 +465,18 @@ const CourseRegistrations = () => {
               <TableBody>
                 {registrations.map((registration) => (
                   <TableRow key={registration.id}>
+                    <TableCell>
+                      {registration.status === "PENDING" && (
+                        <Checkbox
+                          checked={selectedRegistrations.includes(
+                            registration.id
+                          )}
+                          onCheckedChange={() =>
+                            handleSelectRegistration(registration.id)
+                          }
+                        />
+                      )}
+                    </TableCell>
                     <TableCell className="font-medium">
                       {registration.student.name}
                     </TableCell>
@@ -482,6 +640,68 @@ const CourseRegistrations = () => {
               {reviewing
                 ? "Processing..."
                 : `${reviewAction === "approve" ? "Approve" : "Reject"} Registration`}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Batch Approval Dialog */}
+      <AlertDialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {batchAction === "approve" ? "Batch Approve" : "Batch Reject"}{" "}
+              Course Registrations?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You are about to {batchAction} {selectedRegistrations.length}{" "}
+              course registration(s).
+              <br />
+              <br />
+              This action will:
+              <br />•{" "}
+              {batchAction === "approve"
+                ? "Create enrollments for all selected courses"
+                : "Reject all selected registrations"}
+              <br />•{" "}
+              {batchAction === "approve"
+                ? "Allow students to access their courses"
+                : "Require students to re-register"}
+              <br />
+              <br />
+              {batchAction === "reject" && (
+                <>
+                  <strong>Note:</strong> Rejected students will need to submit
+                  new course registrations.
+                  <br />
+                </>
+              )}
+              <br />
+              <strong>Comments (optional):</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Add comments for this batch action..."
+              value={batchComments}
+              onChange={(e) => setBatchComments(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={processBatchAction}
+              disabled={processingBatch}
+              className={
+                batchAction === "reject"
+                  ? "bg-destructive hover:bg-destructive/90"
+                  : ""
+              }
+            >
+              {processingBatch
+                ? "Processing..."
+                : `${batchAction === "approve" ? "Approve" : "Reject"} ${selectedRegistrations.length} Registration(s)`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

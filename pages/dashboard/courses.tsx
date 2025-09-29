@@ -401,9 +401,9 @@ const Courses = () => {
   );
   const totalCredits = firstSemesterCredits + secondSemesterCredits;
 
-  // Credit limits
-  const maxCreditsPerSemester = 24;
-  const maxTotalCredits = 48;
+    // Credit limits (24 credits per semester, 48 total)
+    const maxCreditsPerSemester = 24;
+    const maxTotalCredits = 48;
 
   // Handle course selection
   const handleCourseToggleForRegistration = (

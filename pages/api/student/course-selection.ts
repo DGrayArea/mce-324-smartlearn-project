@@ -573,28 +573,28 @@ async function handleBothSemesters(
 
     const totalCredits = firstSemesterCredits + secondSemesterCredits;
 
-    // Validate credit limits
-    if (firstSemesterCredits > 18) {
+    // Validate credit limits (24 credits per semester, 48 total)
+    if (firstSemesterCredits > 24) {
       return res.status(400).json({
-        message: `First semester credits (${firstSemesterCredits}) exceeds the maximum limit of 18 credits.`,
+        message: `First semester credits (${firstSemesterCredits}) exceeds the maximum limit of 24 credits.`,
         firstSemesterCredits,
-        maxCredits: 18,
+        maxCredits: 24,
       });
     }
 
-    if (secondSemesterCredits > 18) {
+    if (secondSemesterCredits > 24) {
       return res.status(400).json({
-        message: `Second semester credits (${secondSemesterCredits}) exceeds the maximum limit of 18 credits.`,
+        message: `Second semester credits (${secondSemesterCredits}) exceeds the maximum limit of 24 credits.`,
         secondSemesterCredits,
-        maxCredits: 18,
+        maxCredits: 24,
       });
     }
 
-    if (totalCredits > 36) {
+    if (totalCredits > 48) {
       return res.status(400).json({
-        message: `Total credits (${totalCredits}) exceeds the maximum limit of 36 credits.`,
+        message: `Total credits (${totalCredits}) exceeds the maximum limit of 48 credits.`,
         totalCredits,
-        maxCredits: 36,
+        maxCredits: 48,
       });
     }
 

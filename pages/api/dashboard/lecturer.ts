@@ -84,6 +84,26 @@ export default async function handler(
     const totalStudents = await calculateTotalStudents(
       lecturer.courseAssignments
     );
+
+    // Calculate document download statistics
+    const courseIds = lecturer.courseAssignments.map((ca) => ca.course.id);
+    const totalDownloads = await prisma.content.aggregate({
+      where: {
+        courseId: { in: courseIds },
+        isActive: true,
+      },
+      _sum: {
+        downloadCount: true,
+      },
+    });
+
+    const totalDocuments = await prisma.content.count({
+      where: {
+        courseId: { in: courseIds },
+        isActive: true,
+      },
+    });
+
     const pendingReviews = 0; // TODO: Implement assignment review tracking
     const avgClassRating = 4.8; // TODO: Implement rating system
     const attendanceRate = 94; // TODO: Implement attendance tracking
@@ -96,6 +116,8 @@ export default async function handler(
       stats: {
         coursesTeaching,
         totalStudents,
+        totalDocuments,
+        totalDownloads: totalDownloads._sum.downloadCount || 0,
         pendingReviews,
         avgClassRating: avgClassRating.toFixed(1),
         attendanceRate: `${attendanceRate}%`,

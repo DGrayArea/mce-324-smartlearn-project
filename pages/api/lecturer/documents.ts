@@ -5,13 +5,14 @@ import { prisma } from "@/lib/prisma";
 import formidable from "formidable";
 import fs from "fs";
 import path from "path";
-import { createClient } from "@supabase/supabase-js";
+import { v2 as cloudinary } from "cloudinary";
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 // Disable body parsing for file uploads
 export const config = {
@@ -71,6 +72,22 @@ export default async function handler(
         orderBy: {
           uploadedAt: "desc",
         },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          fileName: true,
+          fileUrl: true,
+          fileSize: true,
+          fileType: true,
+          mimeType: true,
+          documentType: true,
+          week: true,
+          topic: true,
+          tags: true,
+          uploadedAt: true,
+          downloadCount: true,
+        },
       });
 
       res.status(200).json({ documents });
@@ -116,58 +133,57 @@ export default async function handler(
       const baseName = path.basename(fileName, fileExtension);
       const uniqueFileName = `course-${courseId}/${baseName}_${Date.now()}${fileExtension}`;
 
-      // Read file buffer
-      const fileBuffer = fs.readFileSync(file.filepath);
-
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("course-documents")
-        .upload(uniqueFileName, fileBuffer, {
-          contentType: mimeType,
-          cacheControl: "3600",
-          upsert: false,
+      // Upload to Cloudinary
+      try {
+        const uploadResult = await cloudinary.uploader.upload(file.filepath, {
+          folder: `course-documents/course-${courseId}`,
+          resource_type: "auto", // Automatically detect file type
+          public_id: `${baseName}_${Date.now()}`,
+          overwrite: false,
+          tags: ["course-document", `course-${courseId}`, ...tags],
         });
 
-      if (uploadError) {
-        console.error("Supabase upload error:", uploadError);
+        const fileUrl = uploadResult.secure_url;
+
+        // Clean up temporary file
+        fs.unlinkSync(file.filepath);
+
+        // Save document info to database
+        const document = await prisma.content.create({
+          data: {
+            courseId,
+            title,
+            description: description || null,
+            fileUrl: fileUrl,
+            fileName,
+            fileSize,
+            fileType: fileExtension,
+            mimeType,
+            documentType: documentType as any,
+            week: week ? parseInt(week) : null,
+            topic: topic || null,
+            tags,
+          },
+        });
+
+        res.status(201).json({
+          message: "Document uploaded successfully",
+          document,
+        });
+      } catch (uploadError) {
+        console.error("Cloudinary upload error:", uploadError);
+        // Clean up temporary file on error
+        if (fs.existsSync(file.filepath)) {
+          fs.unlinkSync(file.filepath);
+        }
         return res.status(500).json({
-          message: "Failed to upload file to storage",
-          error: uploadError.message,
+          message: "Failed to upload file to Cloudinary",
+          error:
+            uploadError instanceof Error
+              ? uploadError.message
+              : "Unknown error",
         });
       }
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from("course-documents")
-        .getPublicUrl(uniqueFileName);
-
-      const fileUrl = urlData.publicUrl;
-
-      // Clean up temporary file
-      fs.unlinkSync(file.filepath);
-
-      // Save document info to database
-      const document = await prisma.content.create({
-        data: {
-          courseId,
-          title,
-          description: description || null,
-          fileUrl: fileUrl,
-          fileName,
-          fileSize,
-          fileType: fileExtension,
-          mimeType,
-          documentType: documentType as any,
-          week: week ? parseInt(week) : null,
-          topic: topic || null,
-          tags,
-        },
-      });
-
-      res.status(201).json({
-        message: "Document uploaded successfully",
-        document,
-      });
     } else if (req.method === "DELETE") {
       // Delete a document
       const { documentId } = req.query;
@@ -190,18 +206,20 @@ export default async function handler(
         return res.status(403).json({ message: "Access denied" });
       }
 
-      // Delete file from Supabase Storage
+      // Delete file from Cloudinary
       if (document.fileUrl) {
-        // Extract file path from Supabase URL
-        const url = new URL(document.fileUrl);
-        const filePath = url.pathname.split("/").slice(3).join("/"); // Remove /storage/v1/object/public/course-documents/
+        try {
+          // Extract public_id from Cloudinary URL
+          const url = new URL(document.fileUrl);
+          const pathParts = url.pathname.split("/");
+          const publicId = pathParts
+            .slice(-2)
+            .join("/")
+            .replace(/\.[^/.]+$/, ""); // Remove file extension
 
-        const { error: deleteError } = await supabase.storage
-          .from("course-documents")
-          .remove([filePath]);
-
-        if (deleteError) {
-          console.error("Supabase delete error:", deleteError);
+          await cloudinary.uploader.destroy(publicId);
+        } catch (deleteError) {
+          console.error("Cloudinary delete error:", deleteError);
           // Continue with database deletion even if file deletion fails
         }
       }

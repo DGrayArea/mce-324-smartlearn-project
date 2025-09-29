@@ -38,6 +38,7 @@ import {
   Award,
   FileText,
   User,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
@@ -130,6 +131,7 @@ const ResultApproval = () => {
     null
   );
   const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -219,6 +221,101 @@ const ResultApproval = () => {
     setReviewNotes("");
   };
 
+  const handleExportStudents = async (
+    format: "xlsx" | "csv",
+    includeGrades: boolean = true
+  ) => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({
+        format,
+        includeGrades: includeGrades.toString(),
+        academicYear: "2024/2025", // You can make this dynamic
+        semester: "FIRST", // You can make this dynamic
+      });
+
+      const response = await fetch(`/api/admin/export-students?${params}`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Students-${includeGrades ? "with-grades" : "basic"}-${new Date().toISOString().split("T")[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Success",
+          description: `Student data exported successfully as ${format.toUpperCase()}`,
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.message || "Failed to export student data",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting student data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export student data",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportTranscripts = async (format: "xlsx" | "csv") => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({
+        format,
+        includeAllSessions: "true",
+      });
+
+      const response = await fetch(`/api/admin/export-transcripts?${params}`);
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Transcripts-${new Date().toISOString().split("T")[0]}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        toast({
+          title: "Success",
+          description: `Transcripts exported successfully as ${format.toUpperCase()}`,
+        });
+      } else {
+        const error = await response.json();
+        toast({
+          title: "Error",
+          description: error.message || "Failed to export transcripts",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error exporting transcripts:", error);
+      toast({
+        title: "Error",
+        description: "Failed to export transcripts",
+        variant: "destructive",
+      });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const pendingCount = resultApprovals.filter(
     (r) => r.status === "pending"
   ).length;
@@ -242,9 +339,29 @@ const ResultApproval = () => {
           </p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
+          <Button
+            variant="outline"
+            onClick={() => handleExportStudents("xlsx", true)}
+            disabled={exporting}
+          >
+            <FileSpreadsheet className="h-4 w-4 mr-2" />
+            {exporting ? "Exporting..." : "Export Students (Excel)"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleExportStudents("xlsx", false)}
+            disabled={exporting}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            {exporting ? "Exporting..." : "Export Basic List"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleExportTranscripts("xlsx")}
+            disabled={exporting}
+          >
+            <Award className="h-4 w-4 mr-2" />
+            {exporting ? "Exporting..." : "Export Transcripts"}
           </Button>
         </div>
       </div>

@@ -57,6 +57,7 @@ import {
   CheckCircle,
   ArrowLeft,
   Download,
+  FileSpreadsheet,
 } from "lucide-react";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import { useToast } from "@/hooks/use-toast";
@@ -268,7 +269,10 @@ const LecturerGrades = () => {
     }
   };
 
-  const handleExportGrades = async (format: "csv" | "excel") => {
+  const handleExportGrades = async (
+    format: "csv" | "xlsx",
+    includeGrades: boolean = true
+  ) => {
     try {
       setExporting(true);
 
@@ -277,47 +281,40 @@ const LecturerGrades = () => {
         academicYear,
         semester,
         format,
+        includeGrades: includeGrades.toString(),
       });
 
-      const response = await fetch(`/api/lecturer/export-grades?${params}`);
+      const response = await fetch(`/api/lecturer/export-students?${params}`);
 
       if (response.ok) {
-        if (format === "csv") {
-          // Handle CSV download
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `grades_${course?.code}_${academicYear}_${semester}.csv`;
-          document.body.appendChild(a);
-          a.click();
-          window.URL.revokeObjectURL(url);
-          document.body.removeChild(a);
-        } else {
-          // Handle Excel data
-          const data = await response.json();
-          // You can implement Excel export using a library like xlsx
-          // For now, we'll just show the data
-          console.log("Excel data:", data);
-        }
+        // Handle file download
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Students-${course?.code}-${academicYear}-${semester}-${includeGrades ? "with-grades" : "basic"}.${format}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
 
         toast({
           title: "Success",
-          description: `Grades exported successfully as ${format.toUpperCase()}`,
+          description: `Student data ${includeGrades ? "with grades" : "basic list"} exported successfully as ${format.toUpperCase()}`,
         });
       } else {
         const error = await response.json();
         toast({
           title: "Error",
-          description: error.message || "Failed to export grades",
+          description: error.message || "Failed to export student data",
           variant: "destructive",
         });
       }
     } catch (error) {
-      console.error("Error exporting grades:", error);
+      console.error("Error exporting student data:", error);
       toast({
         title: "Error",
-        description: "Failed to export grades",
+        description: "Failed to export student data",
         variant: "destructive",
       });
     } finally {
@@ -489,6 +486,22 @@ const LecturerGrades = () => {
             <div className="flex space-x-2">
               <Button
                 variant="outline"
+                onClick={() => handleExportGrades("xlsx", true)}
+                disabled={exporting}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                {exporting ? "Exporting..." : "Export Excel (With Grades)"}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => handleExportGrades("xlsx", false)}
+                disabled={exporting}
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                {exporting ? "Exporting..." : "Export Excel (Basic)"}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={handleSaveGrades}
                 disabled={saving}
               >
@@ -496,12 +509,20 @@ const LecturerGrades = () => {
                 {saving ? "Saving..." : "Save Draft"}
               </Button>
               <Button
-                onClick={() => handleExportGrades("csv")}
+                onClick={() => handleExportGrades("csv", true)}
                 disabled={exporting || students.length === 0}
                 variant="outline"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {exporting ? "Exporting..." : "Export CSV"}
+                {exporting ? "Exporting..." : "Export CSV (With Grades)"}
+              </Button>
+              <Button
+                onClick={() => handleExportGrades("csv", false)}
+                disabled={exporting || students.length === 0}
+                variant="outline"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                {exporting ? "Exporting..." : "Export CSV (Basic)"}
               </Button>
               <Button
                 onClick={() => setShowSubmitDialog(true)}

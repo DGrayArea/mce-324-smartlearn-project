@@ -2,6 +2,12 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import { calculateGPA, calculateCGPA, getGradeStatistics } from "@/lib/grading";
+import {
+  calculateComprehensiveGPA,
+  getGPATrend,
+  getAcademicStanding,
+} from "@/lib/gpa-calculator";
 
 export default async function handler(
   req: NextApiRequest,
@@ -48,13 +54,24 @@ export default async function handler(
 
       const results = await prisma.result.findMany({
         where: whereClause,
-        include: {
+        select: {
+          id: true,
+          caScore: true,
+          examScore: true,
+          totalScore: true,
+          grade: true,
+          status: true,
+          academicYear: true,
+          semester: true,
+          createdAt: true,
+          updatedAt: true,
           course: {
             select: {
               id: true,
               title: true,
               code: true,
               creditUnit: true,
+              level: true,
             },
           },
         },
@@ -65,64 +82,51 @@ export default async function handler(
         ],
       });
 
-      // Calculate GPA and CGPA
-      let totalGradePoints = 0;
-      let totalCredits = 0;
-      let currentSemesterGradePoints = 0;
-      let currentSemesterCredits = 0;
+      // Transform results for comprehensive GPA calculation
+      const courseResults = results.map((r) => ({
+        id: r.id,
+        grade: r.grade,
+        creditUnit: r.course.creditUnit,
+        academicYear: r.academicYear,
+        semester: r.semester,
+        level: r.course.level,
+        courseCode: r.course.code,
+        status: r.status,
+      }));
 
-      const gradePointMap: Record<string, number> = {
-        A: 5.0,
-        B: 4.0,
-        C: 3.0,
-        D: 2.0,
-        F: 0.0,
-      };
+      // Calculate comprehensive GPA with session and level breakdown
+      const comprehensiveGPA = calculateComprehensiveGPA(courseResults);
 
-      results.forEach((result) => {
-        const gradePoint = gradePointMap[result.grade] || 0;
-        const credits = result.course.creditUnit;
+      // Calculate current semester GPA if filtering by semester
+      let currentSemesterGPA = comprehensiveGPA.cgpa;
+      if (semester && semester !== "ALL") {
+        const currentSemesterResults = results.filter(
+          (r) => r.academicYear === academicYear && r.semester === semester
+        );
+        currentSemesterGPA = calculateGPA(
+          currentSemesterResults.map((r) => ({
+            grade: r.grade,
+            creditUnit: r.course.creditUnit,
+          }))
+        );
+      }
 
-        totalGradePoints += gradePoint * credits;
-        totalCredits += credits;
-
-        // Calculate current semester GPA if filtering by semester
-        if (
-          semester &&
-          semester !== "ALL" &&
-          result.academicYear === academicYear &&
-          result.semester === semester
-        ) {
-          currentSemesterGradePoints += gradePoint * credits;
-          currentSemesterCredits += credits;
-        }
-      });
-
-      const cgpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
-      const gpa =
-        semester && semester !== "ALL" && currentSemesterCredits > 0
-          ? currentSemesterGradePoints / currentSemesterCredits
-          : cgpa;
-
-      // Calculate statistics
-      const passed = results.filter((r) => r.grade !== "F").length;
-      const failed = results.filter((r) => r.grade === "F").length;
-      const passRate =
-        results.length > 0 ? Math.round((passed / results.length) * 100) : 0;
-
-      const statistics = {
-        total: results.length,
-        passed,
-        failed,
-        totalCredits,
-        passRate,
-      };
+      // Get GPA trend and academic standing
+      const gpaTrend = getGPATrend(comprehensiveGPA.sessionGPAs);
+      const academicStanding = getAcademicStanding(comprehensiveGPA.cgpa);
 
       return res.status(200).json({
         grades: results,
-        cgpa: parseFloat(cgpa.toFixed(2)),
-        gpa: parseFloat(gpa.toFixed(2)),
-        statistics,
+        cgpa: comprehensiveGPA.cgpa,
+        gpa: parseFloat(currentSemesterGPA.toFixed(2)),
+        totalCredits: comprehensiveGPA.totalCredits,
+        totalGradePoints: comprehensiveGPA.totalGradePoints,
+        sessionGPAs: comprehensiveGPA.sessionGPAs,
+        levelGPAs: comprehensiveGPA.levelGPAs,
+        progression: comprehensiveGPA.progression,
+        statistics: comprehensiveGPA.statistics,
+        gpaTrend,
+        academicStanding,
       });
     } catch (error) {
       console.error("Error fetching student grades:", error);

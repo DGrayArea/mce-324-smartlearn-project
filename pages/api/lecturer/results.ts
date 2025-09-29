@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
 import { prisma } from "@/lib/prisma";
+import { calculateGrade } from "@/lib/grading";
 
 export default async function handler(
   req: NextApiRequest,
@@ -53,7 +54,17 @@ export default async function handler(
           academicYear: (academicYear as string) || "2024/2025",
           semester: (semester as any) || "FIRST",
         },
-        include: {
+        select: {
+          id: true,
+          caScore: true,
+          examScore: true,
+          totalScore: true,
+          grade: true,
+          status: true,
+          academicYear: true,
+          semester: true,
+          createdAt: true,
+          updatedAt: true,
           student: {
             select: {
               id: true,
@@ -84,8 +95,12 @@ export default async function handler(
 
       // Save/update results in a transaction
       const results = await prisma.$transaction(
-        grades.map((grade: any) =>
-          prisma.result.upsert({
+        grades.map((grade: any) => {
+          // Calculate grade automatically if not provided
+          const calculatedGrade =
+            grade.grade || calculateGrade(grade.totalScore).grade;
+
+          return prisma.result.upsert({
             where: {
               studentId_courseId_academicYear_semester: {
                 studentId: grade.studentId,
@@ -98,7 +113,7 @@ export default async function handler(
               caScore: grade.caScore,
               examScore: grade.examScore,
               totalScore: grade.totalScore,
-              grade: grade.grade,
+              grade: calculatedGrade,
               status: "PENDING",
             },
             create: {
@@ -109,11 +124,11 @@ export default async function handler(
               caScore: grade.caScore,
               examScore: grade.examScore,
               totalScore: grade.totalScore,
-              grade: grade.grade,
+              grade: calculatedGrade,
               status: "PENDING",
             },
-          })
-        )
+          });
+        })
       );
 
       res.status(200).json({
