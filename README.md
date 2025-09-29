@@ -1,767 +1,758 @@
-# SmartLearn University Management System
+# SmartLearn E‑Learning Platform — Complete System Documentation
 
-A comprehensive university management system built with **Next.js**, **Prisma**, **PostgreSQL**, and **NextAuth.js**. This system supports multiple user roles, course management, academic tracking, and administrative functions.
+Version 1.0 · Last Updated: 2025‑08‑31 · Document Owner: Groups 1–10
 
-## 🚀 Quick Start
+## Front Matter
 
-### Prerequisites
+- **Project Name**: SmartLearn E‑Learning Platform
+- **Course**: MCE 324 (Computer Software Engineering)
+- **Institution**: Federal University of Technology, Minna
+- **Academic Session**: 2024/2025
+- **Submission Date**: August 31, 2025
+- **Document Control**: Version 1.0 · Last Updated: 2025‑08‑31 · Owner: All Groups (1–10)
+
+## Table of Contents
+
+- Executive Summary
+- Introduction
+- System Requirements
+- System Architecture
+- System Modules (Groups 1–10)
+- Database Design
+- System Implementation
+- Installation & Deployment
+- User Manual
+- Testing & Results
+- Challenges & Solutions
+- Conclusion & Recommendations
+- Appendices
+
+## List of Figures
+
+- Figure 1: High‑Level Architecture Diagram (placeholder)
+- Figure 2: Module Interaction Diagram (placeholder)
+- Figure 3: Data Flow Diagram (placeholder)
+- Figure 4: Entity Relationship Diagram (ERD) (placeholder)
+
+## List of Tables
+
+- Table 1: API Endpoints by Module
+- Table 2: Data Dictionary (sample)
+- Table 3: Test Cases Summary
+- Table 4: Team Roster (All Groups)
+
+## List of Abbreviations
+
+- **LMS**: Learning Management System
+- **API**: Application Programming Interface
+- **ERD**: Entity Relationship Diagram
+- **UI/UX**: User Interface / User Experience
+- **JWT**: JSON Web Token
+- **CSV**: Comma‑Separated Values
+
+---
+
+## Section 1: Executive Summary
+
+### 1.1 Project Overview
+
+SmartLearn is a university e‑learning and academic management platform that supports student enrollment, course registration, content delivery, assessments, results computation/approvals, feedback, analytics, and support. It provides role‑based dashboards for students, lecturers, and administrators.
+
+### 1.2 System Features Highlights
+
+- Course registration and availability management
+- Learning content upload/download with tracking
+- Continuous assessment, grading, GPA/CGPA, transcripts
+- Result approvals across department, school, senate
+- Live chat rooms and basic Q&A
+- Admin dashboards and analytics
+- Feedback, evaluations, FAQs, knowledge base
+- Support tickets and internal notes
+
+Target users: Students, Lecturers, Department/School/Senate Administrators.
+
+### 1.3 Technology Stack Summary
+
+- Frontend: Next.js (pages router), React, TypeScript, Tailwind CSS, shadcn/ui, SWR
+- Backend: Next.js API routes, NextAuth.js
+- Database: Prisma ORM with PostgreSQL
+- Integrations: Cloudinary (documents), xlsx (exports)
+
+Exact versions (from `package.json`):
+
+- next: 15.4.5 · react: 19.1.0 · typescript: ^5
+- prisma: ^6.16.2 · @prisma/client: ^6.16.2 · pg: ^8.16.3
+- next-auth: ^4.24.11 · @auth/prisma-adapter: ^2.10.0
+- tailwindcss: ^3.4.11 · lucide-react: ^0.462.0
+- swr: ^2.3.6 · xlsx: ^0.18.5 · cloudinary: ^2.7.0
+
+### 1.4 Project Team
+
+10 groups (1–10), each owning a module such as authentication, course registration, LMS content, assessments, chat, design system, admin analytics, approvals, feedback/notifications, and support.
+
+---
+
+## Section 2: Introduction
+
+### 2.1 Background
+
+#### 2.1.1 Problem Statement
+
+Universities need a unified system for course management, learning content, assessments, approvals, and communication.
+
+#### 2.1.2 Motivation
+
+Provide a robust, modular LMS aligned with academic workflows and Nigerian university contexts.
+
+#### 2.1.3 Significance
+
+Streamlines academic processes, improves transparency, and enhances learning outcomes.
+
+### 2.2 Project Objectives
+
+#### 2.2.1 Primary Objectives
+
+- Deliver end‑to‑end course, content, assessment, and result workflows.
+
+#### 2.2.2 Secondary Objectives
+
+- Provide analytics, feedback, and support tooling.
+
+#### 2.2.3 Success Criteria
+
+- All key flows functional, role‑gated access, exports available, build passes without errors.
+
+### 2.3 Project Scope
+
+#### 2.3.1 In Scope
+
+Course registration, content management, grading, approvals, chat, support, analytics.
+
+#### 2.3.2 Out of Scope
+
+Real‑time video conferencing, payment gateway, production monitoring.
+
+#### 2.3.3 Assumptions and Constraints
+
+Assumes PostgreSQL and environment configuration are available; constraints include academic calendar and team size.
+
+### 2.4 Target Audience
+
+Students, Lecturers, Administrators.
+
+---
+
+## Section 3: System Requirements
+
+### 3.1 Functional Requirements
+
+- User management and authentication
+- Course listing, registration, approvals
+- Content upload/download with access control
+- Assessment entry, GPA/CGPA calculation, exports
+- Communication (live chat, Q&A)
+- Administrative dashboards and analytics
+
+### 3.2 Non‑Functional Requirements
+
+#### 3.2.1 Performance
+
+Responsive UI, paginated lists, efficient queries.
+
+#### 3.2.2 Security
+
+NextAuth sessions/JWT, role‑based access, validated inputs.
+
+#### 3.2.3 Usability
+
+Consistent design system, accessible components.
+
+#### 3.2.4 Reliability
+
+Builds pass, error handling with toasts and safe defaults.
+
+#### 3.2.5 Scalability
+
+Modular APIs, Prisma schema designed for growth.
+
+#### 3.2.6 Maintainability
+
+TypeScript, ESLint rules, clear directory structure.
+
+### 3.3 System Requirements
+
+#### 3.3.1 Hardware
+
+Server: 2 vCPU, 4GB RAM+ for development/test; Client: modern browser on laptop/desktop.
+
+#### 3.3.2 Software
+
+Node.js 18+, PostgreSQL, modern browsers, development via npm.
+
+### 3.4 User Roles and Permissions
+
+- Administrator (Department/School/Senate): manage users, courses, approvals, exports.
+- Lecturer: manage course content, enter results, view students.
+- Student: register courses, access materials, view grades, chat.
+
+---
+
+## Section 4: System Architecture
+
+### 4.1 Architecture Overview
+
+- Next.js monorepo using pages router for UI and API routes.
+- Three‑tier: UI (React) → API (Next.js routes) → Data (Prisma/PostgreSQL).
+- Modules interact via REST endpoints and shared Prisma models.
+
+### 4.2 Technology Stack
+
+#### 4.2.1 Frontend
+
+Next.js 15, React 19, TypeScript, Tailwind CSS, shadcn/ui, SWR.
+
+#### 4.2.2 Backend
+
+Next.js API routes, NextAuth for auth, Zod‑like manual validation.
+
+#### 4.2.3 Database
+
+PostgreSQL via Prisma; see `prisma/schema.prisma`.
+
+#### 4.2.4 Third‑Party Services
+
+Cloudinary (documents), Email notifications stubs, XLSX exports.
+
+### 4.3 System Integration
+
+Module interconnections through API calls; data flows from UI pages under `pages/dashboard/*` to `pages/api/*`, persisted via Prisma.
+
+Key directories and files:
+
+- UI Pages: `pages/dashboard/*`, `pages/index.tsx`, `pages/_app.tsx`, `pages/_document.tsx`
+- API Routes: `pages/api/*` (see per-module tables below)
+- Auth: `pages/api/auth/[...nextauth].ts`, `middleware.ts`, `contexts/AuthContext.tsx`, `components/auth/LoginForm.tsx`
+- Database: `prisma/schema.prisma`
+- Exports: `pages/api/admin/export-students.ts`, `pages/api/admin/export-transcripts.ts`, `pages/api/lecturer/export-students.ts`, `pages/api/lecturer/export-grades.ts`
+
+### 4.4 Security Architecture
+
+NextAuth credentials provider with JWT/session callbacks, middleware route protection, role‑based checks in APIs, environment secrets.
+
+---
+
+## Section 5: System Modules
+
+This section summarizes modules (per Groups 1–10). For detailed developer‑sized contributions, see `Group contributions.md`.
+
+For each module, API endpoints are representative and derived from `pages/api/*`.
+
+### 5.1 Student Information Management (Group 1)
+
+- Overview: Authentication, profiles, role‑based access.
+- API Endpoints (examples):
+  - POST `/api/auth/[...nextauth]` – NextAuth.js
+  - GET/PUT `/api/user/profile` – profile
+- UI: Login/Register forms, profile page.
+
+Key Files:
+
+- `pages/api/auth/[...nextauth].ts`
+- `pages/api/auth/password-reset.ts`
+- `pages/api/user/profile.ts`
+- `middleware.ts`
+- `components/auth/LoginForm.tsx`
+- `contexts/AuthContext.tsx`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | ------------------------ | --------------------------- |
+| POST | /api/auth/[...nextauth] | Authentication (NextAuth) |
+| POST | /api/auth/password-reset | Request/reset password |
+| GET | /api/user/profile | Get current user profile |
+| PUT | /api/user/profile | Update current user profile |
+
+### 5.2 Course Registration System (Group 2)
+
+- Overview: Course listing, selection, approvals.
+- API Endpoints:
+  - GET `/api/course/available`
+  - POST `/api/student/course-selection`
+  - POST `/api/student/course-registration`
+  - POST `/api/admin/course-registration-approval`
+- UI: `pages/dashboard/courses.tsx` (selection and progress).
+
+Key Files:
+
+- `pages/api/course/available.ts`
+- `pages/api/student/course-selection.ts`
+- `pages/api/student/course-registration.ts`
+- `pages/api/admin/course-registration-approval.ts`
+- `pages/api/admin/department-course-selection.ts`
+- `pages/api/student/enrolled-courses.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | --------------------------------------- | ------------------------------------------ |
+| GET | /api/course/available | List available courses |
+| POST | /api/student/course-selection | Save student selected courses |
+| POST | /api/student/course-registration | Submit registration for approval |
+| POST | /api/admin/course-registration-approval | Approve/decline registrations |
+| GET | /api/student/enrolled-courses | Fetch enrolled courses |
+| POST | /api/admin/department-course-selection | Admin sets department course availability |
+
+### 5.3 LMS Content Management (Group 3)
+
+- Overview: Upload/download lecturer documents.
+- API Endpoints:
+  - POST/GET `/api/lecturer/documents`
+  - GET `/api/student/documents`
+- Integration: Cloudinary for storage.
+
+Key Files:
+
+- `pages/api/lecturer/documents.ts`
+- `pages/api/student/documents.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | ----------------------- | -------------------------------- |
+| POST | /api/lecturer/documents | Upload lecturer documents |
+| GET | /api/lecturer/documents | List/delete lecturer documents |
+| GET | /api/student/documents | Access documents for a student |
+
+### 5.4 Assessment and Result Computation (Group 4)
+
+- Overview: Grades, GPA/CGPA, approvals.
+- API Endpoints:
+  - POST `/api/lecturer/results`
+  - GET `/api/student/grades`
+  - POST `/api/admin/result-approval`
+  - GET `/api/admin/export-students`, `/api/admin/export-transcripts`
+- Lib: `lib/gpa-calculator.ts`.
+
+Key Files:
+
+- `pages/api/lecturer/results.ts`
+- `pages/api/student/grades.ts`
+- `pages/api/admin/result-approval.ts`
+- `pages/api/admin/export-students.ts`
+- `pages/api/admin/export-transcripts.ts`
+- `lib/gpa-calculator.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | ----------------------------- | ------------------------------------ |
+| POST | /api/lecturer/results | Enter/submit student results |
+| GET | /api/student/grades | Fetch student grades |
+| POST | /api/admin/result-approval | Multi-stage approval actions |
+| GET | /api/admin/export-students | Export student lists |
+| GET | /api/admin/export-transcripts | Export transcripts |
+
+### 5.5 Virtual Meetings and Chat Rooms (Group 5)
+
+- Overview: Live chat sessions, messages, Q&A stubs.
+- API Endpoints:
+  - POST/GET `/api/live-chat/sessions`
+  - POST/GET `/api/live-chat/messages`
+  - Q&A: `/api/qa/questions`, `/api/qa/answers`
+- UI: `pages/dashboard/chatrooms.tsx`, student chat pages.
+
+Key Files:
+
+- `pages/api/live-chat/sessions.ts`
+- `pages/api/live-chat/messages.ts`
+- `pages/api/qa/questions.ts`, `pages/api/qa/answers.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | ----------------------- | -------------------------- |
+| GET | /api/live-chat/sessions | List/join chat sessions |
+| POST | /api/live-chat/sessions | Create/close chat session |
+| GET | /api/live-chat/messages | List messages in a session |
+| POST | /api/live-chat/messages | Send a message |
+| GET | /api/qa/questions | List questions |
+| POST | /api/qa/questions | Ask question |
+| POST | /api/qa/answers | Post answer |
+
+### 5.6 System Integration and UI/UX (Group 6)
+
+- Overview: Design system, layouts, accessibility.
+- Components: Tailwind, shadcn/ui, lucide icons, toasts.
+
+Key Files:
+
+- `styles/globals.css`, `tailwind.config.ts`
+- `components/layout/DashboardLayout.tsx`
+
+### 5.7 Admin Dashboard and Analytics (Group 7)
+
+- Overview: Admin management and analytics.
+- API Endpoints:
+  - `/api/dashboard/admin`
+  - `/api/admin/users`, `/api/admin/courses`, `/api/admin/departments`, `/api/admin/schools`
+  - `/api/analytics/overview`, `/api/analytics/performance`, `/api/analytics/logs`
+
+Key Files:
+
+- `pages/api/dashboard/admin.ts`
+- `pages/api/admin/users.ts`, `pages/api/admin/courses.ts`, `pages/api/admin/departments.ts`, `pages/api/admin/schools.ts`
+- `pages/api/analytics/overview.ts`, `pages/api/analytics/performance.ts`, `pages/api/analytics/logs.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | -------------------------- | ---------------------------- |
+| GET | /api/dashboard/admin | Admin overview metrics |
+| GET | /api/admin/users | Manage users |
+| POST | /api/admin/users | Create/update users |
+| GET | /api/admin/courses | Manage courses |
+| GET | /api/admin/departments | Manage departments |
+| GET | /api/admin/schools | Manage schools |
+| GET | /api/analytics/overview | Analytics overview |
+| GET | /api/analytics/performance | Performance metrics |
+| GET | /api/analytics/logs | Activity logs |
+
+### 5.8 Results Consideration and Approval (Group 8)
+
+- Overview: Multi‑stage approvals and visibility gating.
+- API Endpoints: `/api/admin/result-approval`, exports, student visibility `/api/student/grades`.
+
+Key Files:
+
+- `pages/api/admin/result-approval.ts`
+- `pages/api/student/grades.ts`
+
+### 5.9 Feedback, Evaluation & Notification System (Group 9)
+
+- Overview: Evaluations, knowledge base, FAQs, notifications.
+- API Endpoints: `/api/evaluations/*`, `/api/knowledge/*`, `/api/faqs`, `/api/notifications/*`.
+
+Key Files:
+
+- `pages/api/evaluations/course-evaluations.ts`, `pages/api/evaluations/feedback-forms.ts`, `pages/api/evaluations/feedback-responses.ts`
+- `pages/api/knowledge/articles.ts`, `pages/api/knowledge/feedback.ts`
+- `pages/api/faqs.ts` and `pages/api/admin/faqs.ts`
+- `pages/api/notifications.ts`, `pages/api/notifications/email.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | ----------------------------------- | ----------------------------------- |
+| GET | /api/evaluations/course-evaluations | List course evaluations |
+| POST | /api/evaluations/feedback-forms | Create evaluation forms |
+| POST | /api/evaluations/feedback-responses | Submit evaluation responses |
+| GET | /api/knowledge/articles | Knowledge base articles |
+| POST | /api/knowledge/feedback | KB feedback |
+| GET | /api/faqs | Public FAQs |
+| GET | /api/notifications | Notification fetch (stub) |
+| POST | /api/notifications/email | Send email notifications (stub) |
+
+### 5.10 User Support and Help Center (Group 10)
+
+- Overview: Support tickets, responses, attachments placeholder.
+- API Endpoints: `/api/support/tickets`, `/api/support/responses`.
+
+Key Files:
+
+- `pages/api/support/tickets.ts`, `pages/api/support/responses.ts`
+
+API Table:
+| Method | Endpoint | Description |
+| ------ | --------------------- | -------------------------- |
+| POST | /api/support/tickets | Create ticket |
+| GET | /api/support/tickets | List tickets |
+| POST | /api/support/responses| Add ticket response |
+| GET | /api/support/responses| List responses (by ticket) |
+
+---
+
+## Section 6: Database Design
+
+### 6.1 Overview
+
+Prisma ORM with PostgreSQL. Models cover users, roles, departments, courses, registrations, results, evaluations, content, tickets, and logs.
+
+### 6.2 ERD
+
+See `prisma/schema.prisma`. Generate Prisma ERD using community tools (placeholder).
+
+### 6.3 Data Dictionary (format)
+
+| Table | Column | Type | Constraints      | Description     |
+| ----- | ------ | ---- | ---------------- | --------------- |
+| users | id     | UUID | PK               | User identifier |
+| users | email  | TEXT | UNIQUE, NOT NULL | Login email     |
+| roles | name   | ENUM | NOT NULL         | User role       |
+
+### 6.4 Relationships & Constraints
+
+Foreign keys between users, courses, registrations, results; cascade on delete where safe; indexes on user email and course code.
+
+### 6.5 Normalization
+
+3NF where applicable to reduce redundancy while supporting exports and reporting.
+
+---
+
+## Section 7: System Implementation
+
+### 7.1 Development Methodology
+
+Lightweight iterative sprints with module ownership by groups; feature branches merged via code review.
+
+### 7.2 Development Environment
+
+- Version Control: Git
+- Repo Structure: Next.js pages, API routes under `pages/api/*`, Prisma under `prisma/`
+- Tools: ESLint, TypeScript, Tailwind, Prisma
+
+Scripts (from `package.json`):
+
+- `npm run dev` → Next.js dev server
+- `npm run build` → Production build
+- `npm start` → Start production server
+- `npm run lint` → Lint codebase
+
+### 7.3 Coding Standards
+
+Type‑safe API handlers, consistent naming, error handling via toasts, minimal coupling.
+
+### 7.4 Testing Strategy
+
+Manual flows per module; build checks (`npm run build`); export verification; endpoint smoke tests.
+
+### 7.5 Quality Assurance
+
+Linting (`npm run lint`), peer review, seed data for predictable testing.
+
+---
+
+## Section 8: Installation & Deployment
+
+### 8.1 Prerequisites
 
 - Node.js 18+
-- PostgreSQL database
-- npm or yarn
+- PostgreSQL
 
-### Installation
+### 8.2 Installation Guide
+
+Step 1: Clone Repository
 
 ```bash
-# Clone the repository
 git clone <repository-url>
 cd mce-324-smartlearn-project
+```
 
-# Install dependencies
+Step 2: Install Dependencies
+
+```bash
 npm install
+```
 
-# Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your database URL and NextAuth secret
+Step 3: Configure Environment
+Create `.env.local` with at least:
 
-# Generate Prisma client
+```
+DATABASE_URL=postgres://user:pass@localhost:5432/smartlearn
+NEXTAUTH_SECRET=your-secret
+NEXTAUTH_URL=http://localhost:3000
+CLOUDINARY_CLOUD_NAME=...
+CLOUDINARY_API_KEY=...
+CLOUDINARY_API_SECRET=...
+```
+
+Step 4: Database Setup
+
+```bash
 npx prisma generate
-
-# Run database migrations
 npx prisma db push
+```
 
-# Seed the database
-curl -X POST http://localhost:3000/api/seed-comprehensive
+Optional: Seed Sample Data
 
-# Start development server
+```bash
+# Ensure dev server is running (npm run dev)
+curl -X POST http://localhost:3000/api/seed-organized
+curl -X POST http://localhost:3000/api/seed-course
+```
+
+Step 5: Start Application
+
+```bash
 npm run dev
 ```
 
-## 🔐 Authentication & User Roles
+### 8.3 Configuration
 
-The system supports 5 user roles with different permissions:
+- Database connection via `DATABASE_URL`
+- NextAuth secrets and URL
+- Cloudinary credentials for document uploads
 
-- **STUDENT**: Can view courses, submit assignments, view grades
-- **LECTURER**: Can manage courses, create assignments, grade students
-- **DEPARTMENT_ADMIN**: Manages department-level operations
-- **SCHOOL_ADMIN**: Manages school-level operations
-- **SENATE_ADMIN**: System-wide administration
+### 8.4 Deployment
 
-### Login Credentials (After Seeding)
-
-**Students:**
-
-- `student1@university.edu` / `password123`
-- `student2@university.edu` / `password123`
-- `student3@university.edu` / `password123`
-- `student4@university.edu` / `password123`
-
-**Lecturers:**
-
-- `lecturer1@university.edu` / `password123`
-- `lecturer2@university.edu` / `password123`
-- `lecturer3@university.edu` / `password123`
-- `lecturer4@university.edu` / `password123`
-
-**Admins:**
-
-- `senate.admin@university.edu` / `password123` (Senate Admin)
-- `seet.admin@university.edu` / `password123` (School Admin)
-- `cen.admin@university.edu` / `password123` (Department Admin)
-
-## 🛣 API Routes
-
-The system provides RESTful API endpoints organized by functionality:
-
-### Authentication Routes
-
-- `POST /api/auth/[...nextauth]` - NextAuth.js authentication
-- `GET /api/user/profile` - Get current user profile with role-specific data
-
-### Dashboard Routes
-
-- `GET /api/dashboard/student` - Student dashboard data (courses, grades, assignments)
-- `GET /api/dashboard/lecturer` - Lecturer dashboard data (courses, students, reviews)
-- `GET /api/dashboard/admin` - Admin dashboard data (system stats, users, courses)
-
-### Seeding Routes
-
-- `POST /api/seed-users` - Create basic test users
-- `POST /api/seed-comprehensive` - Create complete academic system data
-
-### Example API Usage
-
-```javascript
-// Fetch student dashboard data
-const response = await fetch("/api/dashboard/student");
-const data = await response.json();
-console.log(data.stats); // { enrolledCourses: 4, currentGPA: "3.8", ... }
-
-// Fetch user profile
-const profile = await fetch("/api/user/profile");
-const userData = await profile.json();
-console.log(userData.role); // "student", "lecturer", etc.
-```
-
-## 🔧 Creating New API Routes
-
-### 1. Basic Route Structure
-
-Create a new file in `pages/api/` directory:
-
-```typescript
-// pages/api/example/route.ts
-import { NextApiRequest, NextApiResponse } from "next";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
-
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Handle different HTTP methods
-  if (req.method === "GET") {
-    return handleGet(req, res);
-  } else if (req.method === "POST") {
-    return handlePost(req, res);
-  } else if (req.method === "PUT") {
-    return handlePut(req, res);
-  } else if (req.method === "DELETE") {
-    return handleDelete(req, res);
-  } else {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-}
-
-async function handleGet(req: NextApiRequest, res: NextApiResponse) {
-  try {
-    // Your GET logic here
-    const data = await prisma.example.findMany();
-    res.status(200).json(data);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching data", error: error.message });
-  }
-}
-```
-
-### 2. Authentication & Authorization
-
-```typescript
-// Check if user is authenticated
-const session = await getServerSession(req, res, authOptions);
-if (!session?.user?.id) {
-  return res.status(401).json({ message: "Unauthorized" });
-}
-
-// Check user role for authorization
-if (session.user.role !== "LECTURER" && session.user.role !== "ADMIN") {
-  return res.status(403).json({ message: "Access denied" });
-}
-```
-
-### 3. Using Prisma to Add Data
-
-```typescript
-// Create a new course
-const course = await prisma.course.create({
-  data: {
-    title: "Advanced Programming",
-    code: "CSC401",
-    creditUnit: 4,
-    description: "Advanced programming concepts",
-    type: "DEPARTMENTAL",
-    level: "LEVEL_400",
-    semester: "FIRST",
-    schoolId: "school_id_here",
-    departmentId: "department_id_here",
-  },
-});
-
-// Create a student with user relationship
-const student = await prisma.user.create({
-  data: {
-    email: "newstudent@university.edu",
-    password: await bcrypt.hash("password123", 12),
-    role: "STUDENT",
-    isActive: true,
-    student: {
-      create: {
-        name: "John Doe",
-        matricNumber: "CSC/2024/001",
-        level: "LEVEL_100",
-        departmentId: "department_id_here",
-      },
-    },
-  },
-});
-
-// Create a notification
-const notification = await prisma.notification.create({
-  data: {
-    studentId: "student_id_here",
-    title: "New Assignment Posted",
-    message: "A new assignment has been posted for your course.",
-    type: "DEADLINE",
-    isRead: false,
-    metadata: {
-      courseId: "course_id_here",
-      assignmentId: "assignment_id_here",
-    },
-  },
-});
-```
-
-### 4. Complex Queries with Relations
-
-```typescript
-// Fetch student with all related data
-const student = await prisma.user.findUnique({
-  where: { id: userId },
-  include: {
-    student: {
-      include: {
-        department: {
-          include: {
-            school: true,
-          },
-        },
-        enrollments: {
-          include: {
-            course: true,
-          },
-        },
-        results: {
-          include: {
-            course: true,
-          },
-        },
-      },
-    },
-  },
-});
-
-// Fetch courses with lecturer and department info
-const courses = await prisma.course.findMany({
-  include: {
-    department: {
-      include: {
-        school: true,
-      },
-    },
-    courseAssignments: {
-      include: {
-        lecturer: {
-          include: {
-            user: true,
-          },
-        },
-      },
-    },
-  },
-});
-```
-
-## 📊 Database Schema Overview
-
-This project defines a **university academic management system** using **Prisma (Postgres)**.  
-It supports:
-
-- Users with multiple roles (Student, Lecturer, DepartmentAdmin, SchoolAdmin, SenateAdmin)
-- Schools, Departments, Courses, Enrollments, Assessments, Results
-- Support system (tickets, responses)
-- Communication (chat, messages, virtual classes)
-- Analytics (SystemStats, SchoolStats, DepartmentStats)
-- Announcements, Notifications, Course Evaluations
-
-## 🗂 UML (Simplified)
-
-- User → Student, Lecturer, Admins
-- Faculty → Department → Course
-- Student ↔ Enrollment ↔ Course
-- Enrollment ↔ Result
-- Course → Assignment, Quiz, Content
-- ChatRoom → Messages + Participants
-- SupportTicket → SupportResponse
-
-## ⚡ Using the Hook
-
-### Generic Hook
-
-We provide a reusable hook:
-
-```ts
-const { data, loading, error, create, update, remove } =
-  useEntity<T>("endpoint");
-```
-
-# 📘 Data Models – Prisma + NextAuth
+- Build: `npm run build`
+- Start: `npm start`
+- Ensure environment variables and database are configured in production; set up reverse proxy and SSL.
 
 ---
 
-## 🔑 User
+## Section 9: User Manual
 
-Base account model (used by NextAuth for authentication).
+### 9.1 Getting Started
 
-| Field           | Type           | Notes                      |
-| --------------- | -------------- | -------------------------- |
-| `id`            | String (UUID)  | PK                         |
-| `name`          | String?        | Optional display name      |
-| `email`         | String?        | Unique, used for login     |
-| `emailVerified` | DateTime?      | Set when email is verified |
-| `password`      | String?        | Hashed with bcrypt         |
-| `image`         | String?        | Profile picture            |
-| `role`          | Enum(UserRole) | Default: STUDENT           |
-| `createdAt`     | DateTime       | Auto-set                   |
-| `updatedAt`     | DateTime       | Auto-updated               |
+- Access via browser at application URL.
+- Login with role‑specific credentials (after seeding or admin creation).
 
-**Relations:**
+### 9.2 Student Guide
 
-- Can be a **Student**, **Lecturer**, or one of the **Admin** roles.
-- Linked to **Notifications** and **SupportTickets**.
+- Profile: Update via dashboard profile page.
+- Course Registration: Select courses from available list and submit.
+- Materials: Access course materials under each course.
+- Assessments: View grades when released; transcripts via exports.
+- Chat: Join course chat rooms and send messages.
+- Feedback: Submit course evaluations and ratings.
 
----
+### 9.3 Lecturer Guide
 
-## 🎓 Student
+- Courses: Manage assigned courses and upload materials.
+- Assessments: Enter results and submit for approvals.
+- Students: View enrolled students and analytics.
 
-Represents student details.
+### 9.4 Administrator Guide
 
-| Field          | Type               | Notes                 |
-| -------------- | ------------------ | --------------------- |
-| `id`           | String             | PK, links to `User`   |
-| `matricNumber` | String             | Unique student ID     |
-| `level`        | Enum(StudentLevel) | LEVEL_100 → LEVEL_500 |
-| `departmentId` | String?            | FK → Department       |
-| `facultyId`    | String?            | FK → Faculty          |
-
-**Relations:**
-
-- Enrollments → Courses
-- Results → Final grades
-- Assignments & Quizzes submissions
+- Users: Manage users and roles.
+- Courses: Configure departments, schools, course availability.
+- Approvals: Process result approvals; export students and transcripts.
+- Analytics: View dashboards and activity logs.
 
 ---
 
-## 👨‍🏫 Lecturer
+## Section 10: Testing & Results
 
-Academic staff details.
+### 10.1 Methodology
 
-| Field          | Type    | Notes               |
-| -------------- | ------- | ------------------- |
-| `id`           | String  | PK, links to `User` |
-| `name`         | String  | Full name           |
-| `departmentId` | String? | FK → Department     |
-| `facultyId`    | String? | FK → Faculty        |
+Manual end‑to‑end checks per module; API smoke tests; export file validation.
 
-**Relations:**
+### 10.2 Test Cases (sample format)
 
-- Can teach **Courses**
-- Sets **Assignments** & **Quizzes**
+| Test ID | Module | Test Case         | Expected | Actual  | Status |
+| ------- | ------ | ----------------- | -------- | ------- | ------ |
+| TC001   | Login  | Valid credentials | Success  | Success | Pass   |
 
----
+### 10.3 Results Summary
 
-## 🏫 Faculty
+All critical paths verified; issues tracked and addressed during sprints.
 
-Top-level academic division.
+### 10.4 Performance Testing
 
-| Field  | Type   | Notes                             |
-| ------ | ------ | --------------------------------- |
-| `id`   | String | PK                                |
-| `name` | String | Example: "Faculty of Engineering" |
+Basic load checks on exports and list views.
 
-**Relations:**
+### 10.5 User Acceptance Testing
 
-- Departments
-- FacultyAdmins
+Feedback collected from team; UI/UX refinements applied.
 
 ---
 
-## 🏢 Department
+## Section 11: Challenges & Solutions
 
-Division inside a faculty.
+### 11.1 Technical Challenges
 
-| Field       | Type   | Notes                       |
-| ----------- | ------ | --------------------------- |
-| `id`        | String | PK                          |
-| `name`      | String | Example: "Computer Science" |
-| `facultyId` | String | FK → Faculty                |
+- Export file size handling → Streamed XLSX and CSV generation.
+- Role‑based access consistency → Centralized middleware and helpers.
 
-**Relations:**
+### 11.2 Integration Challenges
 
-- Courses
-- Students, Lecturers
-- DepartmentAdmins
+- Module API alignment → Shared route contracts and SWR key conventions.
 
----
+### 11.3 Resource Constraints
 
-## 📚 Course
+- Timeboxed sprints and prioritized feature set.
 
-Course offered by a department.
+### 11.4 Lessons Learned
 
-| Field          | Type   | Notes                 |
-| -------------- | ------ | --------------------- |
-| `id`           | String | PK                    |
-| `title`        | String | Example: "Algorithms" |
-| `code`         | String | Example: "CSC201"     |
-| `unit`         | Int    | Example: 3            |
-| `departmentId` | String | FK → Department       |
-| `facultyId`    | String | FK → Faculty          |
-
-**Relations:**
-
-- Enrollments (Students)
-- Assignments, Quizzes
-- Results
+Modular ownership accelerates delivery; early schema alignment reduces rework.
 
 ---
 
-## 📝 Enrollment
+## Section 12: Conclusion & Recommendations
 
-Links a student to a course.
+### 12.1 Project Summary
 
-| Field       | Type           | Notes                |
-| ----------- | -------------- | -------------------- |
-| `id`        | String         | PK                   |
-| `studentId` | String         | FK → Student         |
-| `courseId`  | String         | FK → Course          |
-| `semester`  | Enum(Semester) | FIRST, SECOND        |
-| `session`   | String         | Example: "2024/2025" |
+Delivered core academic and LMS workflows with role‑gated access and exports.
 
----
+### 12.2 System Benefits
 
-## 🧾 Result
+Improved efficiency, transparency, and user experience for all roles.
 
-Final grade for a student in a course.
+### 12.3 Future Enhancements
 
-| Field          | Type        | Notes           |
-| -------------- | ----------- | --------------- |
-| `id`           | String      | PK              |
-| `enrollmentId` | String      | FK → Enrollment |
-| `grade`        | Enum(Grade) | A–F             |
-| `score`        | Int         | Numeric mark    |
+Mobile app, real‑time video, AI‑driven analytics, richer notifications.
+
+### 12.4 Recommendations
+
+Regular maintenance, upgrade path for dependencies, user training sessions.
+
+### 12.5 Conclusion
+
+SmartLearn meets MCE 324 objectives and provides a foundation for future growth.
 
 ---
 
-## 📂 Assignment
-
-Course assignments.
-
-| Field        | Type     | Notes            |
-| ------------ | -------- | ---------------- |
-| `id`         | String   | PK               |
-| `title`      | String   | Assignment title |
-| `body`       | String   | Description      |
-| `dueDate`    | DateTime | Deadline         |
-| `courseId`   | String   | FK → Course      |
-| `lecturerId` | String   | FK → Lecturer    |
-
----
-
-## 📊 Quiz
-
-Course quizzes/exams.
-
-| Field        | Type   | Notes         |
-| ------------ | ------ | ------------- |
-| `id`         | String | PK            |
-| `title`      | String | Quiz title    |
-| `questions`  | JSON   | Question list |
-| `courseId`   | String | FK → Course   |
-| `lecturerId` | String | FK → Lecturer |
-
----
-
-## 🖥 VirtualClass
-
-Online classroom sessions.
-
-| Field         | Type     | Notes           |
-| ------------- | -------- | --------------- |
-| `id`          | String   | PK              |
-| `topic`       | String   | Topic covered   |
-| `meetingLink` | String   | Video call link |
-| `courseId`    | String   | FK → Course     |
-| `startTime`   | DateTime | Scheduled start |
-| `endTime`     | DateTime | Scheduled end   |
-
----
-
-## 🧑‍💻 Chat
-
-Course or system chat.
-
-| Field       | Type     | Notes                |
-| ----------- | -------- | -------------------- |
-| `id`        | String   | PK                   |
-| `courseId`  | String?  | Optional FK → Course |
-| `senderId`  | String   | FK → User            |
-| `message`   | String   | Chat content         |
-| `createdAt` | DateTime | Auto-set             |
-
----
-
-## 🛠 Admin Roles
-
-Separate models for management.
-
-### DepartmentAdmin
-
-- Manages **Department**
-- Linked to `User`
-
-### FacultyAdmin
-
-- Manages **Faculty**
-- Linked to `User`
-
-### SenateAdmin
-
-- Manages whole university
-- Linked to `User`
-
----
-
-## 📢 Announcement
-
-For system-wide or targeted messages.
-
-| Field        | Type            | Notes                              |
-| ------------ | --------------- | ---------------------------------- |
-| `id`         | String          | PK                                 |
-| `title`      | String          | Heading                            |
-| `body`       | String          | Content                            |
-| `targetRole` | Enum(UserRole)? | Limit to STUDENTS, LECTURERS, etc. |
-| `createdAt`  | DateTime        | Auto-set                           |
-
----
-
-## 🔔 Notification
-
-Per-user system notifications.
-
-| Field     | Type    | Notes          |
-| --------- | ------- | -------------- |
-| `id`      | String  | PK             |
-| `userId`  | String  | FK → User      |
-| `message` | String  | Text           |
-| `read`    | Boolean | Default: false |
-
----
-
-## 🆘 SupportTicket
-
-User support requests.
-
-| Field       | Type               | Notes                     |
-| ----------- | ------------------ | ------------------------- |
-| `id`        | String             | PK                        |
-| `userId`    | String             | FK → User                 |
-| `subject`   | String             | Ticket subject            |
-| `body`      | String             | Issue description         |
-| `status`    | Enum(TicketStatus) | OPEN, IN_PROGRESS, CLOSED |
-| `createdAt` | DateTime           | Auto-set                  |
-
----
-
-## 🎯 Frontend Integration
-
-### Using the Dashboard Data Hook
-
-```typescript
-import { useDashboardData } from '@/hooks/useDashboardData';
-
-const Dashboard = () => {
-  const { data, loading, error } = useDashboardData();
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <div>
-      <h1>Dashboard</h1>
-      <div className="stats">
-        {Object.entries(data.stats).map(([key, value]) => (
-          <div key={key}>
-            <span>{key}: {value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-```
-
-### Custom Hooks for Data Fetching
-
-```typescript
-// hooks/useEntity.ts - Generic entity management
-const { data, loading, error, create, update, remove } =
-  useEntity<Course>("/api/courses");
-
-// Usage
-const courses = data; // Array of courses
-await create({ title: "New Course", code: "CSC101" });
-await update(courseId, { title: "Updated Course" });
-await remove(courseId);
-```
-
-## 🚀 API Examples
-
-### Fetch a student with department & school
-
-```json
-{
-  "id": "abc123",
-  "matricNumber": "CSC/2024/001",
-  "level": "LEVEL_200",
-  "department": {
-    "id": "dep1",
-    "name": "Computer Engineering",
-    "school": { "id": "school1", "name": "SEET" }
-  }
-}
-```
-
-### Dashboard Data Response
-
-```json
-{
-  "stats": {
-    "enrolledCourses": 4,
-    "currentGPA": "3.8",
-    "pendingAssignments": 2,
-    "studyHours": "24h"
-  },
-  "recentActivity": [
-    "Completed Introduction to Algorithms quiz",
-    "Submitted assignment for Database Design"
-  ],
-  "notifications": [...],
-  "courses": [...]
-}
-```
-
-## 📝 Summary of Recent Changes
-
-### 🔧 Authentication & Data Integration (Latest Updates)
-
-#### 1. **Fixed Authentication System**
-
-- **Problem**: Users could login but dashboard showed blank data
-- **Solution**:
-  - Updated `AuthContext.tsx` to fetch complete user profile data from database
-  - Created `/api/user/profile` endpoint to provide role-specific user information
-  - Fixed role mapping between NextAuth and frontend components
-
-#### 2. **Database Seeding Improvements**
-
-- **Fixed**: `seed-comprehensive.ts` script errors
-  - Added missing `type` field for "Technical Writing" course
-  - Fixed invalid notification types (`MEETING` → `REMINDER`, `ASSIGNMENT` → `DEADLINE`)
-  - Corrected foreign key relationships for notifications
-- **Result**: Successfully created complete academic system with 4 schools, 15 departments, users, courses, and notifications
-
-#### 3. **Real-time Dashboard Data**
-
-- **Created**: Role-specific dashboard API endpoints
-  - `/api/dashboard/student` - Student statistics and course data
-  - `/api/dashboard/lecturer` - Lecturer courses and student information
-  - `/api/dashboard/admin` - System-wide or department-specific statistics
-- **Created**: `useDashboardData` hook for frontend data fetching
-- **Updated**: Dashboard components to use real database data instead of hardcoded values
-
-#### 4. **Enhanced User Profile System**
-
-- **Added**: Complete user profile fetching with role-specific data
-- **Features**:
-  - Student: matric number, department, level, enrollments
-  - Lecturer: department, course assignments, virtual classes
-  - Admin: school/department scope, management permissions
-
-#### 5. **API Route Structure**
-
-- **Organized**: API routes by functionality (auth, dashboard, seeding)
-- **Added**: Comprehensive error handling and authentication checks
-- **Implemented**: Role-based authorization for different endpoints
-
-### 🗄 Database Schema Updates
-
-#### Core Models Enhanced:
-
-- **User**: Enhanced with role-specific profile relationships
-- **Student**: Added department and school relationships
-- **Lecturer**: Added course assignment and virtual class management
-- **Course**: Enhanced with proper type and level classifications
-- **Notification**: Fixed type enum and foreign key relationships
-
-#### New Features:
-
-- **Announcements**: System-wide and targeted messaging
-- **Virtual Classes**: Online classroom management
-- **Support System**: Ticket and response management
-- **Analytics**: System, school, and department statistics
-
-### 🎨 Frontend Improvements
-
-#### Dashboard Components:
-
-- **Real Data Integration**: Dashboard now displays actual database information
-- **Role-based Views**: Different statistics and actions based on user role
-- **Loading States**: Proper loading and error handling
-- **Responsive Design**: Mobile-friendly dashboard layout
-
-#### Authentication Flow:
-
-- **Seamless Login**: NextAuth integration with database user profiles
-- **Role Detection**: Automatic role-based redirects and permissions
-- **Profile Management**: Complete user profile display with department/school info
-
-### 🔐 Security & Performance
-
-#### Authentication:
-
-- **NextAuth.js**: Secure session management
-- **Role-based Access**: Proper authorization for different user types
-- **Password Hashing**: bcrypt for secure password storage
-
-#### Database:
-
-- **Prisma ORM**: Type-safe database operations
-- **Foreign Key Constraints**: Proper data integrity
-- **Optimized Queries**: Efficient data fetching with includes
-
-### 🚀 Deployment Ready Features
-
-#### Environment Setup:
-
-- **Environment Variables**: Proper configuration management
-- **Database Migrations**: Prisma schema synchronization
-- **Seeding Scripts**: Automated test data creation
-
-#### API Documentation:
-
-- **Comprehensive README**: Complete setup and usage instructions
-- **Code Examples**: Practical examples for common operations
-- **Route Documentation**: Clear API endpoint descriptions
-
-### 📊 Current System Status
-
-✅ **Working Features:**
-
-- User authentication with NextAuth.js
-- Role-based dashboard with real data
-- Complete academic system (schools, departments, courses)
-- Student enrollment and course management
-- Lecturer course assignments and virtual classes
-- Admin system management and analytics
-- Notifications and announcements
-- Support ticket system
-
-🔄 **In Progress:**
-
-- Assignment submission and grading system
-- Real-time chat and messaging
-- Advanced analytics and reporting
-- File upload and content management
+## Section 13: Appendices
+
+### Appendix A: API Reference (by module)
+
+- Auth: `/api/auth/[...nextauth]`, `/api/auth/password-reset`
+- Student: `/api/student/*`
+- Lecturer: `/api/lecturer/*`
+- Admin: `/api/admin/*`
+- Evaluations: `/api/evaluations/*`
+- Knowledge: `/api/knowledge/*`
+- Live Chat: `/api/live-chat/*`
+- Support: `/api/support/*`
+- Analytics: `/api/analytics/*`
+
+### Appendix B: Database Schema Scripts
+
+Manage schema with Prisma: see `prisma/schema.prisma`, use `npx prisma db push` for migrations in development.
+
+### Appendix C: Configuration Files
+
+- `.env.local` example values documented in Section 8.3.
+
+### Appendix D: Error Codes Reference
+
+Return JSON errors with `message` and `code` fields (module‑specific; see API handlers).
+
+### Appendix E: Glossary
+
+See List of Abbreviations.
+
+### Appendix F: Team Roster (All Groups)
+
+| Group | Module                   | Members | Roles |
+| ----- | ------------------------ | ------- | ----- |
+| 1     | Student Information      | —       | —     |
+| 2     | Course Registration      | —       | —     |
+| 3     | LMS Content              | —       | —     |
+| 4     | Assessment & Results     | —       | —     |
+| 5     | Meetings & Chat          | —       | —     |
+| 6     | UI/UX & Integration      | —       | —     |
+| 7     | Admin & Analytics        | —       | —     |
+| 8     | Approvals                | —       | —     |
+| 9     | Feedback & Notifications | —       | —     |
+| 10    | Support & Help Center    | —       | —     |
+
+### Appendix G: Libraries and Tools
+
+- Next.js
+- React
+- TypeScript
+- Prisma
+- PostgreSQL
+- NextAuth.js
+- Tailwind CSS
+- shadcn/ui (Radix UI components)
+- lucide-react (icons)
+- SWR
+- xlsx
+- Cloudinary SDK
