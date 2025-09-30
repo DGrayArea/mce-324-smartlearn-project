@@ -25,6 +25,7 @@ export default async function handler(
   }
 
   try {
+    const { excludeUserId } = (req.body || {}) as { excludeUserId?: string };
     console.log(
       "[auto] START: Auto-registering and grading all students for",
       CURRENT_SESSION
@@ -48,8 +49,13 @@ export default async function handler(
             "LEVEL_500",
           ] as any,
         },
+        ...(excludeUserId
+          ? {
+              userId: { not: excludeUserId },
+            }
+          : {}),
       },
-      select: { id: true, level: true },
+      select: { id: true, level: true, userId: true },
     });
     console.log(`[auto] Students found: ${students.length}`);
 

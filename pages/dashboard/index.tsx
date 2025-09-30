@@ -26,9 +26,22 @@ import {
   Loader2,
 } from "lucide-react";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import { useRouter } from "next/router";
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const router = useRouter();
+  const [selectedYear, setSelectedYear] = useState<string>("2024/2025");
+  const [selectedSemester, setSelectedSemester] = useState<string>("FIRST");
   const { data: dashboardData, loading, error } = useDashboardData();
 
   const getWelcomeMessage = () => {
@@ -286,6 +299,60 @@ const Dashboard = () => {
           Here&apos;s what&apos;s happening in your learning environment today.
         </p>
       </div>
+
+      {user?.role === "STUDENT" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Session & Semester</CardTitle>
+            <CardDescription>
+              Quickly switch to view another session/semester
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col md:flex-row gap-3 md:items-center">
+              <div className="flex-1 max-w-xs">
+                <Select value={selectedYear} onValueChange={setSelectedYear}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Academic Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2024/2025">2024/2025</SelectItem>
+                    <SelectItem value="2023/2024">2023/2024</SelectItem>
+                    <SelectItem value="2022/2023">2022/2023</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1 max-w-xs">
+                <Select
+                  value={selectedSemester}
+                  onValueChange={setSelectedSemester}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Semester" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIRST">First Semester</SelectItem>
+                    <SelectItem value="SECOND">Second Semester</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Button
+                  onClick={() =>
+                    router.push(
+                      `/dashboard/grade-history?academicYear=${encodeURIComponent(
+                        selectedYear
+                      )}&semester=${encodeURIComponent(selectedSemester)}`
+                    )
+                  }
+                >
+                  View Grades
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

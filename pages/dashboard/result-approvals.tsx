@@ -46,6 +46,9 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
+import { Download, Wand2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import * as XLSX from "xlsx";
 
 interface ResultApproval {
   id: string;
@@ -114,6 +117,8 @@ const ResultApprovals = () => {
   const [action, setAction] = useState<"approve" | "reject">("approve");
   const [comments, setComments] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [excludeUserId, setExcludeUserId] = useState("");
 
   // Fetch result approvals
   const fetchApprovals = async () => {
@@ -262,6 +267,48 @@ const ResultApprovals = () => {
     );
   };
 
+  const exportToExcel = () => {
+    const rows = approvals.map((a) => ({
+      FirstName: a.result.student.user.firstName,
+      LastName: a.result.student.user.lastName,
+      Email: a.result.student.user.email,
+      Department: a.result.student.department.name,
+      Course: a.result.course.title,
+      Code: a.result.course.code,
+      AcademicYear: a.result.academicYear,
+      Semester: a.result.semester,
+      Total: a.result.totalScore,
+      Grade: a.result.grade,
+      Status: a.status,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Approvals");
+    XLSX.writeFile(wb, "result-approvals.xlsx");
+  };
+
+  const runAutoBackfill = async () => {
+    setAutoBusy(true);
+    try {
+      const res = await fetch("/api/admin/auto-register-and-grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ excludeUserId: excludeUserId || undefined }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Auto backfill failed");
+      toast({
+        title: "Done",
+        description: `Backfilled ${data.students} students for ${data.session}`,
+      });
+      fetchApprovals();
+    } catch (e: any) {
+      toast({ title: "Error", description: e.message, variant: "destructive" });
+    } finally {
+      setAutoBusy(false);
+    }
+  };
+
   const canTakeAction = (approval: ResultApproval) => {
     if (user?.role === "DEPARTMENT_ADMIN") {
       return (
@@ -307,12 +354,29 @@ const ResultApprovals = () => {
             {user.role.replace("_", " ").toLowerCase()} level
           </p>
         </div>
-        <Button onClick={fetchApprovals} disabled={loading}>
-          <RefreshCw
-            className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+        <div className="flex items-center gap-2">
+          <Input
+            placeholder="Exclude userId (optional)"
+            value={excludeUserId}
+            onChange={(e) => setExcludeUserId(e.target.value)}
+            className="hidden md:block w-64"
           />
-          Refresh
-        </Button>
+          <Button variant="outline" onClick={exportToExcel}>
+            <Download className="h-4 w-4 mr-2" /> Export Excel
+          </Button>
+          <Button onClick={runAutoBackfill} disabled={autoBusy}>
+            <Wand2
+              className={`h-4 w-4 mr-2 ${autoBusy ? "animate-spin" : ""}`}
+            />
+            Auto Backfill
+          </Button>
+          <Button onClick={fetchApprovals} disabled={loading}>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -404,7 +468,9 @@ const ResultApprovals = () => {
                     <TableHead>Course</TableHead>
                     <TableHead>Academic Year</TableHead>
                     <TableHead>Semester</TableHead>
-                    <TableHead>Score</TableHead>
+                    <TableHead>CA</TableHead>
+                    <TableHead>Exam</TableHead>
+                    <TableHead>Total</TableHead>
                     <TableHead>Grade</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -449,6 +515,12 @@ const ResultApprovals = () => {
                         <Badge variant="outline">
                           {approval.result.semester}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {(approval.result as any).caScore ?? "-"}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {(approval.result as any).examScore ?? "-"}
                       </TableCell>
                       <TableCell className="font-medium">
                         {approval.result.totalScore.toFixed(1)}%
