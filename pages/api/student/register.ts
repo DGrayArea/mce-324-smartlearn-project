@@ -35,12 +35,43 @@ export default async function handler(
 
     const year = academicYear || "2024/2025";
 
+    // Get student's department to find related departments (same logic as courses API)
+    const studentDepartment = await prisma.department.findFirst({
+      where: { id: student.departmentId },
+      select: { schoolId: true },
+    });
+
+    // Find all departments in the same school plus common service departments
+    const relatedDepartments = await prisma.department.findMany({
+      where: {
+        OR: [
+          { schoolId: studentDepartment?.schoolId }, // Same school departments
+          { name: { contains: "General Studies" } }, // GST courses
+          { name: { contains: "Mathematics" } }, // MTH courses
+          { name: { contains: "Physics" } }, // PHY courses
+          { name: { contains: "Chemistry" } }, // CHM courses
+        ],
+      },
+      select: { id: true },
+    });
+
+    const relatedDepartmentIds = relatedDepartments.map((d) => d.id);
+
+    // Debug logging
+    console.log("Student register API - Related departments:", {
+      studentDepartmentId: student.departmentId,
+      studentDepartmentSchoolId: studentDepartment?.schoolId,
+      relatedDepartments: relatedDepartments.map((d) => ({ id: d.id })),
+      relatedDepartmentIds: relatedDepartmentIds,
+      requestedCourseIds: courseIds,
+    });
+
     // Fetch selected courses to split by semester
     const selectedCourses = courseIds.length
       ? await prisma.course.findMany({
           where: {
             id: { in: courseIds },
-            departmentId: student.departmentId,
+            departmentId: { in: relatedDepartmentIds },
             level: student.level,
           },
           select: { id: true, semester: true },

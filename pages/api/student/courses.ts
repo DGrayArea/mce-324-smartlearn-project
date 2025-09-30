@@ -28,9 +28,39 @@ export default async function handler(
       return res.status(404).json({ message: "Student profile not found" });
     }
 
+    // Get student's department to find related departments
+    const studentDepartment = await prisma.department.findFirst({
+      where: { id: student.departmentId },
+      select: { schoolId: true },
+    });
+
+    // Find all departments in the same school plus common service departments
+    const relatedDepartments = await prisma.department.findMany({
+      where: {
+        OR: [
+          { schoolId: studentDepartment?.schoolId }, // Same school departments
+          { name: { contains: "General Studies" } }, // GST courses
+          { name: { contains: "Mathematics" } }, // MTH courses
+          { name: { contains: "Physics" } }, // PHY courses
+          { name: { contains: "Chemistry" } }, // CHM courses
+        ],
+      },
+      select: { id: true },
+    });
+
+    const relatedDepartmentIds = relatedDepartments.map((d) => d.id);
+
+    // Debug logging
+    console.log("Student courses API - Related departments:", {
+      studentDepartmentId: student.departmentId,
+      studentDepartmentSchoolId: studentDepartment?.schoolId,
+      relatedDepartments: relatedDepartments.map((d) => ({ id: d.id })),
+      relatedDepartmentIds: relatedDepartmentIds,
+    });
+
     const courses = await prisma.course.findMany({
       where: {
-        departmentId: student.departmentId,
+        departmentId: { in: relatedDepartmentIds },
         level: student.level,
         isActive: true,
       },
@@ -41,6 +71,13 @@ export default async function handler(
         creditUnit: true,
         semester: true,
         level: true,
+        department: {
+          select: {
+            id: true,
+            name: true,
+            code: true,
+          },
+        },
       },
       orderBy: [{ semester: "asc" }, { code: "asc" }],
     });
@@ -48,18 +85,38 @@ export default async function handler(
     const first = courses.filter((c) => c.semester === "FIRST");
     const second = courses.filter((c) => c.semester === "SECOND");
 
-    // Existing selections across registrations (for preselection)
-    const regs = await prisma.courseRegistration.findMany({
-      where: { studentId: student.id },
-      select: { id: true },
+    // Current session registration status per semester
+    const ACADEMIC_YEAR = "2024/2025";
+    const currentRegs = await prisma.courseRegistration.findMany({
+      where: { studentId: student.id, academicYear: ACADEMIC_YEAR },
+      select: { id: true, semester: true, status: true },
     });
-    const selections = regs.length
+    const regBySem = Object.fromEntries(
+      currentRegs.map((r) => [r.semester, r])
+    );
+    const selectionsCurrent = currentRegs.length
       ? await prisma.courseSelection.findMany({
-          where: { courseRegistrationId: { in: regs.map((r) => r.id) } },
-          select: { courseId: true },
+          where: { courseRegistrationId: { in: currentRegs.map((r) => r.id) } },
+          select: { courseId: true, courseRegistrationId: true },
         })
       : [];
-    const registeredSet = new Set(selections.map((s) => s.courseId));
+    const selectedFirst = new Set(
+      selectionsCurrent
+        .filter(
+          (s) =>
+            regBySem["FIRST"] && s.courseRegistrationId === regBySem["FIRST"].id
+        )
+        .map((s) => s.courseId)
+    );
+    const selectedSecond = new Set(
+      selectionsCurrent
+        .filter(
+          (s) =>
+            regBySem["SECOND"] &&
+            s.courseRegistrationId === regBySem["SECOND"].id
+        )
+        .map((s) => s.courseId)
+    );
     const sum = (arr: { creditUnit: number }[]) =>
       arr.reduce((a, b) => a + (b.creditUnit || 0), 0);
 
@@ -69,17 +126,20 @@ export default async function handler(
       firstSemester: {
         totalCredits: sum(first),
         courses: first,
+        status: regBySem["FIRST"]?.status || null,
         registeredCourseIds: first
-          .filter((c) => registeredSet.has(c.id))
+          .filter((c) => selectedFirst.has(c.id))
           .map((c) => c.id),
       },
       secondSemester: {
         totalCredits: sum(second),
         courses: second,
+        status: regBySem["SECOND"]?.status || null,
         registeredCourseIds: second
-          .filter((c) => registeredSet.has(c.id))
+          .filter((c) => selectedSecond.has(c.id))
           .map((c) => c.id),
       },
+      academicYear: ACADEMIC_YEAR,
     });
   } catch (e: any) {
     return res.status(500).json({ message: "Internal Server Error" });

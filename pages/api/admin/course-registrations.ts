@@ -28,126 +28,131 @@ export default async function handler(
     }
 
     if (req.method === "GET") {
-      // Get pending course registrations for the department
-      const pendingRegistrations = await prisma.courseRegistration.findMany({
+      const year = (req.query.academicYear as string) || "2024/2025";
+      const regs = await prisma.courseRegistration.findMany({
         where: {
+          academicYear: year,
           status: "PENDING",
-          student: {
-            departmentId: departmentAdmin.departmentId,
-          },
+          student: { departmentId: departmentAdmin.departmentId },
         },
         include: {
           student: {
-            select: {
-              id: true,
-              name: true,
-              matricNumber: true,
-              level: true,
-            },
+            select: { id: true, name: true, matricNumber: true, level: true },
           },
-          selectedCourses: {
-            include: {
-              course: {
-                select: {
-                  id: true,
-                  code: true,
-                  title: true,
-                  creditUnit: true,
-                },
-              },
-            },
-          },
+          selectedCourses: { include: { course: true } },
         },
-        orderBy: [{ submittedAt: "asc" }, { student: { matricNumber: "asc" } }],
+      });
+
+      const levelOrder: Record<string, number> = {
+        LEVEL_100: 0,
+        LEVEL_200: 1,
+        LEVEL_300: 2,
+        LEVEL_400: 3,
+        LEVEL_500: 4,
+      };
+      const byStudent: Record<string, any> = {};
+      for (const r of regs) {
+        const key = r.student.id;
+        if (!byStudent[key]) {
+          byStudent[key] = {
+            student: r.student,
+            academicYear: r.academicYear,
+            first: null as any,
+            second: null as any,
+          };
+        }
+        const pack = {
+          id: r.id,
+          semester: r.semester,
+          status: r.status,
+          submittedAt: r.submittedAt,
+          courses: r.selectedCourses.map((s) => s.course),
+        };
+        if (r.semester === "FIRST") byStudent[key].first = pack;
+        else byStudent[key].second = pack;
+      }
+      const grouped = Object.values(byStudent).sort((a: any, b: any) => {
+        const la = levelOrder[a.student.level] ?? 9;
+        const lb = levelOrder[b.student.level] ?? 9;
+        if (la !== lb) return la - lb;
+        return (a.student.matricNumber || "").localeCompare(
+          b.student.matricNumber || ""
+        );
       });
 
       return res.status(200).json({
-        registrations: pendingRegistrations,
+        grouped,
         department: departmentAdmin.department.name,
+        academicYear: year,
       });
     }
 
     if (req.method === "PUT") {
-      // Approve or reject a course registration
-      const { registrationId, action, comments } = req.body as {
-        registrationId: string;
+      const { studentId, academicYear, action, comments } = req.body as {
+        studentId: string;
+        academicYear?: string;
         action: "APPROVE" | "REJECT";
         comments?: string;
       };
 
-      if (
-        !registrationId ||
-        !action ||
-        !["APPROVE", "REJECT"].includes(action)
-      ) {
+      const year = academicYear || "2024/2025";
+      if (!studentId || !action || !["APPROVE", "REJECT"].includes(action)) {
         return res.status(400).json({
           message:
-            "Invalid request. Required: registrationId, action (APPROVE/REJECT)",
+            "Invalid request. Required: studentId, action (APPROVE/REJECT)",
         });
       }
 
-      // Verify the registration belongs to this department
-      const registration = await prisma.courseRegistration.findFirst({
+      // Convert frontend action to database enum
+      const dbStatus =
+        action === "APPROVE" ? "DEPARTMENT_APPROVED" : "DEPARTMENT_REJECTED";
+
+      const regs = await prisma.courseRegistration.findMany({
         where: {
-          id: registrationId,
-          student: {
-            departmentId: departmentAdmin.departmentId,
-          },
+          studentId,
+          academicYear: year,
+          status: "PENDING",
+          student: { departmentId: departmentAdmin.departmentId },
         },
-        include: {
-          selectedCourses: {
-            include: { course: true },
-          },
-        },
+        include: { selectedCourses: true },
       });
-
-      if (!registration) {
-        return res.status(404).json({ message: "Registration not found" });
+      if (!regs.length) {
+        return res
+          .status(404)
+          .json({ message: "No pending registrations for this student" });
       }
 
-      if (registration.status !== "PENDING") {
-        return res.status(400).json({ message: "Registration is not pending" });
-      }
-
-      // Update registration status
-      const updatedRegistration = await prisma.courseRegistration.update({
-        where: { id: registrationId },
+      await prisma.courseRegistration.updateMany({
+        where: { id: { in: regs.map((r) => r.id) } },
         data: {
-          status: action,
+          status: dbStatus,
           reviewedAt: new Date(),
           reviewedById: departmentAdmin.id,
           comments: comments || null,
         },
       });
 
-      // If approved, create enrollments
       if (action === "APPROVE") {
-        const enrollments = registration.selectedCourses.map((selection) => ({
-          studentId: registration.studentId,
-          courseId: selection.courseId,
-          academicYear: registration.academicYear,
-          semester: registration.semester,
-          courseRegistrationId: registrationId,
-          isActive: true,
-        }));
-
-        await prisma.enrollment.createMany({
-          data: enrollments,
-          skipDuplicates: true,
-        });
-
-        console.log(
-          `[admin] Approved registration ${registrationId}, created ${enrollments.length} enrollments`
+        const enrollments = regs.flatMap((r) =>
+          r.selectedCourses.map((s) => ({
+            studentId: r.studentId,
+            courseId: s.courseId,
+            academicYear: r.academicYear,
+            semester: r.semester,
+            courseRegistrationId: r.id,
+            isActive: true,
+          }))
         );
-      } else {
-        console.log(
-          `[admin] Rejected registration ${registrationId}: ${comments || "No reason provided"}`
-        );
+        if (enrollments.length)
+          await prisma.enrollment.createMany({
+            data: enrollments,
+            skipDuplicates: true,
+          });
       }
 
       return res.status(200).json({
-        message: `Registration ${action.toLowerCase()}d successfully`,
-        registration: updatedRegistration,
+        message: `Student registrations ${action.toLowerCase()}d`,
+        count: regs.length,
       });
     }
 

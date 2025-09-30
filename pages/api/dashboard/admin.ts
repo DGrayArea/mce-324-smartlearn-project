@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,13 +14,14 @@ export default async function handler(
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    if (!session?.user?.id) {
+    const userId = (session?.user as any)?.id;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Get user with admin profile - optimized query
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -212,13 +213,48 @@ export default async function handler(
         schoolId: course.schoolId,
       }));
 
+      // Calculate real average grade for school
+      const schoolResults = await prisma.result.findMany({
+        where: {
+          student: { department: { schoolId } },
+          status: "SENATE_APPROVED",
+        },
+        select: { grade: true },
+      });
+
+      const schoolGradePoints = schoolResults.map((r) => {
+        const grade = r.grade?.toUpperCase();
+        switch (grade) {
+          case "A":
+            return 4.0;
+          case "B":
+            return 3.0;
+          case "C":
+            return 2.0;
+          case "D":
+            return 1.0;
+          case "F":
+            return 0.0;
+          default:
+            return 0.0;
+        }
+      });
+
+      const schoolAverageGrade =
+        schoolGradePoints.length > 0
+          ? (
+              schoolGradePoints.reduce((sum, gp) => sum + gp, 0) /
+              schoolGradePoints.length
+            ).toFixed(1)
+          : "0.0";
+
       stats = {
         totalUsers: schoolUsers,
         activeCourses: schoolCourses,
         totalStudents: schoolStudents,
         totalLecturers: schoolLecturers,
         totalEnrollments: schoolEnrollments,
-        averageGrade: "3.7", // TODO: Calculate real average
+        averageGrade: schoolAverageGrade,
       };
 
       recentActivity = [
@@ -285,13 +321,58 @@ export default async function handler(
         schoolId: course.schoolId,
       }));
 
+      // Calculate real average grade and pass rate
+      const deptResults = await prisma.result.findMany({
+        where: {
+          student: { departmentId },
+          status: "SENATE_APPROVED",
+        },
+        select: { grade: true },
+      });
+
+      const gradePoints = deptResults.map((r) => {
+        const grade = r.grade?.toUpperCase();
+        switch (grade) {
+          case "A":
+            return 4.0;
+          case "B":
+            return 3.0;
+          case "C":
+            return 2.0;
+          case "D":
+            return 1.0;
+          case "F":
+            return 0.0;
+          default:
+            return 0.0;
+        }
+      });
+
+      const averageGrade =
+        gradePoints.length > 0
+          ? (
+              gradePoints.reduce((sum, gp) => sum + gp, 0) / gradePoints.length
+            ).toFixed(1)
+          : "0.0";
+
+      const passRate =
+        deptResults.length > 0
+          ? Math.round(
+              (deptResults.filter(
+                (r) => r.grade && !["F"].includes(r.grade.toUpperCase())
+              ).length /
+                deptResults.length) *
+                100
+            )
+          : 0;
+
       stats = {
         totalStudents: deptStudents,
         totalLecturers: deptLecturers,
         activeCourses: deptCourses,
         totalEnrollments: deptEnrollments,
-        averageGrade: "3.8", // TODO: Calculate real average
-        passRate: "85%", // TODO: Calculate real pass rate
+        averageGrade,
+        passRate: `${passRate}%`,
       };
 
       recentActivity = [

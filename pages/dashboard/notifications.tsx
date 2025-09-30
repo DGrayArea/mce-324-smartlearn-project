@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
   Card,
   CardContent,
@@ -10,26 +9,41 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Bell,
-  BellOff,
-  Check,
-  CheckCheck,
+  CheckCircle,
+  Circle,
+  Filter,
+  RefreshCw,
   Trash2,
+  Eye,
+  EyeOff,
+  Calendar,
   MessageSquare,
+  BookOpen,
   Video,
   Award,
-  FileText,
-  Calendar,
-  AlertCircle,
+  Users,
+  HelpCircle,
+  AlertTriangle,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { withDashboardLayout } from "@/lib/layoutWrappers";
 
 interface Notification {
   id: string;
-  title: string;
-  content: string;
   type: string;
+  title: string;
+  message: string;
+  data: any;
   isRead: boolean;
   createdAt: string;
 }
@@ -37,29 +51,27 @@ interface Notification {
 const Notifications = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const [filterType, setFilterType] = useState("all");
+  const [filterRead, setFilterRead] = useState("all");
 
-  const fetchNotifications = useCallback(async () => {
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const url = showUnreadOnly
-        ? "/api/notifications?unreadOnly=true"
-        : "/api/notifications";
+      const params = new URLSearchParams();
+      if (filterType !== "all") params.append("type", filterType);
+      if (filterRead !== "all") params.append("isRead", filterRead);
 
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data.notifications);
-        setUnreadCount(data.unreadCount);
+      const res = await fetch(`/api/notifications?${params.toString()}`);
+      const data = await res.json();
+
+      if (res.ok) {
+        setNotifications(data.notifications || []);
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch notifications",
-          variant: "destructive",
-        });
+        throw new Error(data.message || "Failed to fetch notifications");
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -71,66 +83,49 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [showUnreadOnly, toast]);
+  };
 
   useEffect(() => {
     fetchNotifications();
-  }, [fetchNotifications]);
+  }, [filterType, filterRead]);
 
-  const markAsRead = async (notificationIds: string[]) => {
+  const markAsRead = async (notificationId: string) => {
     try {
-      const response = await fetch("/api/notifications", {
-        method: "PUT",
+      const res = await fetch(`/api/notifications/${notificationId}`, {
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ notificationIds }),
+        body: JSON.stringify({ isRead: true }),
       });
 
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Notifications marked as read",
-        });
-        fetchNotifications();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to mark notifications as read",
-          variant: "destructive",
-        });
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((notification) =>
+            notification.id === notificationId
+              ? { ...notification, isRead: true }
+              : notification
+          )
+        );
       }
     } catch (error) {
-      console.error("Error marking notifications as read:", error);
-      toast({
-        title: "Error",
-        description: "Failed to mark notifications as read",
-        variant: "destructive",
-      });
+      console.error("Error marking notification as read:", error);
     }
   };
 
   const markAllAsRead = async () => {
     try {
-      const response = await fetch("/api/notifications", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ markAllAsRead: true }),
+      const res = await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
       });
 
-      if (response.ok) {
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.map((notification) => ({ ...notification, isRead: true }))
+        );
         toast({
           title: "Success",
           description: "All notifications marked as read",
-        });
-        fetchNotifications();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to mark all notifications as read",
-          variant: "destructive",
         });
       }
     } catch (error) {
@@ -143,69 +138,26 @@ const Notifications = () => {
     }
   };
 
-  const deleteNotifications = async (notificationIds: string[]) => {
+  const deleteNotification = async (notificationId: string) => {
     try {
-      const response = await fetch("/api/notifications", {
+      const res = await fetch(`/api/notifications/${notificationId}`, {
         method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ notificationIds }),
       });
 
-      if (response.ok) {
+      if (res.ok) {
+        setNotifications((prev) =>
+          prev.filter((notification) => notification.id !== notificationId)
+        );
         toast({
           title: "Success",
-          description: "Notifications deleted",
-        });
-        fetchNotifications();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete notifications",
-          variant: "destructive",
+          description: "Notification deleted",
         });
       }
     } catch (error) {
-      console.error("Error deleting notifications:", error);
+      console.error("Error deleting notification:", error);
       toast({
         title: "Error",
-        description: "Failed to delete notifications",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const deleteAllNotifications = async () => {
-    if (!confirm("Are you sure you want to delete all notifications?")) return;
-
-    try {
-      const response = await fetch("/api/notifications", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ deleteAll: true }),
-      });
-
-      if (response.ok) {
-        toast({
-          title: "Success",
-          description: "All notifications deleted",
-        });
-        fetchNotifications();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete all notifications",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting all notifications:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete all notifications",
+        description: "Failed to delete notification",
         variant: "destructive",
       });
     }
@@ -213,206 +165,279 @@ const Notifications = () => {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case "meeting":
-        return <Video className="h-5 w-5 text-blue-600" />;
-      case "message":
-        return <MessageSquare className="h-5 w-5 text-green-600" />;
-      case "grade":
-        return <Award className="h-5 w-5 text-yellow-600" />;
-      case "announcement":
-        return <FileText className="h-5 w-5 text-purple-600" />;
-      case "deadline":
-        return <Calendar className="h-5 w-5 text-red-600" />;
+      case "VIRTUAL_CLASS":
+        return <Video className="h-4 w-4 text-blue-600" />;
+      case "GRADE":
+        return <Award className="h-4 w-4 text-green-600" />;
+      case "COURSE_REGISTRATION":
+        return <BookOpen className="h-4 w-4 text-purple-600" />;
+      case "ANNOUNCEMENT":
+        return <MessageSquare className="h-4 w-4 text-orange-600" />;
+      case "DEADLINE":
+        return <AlertTriangle className="h-4 w-4 text-red-600" />;
+      case "REMINDER":
+        return <Bell className="h-4 w-4 text-yellow-600" />;
+      case "SYSTEM":
+        return <HelpCircle className="h-4 w-4 text-gray-600" />;
       default:
-        return <Bell className="h-5 w-5 text-gray-600" />;
+        return <Bell className="h-4 w-4 text-gray-600" />;
     }
   };
 
-  const getNotificationBadgeColor = (type: string) => {
-    switch (type) {
-      case "meeting":
-        return "bg-blue-100 text-blue-800";
-      case "message":
-        return "bg-green-100 text-green-800";
-      case "grade":
-        return "bg-yellow-100 text-yellow-800";
-      case "announcement":
-        return "bg-purple-100 text-purple-800";
-      case "deadline":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
+  const getNotificationBadge = (type: string) => {
+    const typeColors: { [key: string]: string } = {
+      VIRTUAL_CLASS: "bg-blue-100 text-blue-800",
+      GRADE: "bg-green-100 text-green-800",
+      COURSE_REGISTRATION: "bg-purple-100 text-purple-800",
+      ANNOUNCEMENT: "bg-orange-100 text-orange-800",
+      DEADLINE: "bg-red-100 text-red-800",
+      REMINDER: "bg-yellow-100 text-yellow-800",
+      SYSTEM: "bg-gray-100 text-gray-800",
+    };
+
+    return (
+      <Badge className={typeColors[type] || "bg-gray-100 text-gray-800"}>
+        {type.replace("_", " ").toLowerCase()}
+      </Badge>
+    );
   };
 
-  const formatTimeAgo = (dateString: string) => {
+  const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
 
-    if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400)
-      return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 2592000)
-      return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    return date.toLocaleDateString();
+    if (diffInHours < 1) {
+      return "Just now";
+    } else if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    } else if (diffInHours < 168) {
+      // 7 days
+      const days = Math.floor(diffInHours / 24);
+      return `${days}d ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
   };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const filteredNotifications = notifications.filter((notification) => {
+    if (filterType !== "all" && notification.type !== filterType) return false;
+    if (filterRead === "read" && !notification.isRead) return false;
+    if (filterRead === "unread" && notification.isRead) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Notifications</h2>
           <p className="text-muted-foreground">
-            Stay updated with your latest activities and important announcements
+            Stay updated with your academic activities and important
+            announcements
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex gap-2">
           {unreadCount > 0 && (
-            <Button
-              variant="outline"
-              onClick={markAllAsRead}
-              className="flex items-center space-x-2"
-            >
-              <CheckCheck className="h-4 w-4" />
-              <span>Mark All Read</span>
+            <Button variant="outline" onClick={markAllAsRead}>
+              <CheckCircle className="h-4 w-4 mr-2" />
+              Mark All Read
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={deleteAllNotifications}
-            className="flex items-center space-x-2"
-          >
-            <Trash2 className="h-4 w-4" />
-            <span>Clear All</span>
+          <Button onClick={fetchNotifications} disabled={loading}>
+            <RefreshCw
+              className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+            />
+            Refresh
           </Button>
         </div>
       </div>
 
-      <div className="flex items-center space-x-4">
-        <Button
-          variant={showUnreadOnly ? "default" : "outline"}
-          onClick={() => setShowUnreadOnly(!showUnreadOnly)}
-          className="flex items-center space-x-2"
-        >
-          {showUnreadOnly ? (
-            <>
-              <BellOff className="h-4 w-4" />
-              <span>Show All</span>
-            </>
-          ) : (
-            <>
-              <Bell className="h-4 w-4" />
-              <span>Unread Only</span>
-            </>
-          )}
-        </Button>
-        {unreadCount > 0 && (
-          <Badge variant="destructive" className="ml-2">
-            {unreadCount} unread
-          </Badge>
-        )}
+      {/* Notification Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Bell className="h-8 w-8 text-primary" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Total
+                </p>
+                <p className="text-2xl font-bold">{notifications.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Circle className="h-8 w-8 text-primary" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Unread
+                </p>
+                <p className="text-2xl font-bold">{unreadCount}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <CheckCircle className="h-8 w-8 text-primary" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Read
+                </p>
+                <p className="text-2xl font-bold">
+                  {notifications.length - unreadCount}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {loading ? (
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="h-10 w-10 bg-muted rounded-full"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-muted rounded w-3/4"></div>
-                    <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              className={`transition-all hover:shadow-md ${
-                !notification.isRead
-                  ? "border-l-4 border-l-primary bg-primary/5"
-                  : ""
-              }`}
-            >
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Type</label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="VIRTUAL_CLASS">Virtual Class</SelectItem>
+                  <SelectItem value="GRADE">Grade</SelectItem>
+                  <SelectItem value="COURSE_REGISTRATION">
+                    Course Registration
+                  </SelectItem>
+                  <SelectItem value="ANNOUNCEMENT">Announcement</SelectItem>
+                  <SelectItem value="DEADLINE">Deadline</SelectItem>
+                  <SelectItem value="REMINDER">Reminder</SelectItem>
+                  <SelectItem value="SYSTEM">System</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select value={filterRead} onValueChange={setFilterRead}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="unread">Unread</SelectItem>
+                  <SelectItem value="read">Read</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Notifications List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Notifications</CardTitle>
+          <CardDescription>
+            {filteredNotifications.length} notification
+            {filteredNotifications.length !== 1 ? "s" : ""} found
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading notifications...</p>
+            </div>
+          ) : filteredNotifications.length > 0 ? (
+            <div className="space-y-4">
+              {filteredNotifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className={`p-4 rounded-lg border transition-colors ${
+                    notification.isRead
+                      ? "bg-muted/50 border-muted"
+                      : "bg-background border-border shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className="mt-1">
+                        {notification.isRead ? (
+                          <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Circle className="h-4 w-4 text-primary" />
+                        )}
+                      </div>
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3 className="text-sm font-medium text-gray-900">
+                        <div className="flex items-center gap-2 mb-1">
+                          {getNotificationIcon(notification.type)}
+                          <h3
+                            className={`font-medium ${!notification.isRead ? "text-foreground" : "text-muted-foreground"}`}
+                          >
                             {notification.title}
                           </h3>
-                          <Badge
-                            variant="secondary"
-                            className={`text-xs ${getNotificationBadgeColor(notification.type)}`}
-                          >
-                            {notification.type}
-                          </Badge>
-                          {!notification.isRead && (
-                            <div className="h-2 w-2 bg-primary rounded-full"></div>
-                          )}
+                          {getNotificationBadge(notification.type)}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {notification.content}
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {notification.message}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {formatTimeAgo(notification.createdAt)}
-                        </p>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {formatTime(notification.createdAt)}
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-1 ml-4">
-                        {!notification.isRead && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead([notification.id])}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Check className="h-4 w-4" />
-                          </Button>
-                        )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      {!notification.isRead && (
                         <Button
-                          variant="ghost"
                           size="sm"
-                          onClick={() => deleteNotifications([notification.id])}
-                          className="h-8 w-8 p-0"
+                          variant="ghost"
+                          onClick={() => markAsRead(notification.id)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      </div>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => deleteNotification(notification.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {notifications.length === 0 && !loading && (
-        <Card>
-          <CardContent className="text-center py-8">
-            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
-            <p className="text-muted-foreground">
-              {showUnreadOnly
-                ? "You have no unread notifications."
-                : "You have no notifications yet."}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Notifications</h3>
+              <p className="text-muted-foreground">
+                No notifications found for the selected filters.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -47,35 +47,35 @@ model VerificationToken {
 }
 
 model User {
-  id                         String              @id @default(cuid())
+  id                         String                @id @default(cuid())
   name                       String?
   firstName                  String?
   lastName                   String?
-  email                      String?             @unique
-  emailVerified              DateTime?           @map("email_verified")
+  email                      String?               @unique
+  emailVerified              DateTime?             @map("email_verified")
   image                      String?
   password                   String?
   role                       UserRole?
-  isActive                   Boolean             @default(true)
-  createdAt                  DateTime            @default(now())
-  updatedAt                  DateTime            @updatedAt
+  isActive                   Boolean               @default(true)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
   accounts                   Account[]
   announcements              Announcement[]
   answerVotes                AnswerVote[]
   answers                    Answer[]
   chatParticipants           ChatParticipant[]
   departmentAdmin            DepartmentAdmin?
-  emailNotificationsReceived EmailNotification[] @relation("EmailNotificationsReceived")
-  emailNotificationsSent     EmailNotification[] @relation("EmailNotificationsSent")
+  emailNotificationsReceived EmailNotification[]   @relation("EmailNotificationsReceived")
+  emailNotificationsSent     EmailNotification[]   @relation("EmailNotificationsSent")
   feedbackForms              FeedbackForm[]
   forumCategories            ForumCategory[]
   forumPosts                 ForumPost[]
   forumThreads               ForumThread[]
   knowledgeArticles          KnowledgeArticle[]
   lecturer                   Lecturer?
-  chatMessages               LiveChatMessage[]   @relation("ChatMessages")
-  agentChatSessions          LiveChatSession[]   @relation("AgentChatSessions")
-  chatSessions               LiveChatSession[]   @relation("ChatSessions")
+  chatMessages               LiveChatMessage[]     @relation("ChatMessages")
+  agentChatSessions          LiveChatSession[]     @relation("AgentChatSessions")
+  chatSessions               LiveChatSession[]     @relation("ChatSessions")
   loginLogs                  LoginLog[]
   messages                   Message[]
   passwordResets             PasswordReset[]
@@ -86,10 +86,12 @@ model User {
   sessions                   Session[]
   student                    Student?
   supportResponses           SupportResponse[]
-  assignedTickets            SupportTicket[]     @relation("AssignedTickets")
+  assignedTickets            SupportTicket[]       @relation("AssignedTickets")
   supportTickets             SupportTicket[]
   systemLogs                 SystemLog[]
   userSessions               UserSession[]
+  communications             CourseCommunication[]
+  communicationVotes         CommunicationVote[]
 
   @@map("users")
 }
@@ -262,17 +264,17 @@ model SenateAdmin {
 }
 
 model Course {
-  id                 String               @id @default(cuid())
+  id                 String                @id @default(cuid())
   title              String
-  code               String               @unique
+  code               String                @unique
   creditUnit         Int
   description        String?
   type               CourseType
   level              StudentLevel
   semester           SemesterType
-  isActive           Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  isActive           Boolean               @default(true)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
   departmentId       String?
   schoolId           String?
   announcements      Announcement[]
@@ -284,8 +286,8 @@ model Course {
   courseAvailability CourseAvailability[]
   courseEvaluations  CourseEvaluation[]
   courseSelections   CourseSelection[]
-  department         Department?          @relation(fields: [departmentId], references: [id])
-  school             School?              @relation(fields: [schoolId], references: [id])
+  department         Department?           @relation(fields: [departmentId], references: [id])
+  school             School?               @relation(fields: [schoolId], references: [id])
   departmentCourses  DepartmentCourse[]
   enrollments        Enrollment[]
   feedbackForms      FeedbackForm[]
@@ -295,6 +297,7 @@ model Course {
   quizzes            Quiz[]
   results            Result[]
   virtualClasses     VirtualClass[]
+  communications     CourseCommunication[]
 
   @@map("courses")
 }
@@ -1437,4 +1440,70 @@ enum EmailNotificationStatus {
   FAILED
   DELIVERED
   BOUNCED
+}
+
+// Unified Communication System Models
+model CourseCommunication {
+  id           String            @id @default(cuid())
+  courseId     String
+  userId       String
+  type         CommunicationType
+  title        String?
+  content      String
+  isPinned     Boolean           @default(false)
+  isResolved   Boolean           @default(false) // For Q&A
+  parentId     String? // For replies
+  academicYear String
+  semester     SemesterType
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  course  Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent  CourseCommunication?  @relation("Replies", fields: [parentId], references: [id])
+  replies CourseCommunication[] @relation("Replies")
+  votes   CommunicationVote[]
+  files   CommunicationFile[]
+
+  @@map("course_communications")
+}
+
+model CommunicationVote {
+  id              String   @id @default(cuid())
+  communicationId String
+  userId          String
+  type            VoteType
+  createdAt       DateTime @default(now())
+
+  communication CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communicationId, userId])
+  @@map("communication_votes")
+}
+
+model CommunicationFile {
+  id              String   @id @default(cuid())
+  communicationId String
+  fileName        String
+  fileUrl         String
+  fileSize        Int
+  mimeType        String
+  createdAt       DateTime @default(now())
+
+  communication CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+
+  @@map("communication_files")
+}
+
+enum CommunicationType {
+  CHAT_MESSAGE
+  QUESTION
+  ANSWER
+  ANNOUNCEMENT
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
 }

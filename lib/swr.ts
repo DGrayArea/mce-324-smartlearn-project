@@ -186,6 +186,16 @@ export const swrKeys = {
   liveChatSessions: () => `/api/live-chat/sessions`,
   liveChatMessages: (sessionId: string) =>
     `/api/live-chat/messages?sessionId=${sessionId}`,
+
+  // Course Communications
+  accessibleCourses: () => `/api/user/accessible-courses`,
+  courseCommunications: (
+    courseId: string,
+    type: string,
+    academicYear: string,
+    semester: string
+  ) =>
+    `/api/course/communications?courseId=${courseId}&type=${type}&academicYear=${academicYear}&semester=${semester}`,
 };
 
 // Custom hooks for common patterns
@@ -227,4 +237,166 @@ export const isClientError = (error: any): boolean => {
 
 export const isServerError = (error: any): boolean => {
   return error?.status >= 500;
+};
+
+// Custom hook for course communications with optimistic updates
+export const useCourseCommunications = (
+  courseId: string | null,
+  type: string,
+  academicYear: string,
+  semester: string,
+  options?: SWRConfiguration
+) => {
+  const key = courseId
+    ? swrKeys.courseCommunications(courseId, type, academicYear, semester)
+    : null;
+
+  const { data, error, isLoading, mutate } = useSWR(key, fetcher, {
+    ...swrConfig,
+    refreshInterval: 10000, // Refresh every 10 seconds for real-time feel
+    revalidateOnFocus: true,
+    ...options,
+  });
+
+  // Optimistic update function for sending messages and replies
+  const sendMessage = async (messageData: {
+    courseId: string;
+    type: string;
+    content: string;
+    title?: string;
+    parentId?: string;
+    academicYear: string;
+    semester: string;
+    user: any;
+  }) => {
+    console.log("SWR received user data:", messageData.user);
+    // Create optimistic message
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`,
+      ...messageData,
+      user: {
+        id: messageData.user?.id || "current-user", // Use actual user ID
+        name: messageData.user?.name || "You",
+        firstName: messageData.user?.firstName || "You",
+        lastName: messageData.user?.lastName || "",
+        role: messageData.user?.role || "STUDENT",
+      },
+      createdAt: new Date().toISOString(),
+      isPinned: false,
+      isResolved: false,
+      replies: [],
+      votes: [],
+      files: [],
+      _count: { votes: 0, replies: 0 },
+    };
+
+    // Optimistically update the cache
+    mutate(
+      (currentData: any) => {
+        if (!currentData) return currentData;
+
+        // If it's a reply, add it to the parent's replies
+        if (messageData.parentId) {
+          return {
+            ...currentData,
+            communications: currentData.communications.map((comm: any) => {
+              if (comm.id === messageData.parentId) {
+                return {
+                  ...comm,
+                  replies: [optimisticMessage, ...comm.replies],
+                  _count: {
+                    ...comm._count,
+                    replies: comm._count.replies + 1,
+                  },
+                };
+              }
+              return comm;
+            }),
+          };
+        } else {
+          // If it's a new message/question, add it to the end for chat messages
+          // or to the beginning for Q&A messages
+          const updatedCommunications = [
+            ...currentData.communications,
+            optimisticMessage,
+          ];
+
+          // Don't sort here - let the frontend handle sorting based on activeTab
+
+          return {
+            ...currentData,
+            communications: updatedCommunications,
+          };
+        }
+      },
+      false // Don't revalidate immediately
+    );
+
+    try {
+      // Send the actual request
+      const response = await fetch("/api/course/communications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(messageData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to send message");
+      }
+
+      const result = await response.json();
+
+      // Update the cache with the real data
+      mutate(
+        (currentData: any) => {
+          if (!currentData) return currentData;
+
+          // If it's a reply, update it within the parent's replies
+          if (messageData.parentId) {
+            return {
+              ...currentData,
+              communications: currentData.communications.map((comm: any) => {
+                if (comm.id === messageData.parentId) {
+                  return {
+                    ...comm,
+                    replies: comm.replies.map((reply: any) =>
+                      reply.id === optimisticMessage.id ? result : reply
+                    ),
+                  };
+                }
+                return comm;
+              }),
+            };
+          } else {
+            // If it's a new message/question, update it in the main list and sort
+            const updatedCommunications = currentData.communications.map(
+              (comm: any) => (comm.id === optimisticMessage.id ? result : comm)
+            );
+
+            // Don't sort here - let the frontend handle sorting based on activeTab
+
+            return {
+              ...currentData,
+              communications: updatedCommunications,
+            };
+          }
+        },
+        true // Revalidate to get the latest data
+      );
+
+      return result;
+    } catch (error) {
+      // Revert the optimistic update on error
+      mutate();
+      throw error;
+    }
+  };
+
+  return {
+    data: data?.communications || [],
+    error,
+    isLoading,
+    mutate,
+    sendMessage,
+  };
 };

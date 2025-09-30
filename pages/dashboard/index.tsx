@@ -33,11 +33,14 @@ const Dashboard = () => {
 
   const getWelcomeMessage = () => {
     const firstName = user?.name?.split(" ")[0] || "User";
+    const fullName = user?.name || "";
+
     switch (user?.role) {
       case "STUDENT":
         return `Welcome back, ${firstName}! Ready to continue your learning journey?`;
       case "LECTURER":
-        return `Welcome back, ${firstName}! Your students are waiting for new content.`;
+        const title = fullName.toLowerCase().includes("dr") ? "Dr" : "Engr";
+        return `Welcome back, ${title} ${firstName}! Your students are waiting for new content.`;
       case "DEPARTMENT_ADMIN":
       case "SCHOOL_ADMIN":
       case "SENATE_ADMIN":

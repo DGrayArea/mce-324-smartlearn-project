@@ -127,15 +127,16 @@ const ContentLibrary = () => {
   const [selectedCourse, setSelectedCourse] = useState("all");
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
-const handleDelete = (item: ContentItem) => {
-  setContent((prev) => prev.filter((c) => c.id !== item.id));
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const handleDelete = (item: ContentItem) => {
+    setContent((prev) => prev.filter((c) => c.id !== item.id));
 
-  toast({
-    title: "Content Deleted",
-    description: `${item.title} has been removed from the library.`,
-    variant: "destructive",
-  });
-};
+    toast({
+      title: "Content Deleted",
+      description: `${item.title} has been removed from the library.`,
+      variant: "destructive",
+    });
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -168,10 +169,9 @@ const handleDelete = (item: ContentItem) => {
     );
   };
 
- const [content, setContent] = useState<ContentItem[]>(contentLibrary);
+  const [content, setContent] = useState<ContentItem[]>(contentLibrary);
 
-const filteredContent = content.filter((item) => {
-
+  const filteredContent = content.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -212,12 +212,66 @@ const filteredContent = content.filter((item) => {
     setUploadFile(null);
   };
 
-  const handleDownload = (item: ContentItem) => {
-    // Simulate file download
-    toast({
-      title: "Download Started",
-      description: `Downloading ${item.title}...`,
-    });
+  const handleDownload = async (item: ContentItem) => {
+    setDownloading(item.id);
+    try {
+      // Track download and get file info
+      const res = await fetch("/api/student/content/download", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contentId: item.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Download failed");
+      }
+
+      // Fetch the file as a blob to ensure proper download
+      const fileResponse = await fetch(data.fileUrl);
+      const blob = await fileResponse.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = data.fileName || item.title;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL
+      window.URL.revokeObjectURL(url);
+
+      // Update the download count in the UI
+      setContent((prevContent) =>
+        prevContent.map((content) =>
+          content.id === item.id
+            ? { ...content, downloadCount: data.downloadCount }
+            : content
+        )
+      );
+
+      toast({
+        title: "Download Complete",
+        description: `${item.title} has been downloaded successfully.`,
+      });
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast({
+        title: "Download Failed",
+        description:
+          error instanceof Error ? error.message : "Failed to download file",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloading(null);
+    }
   };
 
   const handlePreview = (item: ContentItem) => {
@@ -377,74 +431,87 @@ const filteredContent = content.filter((item) => {
       </div>
 
       {/* Content Grid */}
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-  {filteredContent.map((item) => (
-    <Card key={item.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center space-x-2">
-            {getTypeIcon(item.type)}
-            {getTypeBadge(item.type)}
-          </div>
-        </div>
-      </CardHeader>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredContent.map((item) => (
+          <Card key={item.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  {getTypeIcon(item.type)}
+                  {getTypeBadge(item.type)}
+                </div>
+              </div>
+            </CardHeader>
 
-      <CardContent className="space-y-3">
-        {/* Title occupies full width */}
-        <CardTitle className="text-lg font-semibold">{item.title}</CardTitle>
-        {/* Course code */}
-        <CardDescription>{item.course}</CardDescription>
+            <CardContent className="space-y-3">
+              {/* Title occupies full width */}
+              <CardTitle className="text-lg font-semibold">
+                {item.title}
+              </CardTitle>
+              {/* Course code */}
+              <CardDescription>{item.course}</CardDescription>
 
-        <p className="text-sm text-muted-foreground">{item.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {item.description}
+              </p>
 
-        <div className="flex flex-wrap gap-1">
-          {item.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-xs">
-              {tag}
-            </Badge>
-          ))}
-        </div>
+              <div className="flex flex-wrap gap-1">
+                {item.tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
 
-        <div className="text-xs text-muted-foreground space-y-1">
-          <div>Uploaded by {item.uploadedBy}</div>
-          <div>
-            {item.uploadDate} • {item.size} • {item.downloads} downloads
-          </div>
-        </div>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <div>Uploaded by {item.uploadedBy}</div>
+                <div>
+                  {item.uploadDate} • {item.size} • {item.downloads} downloads
+                </div>
+              </div>
 
-        {/* Buttons row */}
-        <div className="flex space-x-2 pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={() => handleDownload(item)}
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Download
-          </Button>
+              {/* Buttons row */}
+              <div className="flex space-x-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleDownload(item)}
+                  disabled={downloading === item.id}
+                >
+                  {downloading === item.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </>
+                  )}
+                </Button>
 
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleDelete(item)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDelete(item)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => handlePreview(item)}
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  ))}
-</div>
-
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handlePreview(item)}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };

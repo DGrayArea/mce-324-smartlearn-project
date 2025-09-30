@@ -61,10 +61,10 @@ const navigationItems: NavItem[] = [
     roles: ["STUDENT"],
   },
   {
-    title: "Course Management",
+    title: "Course Registrations",
     href: "/dashboard/courses",
-    icon: BookOpen,
-    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
+    icon: ClipboardCheck,
+    roles: ["DEPARTMENT_ADMIN"],
   },
   {
     title: "Assignments",
@@ -83,42 +83,6 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/meetings",
     icon: Video,
     roles: ["LECTURER"],
-  },
-  {
-    title: "Chat",
-    href: "/dashboard/student/chat",
-    icon: MessageSquare,
-    roles: ["STUDENT"],
-  },
-  {
-    title: "Messages & Forums",
-    href: "/dashboard/messages",
-    icon: MessageSquare,
-    roles: ["LECTURER"],
-  },
-  {
-    title: "Discussion Forums",
-    href: "/dashboard/forums",
-    icon: MessageSquare,
-    roles: [
-      "STUDENT",
-      "LECTURER",
-      "DEPARTMENT_ADMIN",
-      "SCHOOL_ADMIN",
-      "SENATE_ADMIN",
-    ],
-  },
-  {
-    title: "Q&A Boards",
-    href: "/dashboard/qa",
-    icon: HelpCircle,
-    roles: [
-      "STUDENT",
-      "LECTURER",
-      "DEPARTMENT_ADMIN",
-      "SCHOOL_ADMIN",
-      "SENATE_ADMIN",
-    ],
   },
   {
     title: "Course Evaluations",
@@ -140,9 +104,39 @@ const navigationItems: NavItem[] = [
   },
   {
     title: "Content Library",
-    href: "/dashboard/content",
+    href: "/dashboard/content-library",
     icon: FileText,
     roles: ["LECTURER"],
+  },
+  {
+    title: "Virtual Meetings",
+    href: "/dashboard/virtual-meetings",
+    icon: Video,
+    roles: ["LECTURER"],
+  },
+  {
+    title: "Result Approvals",
+    href: "/dashboard/result-approvals",
+    icon: ClipboardCheck,
+    roles: ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"],
+  },
+  {
+    title: "Grade History",
+    href: "/dashboard/grade-history",
+    icon: Award,
+    roles: ["STUDENT"],
+  },
+  {
+    title: "Notifications",
+    href: "/dashboard/notifications",
+    icon: Bell,
+    roles: [
+      "STUDENT",
+      "LECTURER",
+      "DEPARTMENT_ADMIN",
+      "SCHOOL_ADMIN",
+      "SENATE_ADMIN",
+    ],
   },
   {
     title: "Student Analytics",
@@ -151,10 +145,16 @@ const navigationItems: NavItem[] = [
     roles: ["LECTURER"],
   },
   {
-    title: "Course Registrations",
-    href: "/dashboard/admin/course-registrations",
-    icon: ClipboardCheck,
+    title: "Course Assignments",
+    href: "/dashboard/course-assignments",
+    icon: UserCheck,
     roles: ["DEPARTMENT_ADMIN"],
+  },
+  {
+    title: "Course Communication",
+    href: "/dashboard/course-communication",
+    icon: MessageSquare,
+    roles: ["STUDENT", "LECTURER", "DEPARTMENT_ADMIN"],
   },
   {
     title: "Academic Sessions",
@@ -277,27 +277,9 @@ const navigationItems: NavItem[] = [
     ],
   },
   {
-    title: "Live Chat",
-    href: "/dashboard/live-chat",
-    icon: MessageSquare,
-    roles: ["STUDENT", "DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"],
-  },
-  {
     title: "Contact Support",
     href: "/contact",
     icon: HelpCircle,
-    roles: [
-      "STUDENT",
-      "LECTURER",
-      "SCHOOL_ADMIN",
-      "DEPARTMENT_ADMIN",
-      "SENATE_ADMIN",
-    ],
-  },
-  {
-    title: "Chat Rooms",
-    href: "/dashboard/chatrooms",
-    icon: MessageSquare,
     roles: [
       "STUDENT",
       "LECTURER",
@@ -367,7 +349,7 @@ export const DashboardSidebar = () => {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen sticky top-0">
       {/* Role Badge */}
       <div className="p-4 border-b">
         <div
@@ -397,7 +379,7 @@ export const DashboardSidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 py-6 space-y-2">
+      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
         {filteredItems.map((item) => {
           const isActive =
             pathname === item.href ||

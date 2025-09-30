@@ -174,7 +174,8 @@ const Profile = () => {
                   ?.split(" ")
                   .map((n) => n[0])
                   .join("")
-                  .toUpperCase()}
+                  .toUpperCase()
+                  .substring(0, 3)}
               </AvatarFallback>
             </Avatar>
             <CardTitle>{user?.name}</CardTitle>

@@ -135,7 +135,8 @@ export const DashboardLayout = ({
                           ?.split(" ")
                           .map((n) => n[0])
                           .join("")
-                          .toUpperCase()}
+                          .toUpperCase()
+                          .substring(0, 3)}
                       </span>
                     </AvatarFallback>
                   </Avatar>

@@ -1120,6 +1120,110 @@ export default async function handler(
       }
     }
 
+    // Create departments for different course types
+    console.log("[seed] Creating departments for course types...");
+    const getDept = await prisma.department.upsert({
+      where: {
+        name_schoolId: {
+          name: "General Engineering Technology",
+          schoolId: seet.id,
+        },
+      },
+      update: {},
+      create: {
+        name: "General Engineering Technology",
+        code: "GET",
+        schoolId: seet.id,
+      },
+    });
+
+    const eleDept = await prisma.department.upsert({
+      where: {
+        name_schoolId: { name: "Electrical Engineering", schoolId: seet.id },
+      },
+      update: {},
+      create: {
+        name: "Electrical Engineering",
+        code: "ELE",
+        schoolId: seet.id,
+      },
+    });
+
+    const eetDept = await prisma.department.upsert({
+      where: {
+        name_schoolId: {
+          name: "Electrical Engineering Technology",
+          schoolId: seet.id,
+        },
+      },
+      update: {},
+      create: {
+        name: "Electrical Engineering Technology",
+        code: "EET",
+        schoolId: seet.id,
+      },
+    });
+
+    const cpeDept = await prisma.department.upsert({
+      where: {
+        name_schoolId: { name: "Computer Engineering", schoolId: seet.id },
+      },
+      update: {},
+      create: {
+        name: "Computer Engineering",
+        code: "CPE",
+        schoolId: seet.id,
+      },
+    });
+
+    const gstDept = await prisma.department.upsert({
+      where: { name_schoolId: { name: "General Studies", schoolId: seet.id } },
+      update: {},
+      create: {
+        name: "General Studies",
+        code: "GST",
+        schoolId: seet.id,
+      },
+    });
+
+    const otherDept = await prisma.department.upsert({
+      where: {
+        name_schoolId: { name: "Other Departments", schoolId: seet.id },
+      },
+      update: {},
+      create: {
+        name: "Other Departments",
+        code: "OTH",
+        schoolId: seet.id,
+      },
+    });
+
+    // Function to determine department based on course code
+    const getDepartmentId = (code: string) => {
+      if (code.startsWith("MCE")) return mce.id;
+      if (code.startsWith("GET")) return getDept.id;
+      if (code.startsWith("ELE")) return eleDept.id;
+      if (code.startsWith("EET")) return eetDept.id;
+      if (code.startsWith("CPE")) return cpeDept.id;
+      if (code.startsWith("GST")) return gstDept.id;
+      if (
+        code.startsWith("CHM") ||
+        code.startsWith("MTH") ||
+        code.startsWith("PHY")
+      )
+        return otherDept.id;
+      if (
+        code.startsWith("ENT") ||
+        code.startsWith("MGT") ||
+        code.startsWith("DBM") ||
+        code.startsWith("EEE") ||
+        code.startsWith("SIW") ||
+        code.startsWith("IOT")
+      )
+        return otherDept.id;
+      return otherDept.id;
+    };
+
     // Use balanced list for upsert
     console.log("[seed] Upserting balanced courses to DB...");
     await Promise.all(
@@ -1132,7 +1236,7 @@ export default async function handler(
             type: "DEPARTMENTAL",
             level: c.level,
             semester: c.semester,
-            departmentId: mce.id,
+            departmentId: getDepartmentId(c.code),
             isActive: true,
           },
           create: {
@@ -1142,19 +1246,21 @@ export default async function handler(
             type: "DEPARTMENTAL",
             level: c.level,
             semester: c.semester,
-            departmentId: mce.id,
+            departmentId: getDepartmentId(c.code),
             isActive: true,
           },
         })
       )
     );
 
-    // Deactivate courses that are not in the balanced list
-    const balancedCodes = new Set(balanced.map((c) => c.code));
+    // Deactivate MCE courses that are not in the balanced list
+    const balancedMceCodes = new Set(
+      balanced.filter((c) => c.code.startsWith("MCE")).map((c) => c.code)
+    );
     await prisma.course.updateMany({
       where: {
         departmentId: mce.id,
-        code: { notIn: Array.from(balancedCodes) },
+        code: { notIn: Array.from(balancedMceCodes) },
       },
       data: { isActive: false },
     });

@@ -38,6 +38,14 @@ import {
   Send,
 } from "lucide-react";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface SupportTicket {
   id: string;
@@ -120,6 +128,7 @@ const Support = () => {
     : "U";
   const [searchQuery, setSearchQuery] = useState("");
   const [chatMessage, setChatMessage] = useState("");
+  const [issueType, setIssueType] = useState<string>("GENERAL");
   const [chatMessages, setChatMessages] = useState([
     {
       id: "1",
@@ -138,6 +147,17 @@ const Support = () => {
   });
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+    category: "SUPPORT",
+  });
+
+  const embedChatUrl = process.env.NEXT_PUBLIC_CHAT_IFRAME_URL;
+  const libreChatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL;
 
   const getStatusBadge = (status: string) => {
     const variants = {
@@ -174,39 +194,52 @@ const Support = () => {
       item.answer.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSendChatMessage = useCallback(() => {
-    if (chatMessage.trim()) {
-      const displayName = user?.name || "User";
+  const handleSendChatMessage = useCallback(async () => {
+    const text = chatMessage.trim();
+    if (!text) return;
+    const displayName = user?.name || "You";
 
-      const newMessage = {
-        id: Date.now().toString(),
-        sender: displayName,
-        content: chatMessage,
-        timestamp: new Date().toLocaleTimeString(),
-        isBot: false,
-      };
+    const userMsg = {
+      id: Date.now().toString(),
+      sender: displayName,
+      content: text,
+      timestamp: new Date().toLocaleTimeString(),
+      isBot: false,
+    };
+    setChatMessages((prev) => [...prev, userMsg]);
+    setChatMessage("");
 
-      setChatMessages((prev) => [...prev, newMessage]);
-      setChatMessage("");
-
-      // Simulate AI response
-      setTimeout(() => {
-        const aiResponse = {
-          id: (Date.now() + 1).toString(),
-          sender: "AI Assistant",
-          content: `I understand you're asking about "${chatMessage}". This is a demo response. In a real implementation, this would connect to an AI service.`,
-          timestamp: new Date().toLocaleTimeString(),
-          isBot: true,
-        };
-        setChatMessages((prev) => [...prev, aiResponse]);
-      }, 1000);
-
-      toast({
-        title: "Message Sent",
-        description: "Your message has been sent to the AI assistant.",
+    try {
+      const res = await fetch("/api/assistant/qa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text, issueType }),
       });
+      const data = await res.json();
+      const reply =
+        typeof data?.answer === "string"
+          ? data.answer
+          : "I couldn't find an answer. Please check the User Manual in Help Center.";
+      const botMsg = {
+        id: (Date.now() + 1).toString(),
+        sender: "AI Assistant",
+        content: reply,
+        timestamp: new Date().toLocaleTimeString(),
+        isBot: true,
+      };
+      setChatMessages((prev) => [...prev, botMsg]);
+    } catch (e) {
+      const botMsg = {
+        id: (Date.now() + 1).toString(),
+        sender: "AI Assistant",
+        content:
+          "There was a problem answering right now. Please try again or download the User Manual from Help Center.",
+        timestamp: new Date().toLocaleTimeString(),
+        isBot: true,
+      };
+      setChatMessages((prev) => [...prev, botMsg]);
     }
-  }, [chatMessage, user, toast]);
+  }, [chatMessage, user, issueType]);
 
   const handleCreateTicket = useCallback(() => {
     if (newTicket.title.trim() && newTicket.description.trim()) {
@@ -255,6 +288,36 @@ const Support = () => {
       description: "Support session booking initiated (demo mode).",
     });
   }, [toast]);
+
+  const handleSubmitContact = async () => {
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(contactForm),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast({ title: "Message sent", description: data.message });
+        setIsContactOpen(false);
+        setContactForm({
+          name: "",
+          email: "",
+          subject: "",
+          message: "",
+          category: "SUPPORT",
+        });
+      } else {
+        throw new Error(data.message || "Failed to send message");
+      }
+    } catch (e) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -369,6 +432,50 @@ const Support = () => {
                 </ul>
               </CardContent>
             </Card>
+
+            {/* User Manual download */}
+            <Card className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <BookOpen className="h-8 w-8 text-primary mb-2" />
+                <CardTitle>User Manual</CardTitle>
+                <CardDescription>
+                  Download the full platform user manual (PDF)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <a
+                  href={
+                    "/" + encodeURIComponent("User Manual Second draft.pdf")
+                  }
+                  download
+                >
+                  <Button className="w-full">Download User Manual</Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            {/* Contact Support visible only to admins */}
+            {(user?.role === "DEPARTMENT_ADMIN" ||
+              user?.role === "SCHOOL_ADMIN" ||
+              user?.role === "SENATE_ADMIN") && (
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <MessageSquare className="h-8 w-8 text-primary mb-2" />
+                  <CardTitle>Contact Support</CardTitle>
+                  <CardDescription>
+                    Reach out directly to the support team
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    className="w-full"
+                    onClick={() => setIsContactOpen(true)}
+                  >
+                    Open Contact Form
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -401,61 +508,135 @@ const Support = () => {
         </TabsContent>
 
         <TabsContent value="chatbot" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Bot className="h-5 w-5 mr-2" />
-                AI Assistant
-              </CardTitle>
-              <CardDescription>
-                Get instant help with your questions
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4 h-96 overflow-y-auto bg-muted/20">
-                <div className="space-y-4">
-                  {chatMessages.map((msg) => (
-                    <div key={msg.id} className="flex items-start space-x-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
-                          {msg.isBot ? "AI" : userInitials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div
-                        className={`rounded-lg p-3 max-w-xs ${msg.isBot ? "bg-secondary" : "bg-primary text-primary-foreground"}`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium">
-                            {msg.sender}
-                          </span>
-                          <span className="text-xs opacity-70">
-                            {msg.timestamp}
-                          </span>
-                        </div>
-                        <p className="text-sm">{msg.content}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Input
-                  placeholder="Type your message..."
-                  value={chatMessage}
-                  onChange={(e) => setChatMessage(e.target.value)}
-                  onKeyPress={(e) =>
-                    e.key === "Enter" && handleSendChatMessage()
-                  }
+          {embedChatUrl ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Bot className="h-5 w-5 mr-2" />
+                  AI Assistant (Embedded)
+                </CardTitle>
+                <CardDescription>
+                  Embedded external chatbot for live demo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <iframe
+                  src={embedChatUrl}
+                  title="Embedded Chatbot"
+                  className="w-full h-[600px] rounded-md border"
                 />
-                <Button
-                  onClick={handleSendChatMessage}
-                  disabled={!chatMessage.trim()}
-                >
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : libreChatUrl ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Bot className="h-5 w-5 mr-2" />
+                  AI Assistant (LibreChat)
+                </CardTitle>
+                <CardDescription>
+                  Embedded LibreChat for live demo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <iframe
+                  src={libreChatUrl}
+                  title="LibreChat"
+                  className="w-full h-[600px] rounded-md border"
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Bot className="h-5 w-5 mr-2" />
+                  AI Assistant
+                </CardTitle>
+                <CardDescription>
+                  Get instant help with your questions (demo)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Issue Type</Label>
+                    <Select value={issueType} onValueChange={setIssueType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="GENERAL">General</SelectItem>
+                        <SelectItem value="ACCOUNT">Account</SelectItem>
+                        <SelectItem value="COURSE_REG">
+                          Course Registration
+                        </SelectItem>
+                        <SelectItem value="CONTENT_DOWNLOAD">
+                          Content Download
+                        </SelectItem>
+                        <SelectItem value="VIRTUAL_MEETING">
+                          Virtual Meeting
+                        </SelectItem>
+                        <SelectItem value="CHAT_QA">Chat & Q&A</SelectItem>
+                        <SelectItem value="GRADES_RESULTS">
+                          Grades & Results
+                        </SelectItem>
+                        <SelectItem value="NOTIFICATIONS">
+                          Notifications
+                        </SelectItem>
+                        <SelectItem value="SUPPORT_TICKET">
+                          Support Ticket
+                        </SelectItem>
+                        <SelectItem value="TECHNICAL">Technical</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="border rounded-lg p-4 h-96 overflow-y-auto bg-muted/20">
+                  <div className="space-y-4">
+                    {chatMessages.map((msg) => (
+                      <div key={msg.id} className="flex items-start space-x-2">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            {msg.isBot ? "AI" : userInitials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div
+                          className={`rounded-lg p-3 max-w-xs ${msg.isBot ? "bg-secondary" : "bg-primary text-primary-foreground"}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium">
+                              {msg.sender}
+                            </span>
+                            <span className="text-xs opacity-70">
+                              {msg.timestamp}
+                            </span>
+                          </div>
+                          <p className="text-sm">{msg.content}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex space-x-2">
+                  <Input
+                    placeholder="Type your message..."
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    onKeyPress={(e) =>
+                      e.key === "Enter" && handleSendChatMessage()
+                    }
+                  />
+                  <Button
+                    onClick={handleSendChatMessage}
+                    disabled={!chatMessage.trim()}
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="tickets" className="space-y-6">
@@ -718,6 +899,74 @@ const Support = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Contact Support Dialog (Admins only) */}
+      {(user?.role === "DEPARTMENT_ADMIN" ||
+        user?.role === "SCHOOL_ADMIN" ||
+        user?.role === "SENATE_ADMIN") && (
+        <Dialog open={isContactOpen} onOpenChange={setIsContactOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Contact Support</DialogTitle>
+              <DialogDescription>
+                Send a message to the platform support team
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-name">Name</Label>
+                  <Input
+                    id="contact-name"
+                    value={contactForm.name}
+                    onChange={(e) =>
+                      setContactForm((p) => ({ ...p, name: e.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email">Email</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(e) =>
+                      setContactForm((p) => ({ ...p, email: e.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact-subject">Subject</Label>
+                <Input
+                  id="contact-subject"
+                  value={contactForm.subject}
+                  onChange={(e) =>
+                    setContactForm((p) => ({ ...p, subject: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contact-message">Message</Label>
+                <Textarea
+                  id="contact-message"
+                  className="min-h-[120px]"
+                  value={contactForm.message}
+                  onChange={(e) =>
+                    setContactForm((p) => ({ ...p, message: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsContactOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSubmitContact}>Send</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };

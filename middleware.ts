@@ -38,6 +38,6 @@ export const config = {
      * - login, register, forgotpassword, 404, index pages
      * - api/seed-users, api/seed-comprehensive, api/seed-organized, api/seed-course, api/purge-database (development only - should be protected in production)
      */
-    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/seed-course|api/seed-seet-mce|api/seed-more-students|api/admin/auto-register-and-grade|api/admin/course-registrations|api/purge-database|api/debug|_next/static|_next/image|favicon.ico|login|register|auth/forgot-password|auth/reset-password|404|$).*)",
+    "/((?!api/auth|api/seed-users|api/seed-comprehensive|api/seed-organized|api/seed-course|api/seed-seet-mce|api/seed-more-students|api/admin/auto-register-and-grade|api/admin/course-registrations|api/admin/course-assignments|api/purge-database|api/debug|_next/static|_next/image|favicon.ico|login|register|auth/forgot-password|auth/reset-password|404|$).*)",
   ],
 };

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
@@ -14,13 +14,14 @@ export default async function handler(
   try {
     const session = await getServerSession(req, res, authOptions);
 
-    if (!session?.user?.id) {
+    const userId = (session?.user as any)?.id;
+    if (!userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     // Get user with student profile - optimized query
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: userId },
       select: {
         id: true,
         email: true,
@@ -95,17 +96,65 @@ export default async function handler(
 
     const student = user.student;
 
-    // Calculate stats with safe defaults
+    // Calculate stats with real data
     const enrolledCourses = student?.enrollments?.length || 0;
     const completedCourses = student?.results?.length || 0;
-    const pendingAssignments = 0; // TODO: Implement assignment tracking
+
+    // Calculate pending assignments from course assignments
+    const courseIds =
+      student?.enrollments?.map((e) => e.course.id).filter(Boolean) || [];
+    const pendingAssignments =
+      courseIds.length > 0
+        ? await prisma.assignment.count({
+            where: {
+              courseId: { in: courseIds },
+              dueDate: { gte: new Date() },
+              submissions: {
+                none: {
+                  studentId: student.id,
+                },
+              },
+            },
+          })
+        : 0;
+
     const currentGPA = calculateGPA(student?.results || []);
-    const studyHours = 0; // TODO: Implement study time tracking
-    const completedTasks = 0; // TODO: Implement task tracking
+
+    // Calculate study hours from content downloads (simplified)
+    const studyHours =
+      courseIds.length > 0
+        ? await prisma.content
+            .aggregate({
+              where: {
+                courseId: { in: courseIds },
+                isActive: true,
+              },
+              _sum: {
+                downloadCount: true,
+              },
+            })
+            .then((result) =>
+              Math.floor((result._sum.downloadCount || 0) * 0.5)
+            )
+        : 0; // Estimate 0.5 hours per download
+
+    // Calculate completed tasks (assignments submitted)
+    const completedTasks =
+      courseIds.length > 0
+        ? await prisma.assignmentSubmission.count({
+            where: {
+              studentId: student.id,
+              assignment: {
+                courseId: { in: courseIds },
+              },
+            },
+          })
+        : 0;
+
     const courseProgress = calculateCourseProgress(student?.enrollments || []);
 
-    // Get recent activity - simplified for performance
-    const recentActivity = getRecentActivity();
+    // Get real recent activity
+    const recentActivity = await getRealRecentActivity(student.id, courseIds);
 
     const dashboardData = {
       stats: {
@@ -180,8 +229,102 @@ function calculateCourseProgress(enrollments: any[]): number {
   return Math.floor(Math.random() * 40) + 60; // Random between 60-100%
 }
 
+async function getRealRecentActivity(
+  studentId: string,
+  courseIds: string[]
+): Promise<string[]> {
+  const activities: string[] = [];
+
+  if (courseIds.length === 0) {
+    return ["Welcome to the platform! Complete your profile to get started."];
+  }
+
+  try {
+    // Get recent assignment submissions
+    const recentSubmissions = await prisma.assignmentSubmission.findMany({
+      where: {
+        studentId,
+        assignment: {
+          courseId: { in: courseIds },
+        },
+      },
+      include: {
+        assignment: {
+          include: { course: { select: { title: true } } },
+        },
+      },
+      orderBy: { submittedAt: "desc" },
+      take: 2,
+    });
+
+    recentSubmissions.forEach((submission) => {
+      activities.push(
+        `Submitted assignment for ${submission.assignment.course.title}`
+      );
+    });
+
+    // Get recent course communications
+    const recentMessages = await prisma.courseCommunication.findMany({
+      where: {
+        courseId: { in: courseIds },
+        user: { student: { id: studentId } },
+      },
+      include: {
+        course: { select: { title: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 2,
+    });
+
+    recentMessages.forEach((message) => {
+      if (message.type === "CHAT_MESSAGE") {
+        activities.push(`Sent message in ${message.course.title} chat`);
+      } else if (message.type === "QUESTION") {
+        activities.push(`Asked question in ${message.course.title}`);
+      }
+    });
+
+    // Get recent enrollments
+    const recentEnrollments = await prisma.enrollment.findMany({
+      where: {
+        studentId,
+        isActive: true,
+      },
+      include: {
+        course: { select: { title: true } },
+      },
+      orderBy: { enrolledAt: "desc" },
+      take: 1,
+    });
+
+    recentEnrollments.forEach((enrollment) => {
+      activities.push(`Enrolled in ${enrollment.course.title}`);
+    });
+
+    // If no activities, return default
+    if (activities.length === 0) {
+      return [
+        "Welcome to the learning platform!",
+        "Explore your enrolled courses",
+        "Check out course materials",
+        "Join course discussions",
+      ];
+    }
+
+    return activities.slice(0, 4); // Return max 4 activities
+  } catch (error) {
+    console.error("Error fetching recent activity:", error);
+    return [
+      "Welcome to the learning platform!",
+      "Explore your enrolled courses",
+      "Check out course materials",
+      "Join course discussions",
+    ];
+  }
+}
+
 function getRecentActivity(): string[] {
-  // TODO: Implement real activity tracking
+  // Fallback function - kept for compatibility
   return [
     "Completed Introduction to Programming quiz",
     "Submitted assignment for Data Structures",
