@@ -609,8 +609,8 @@ const StudentCourses = () => {
                               Approve both semesters?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will approve the student's first and second
-                              semester course registrations for{" "}
+                              This will approve the student&apos;s first and
+                              second semester course registrations for{" "}
                               {grp?.academicYear}. You can add an optional
                               comment before confirming.
                             </AlertDialogDescription>
@@ -657,8 +657,8 @@ const StudentCourses = () => {
                               Reject both semesters?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              This will reject the student's first and second
-                              semester course registrations for{" "}
+                              This will reject the student&apos;s first and
+                              second semester course registrations for{" "}
                               {grp?.academicYear}. Consider adding a comment to
                               explain the decision.
                             </AlertDialogDescription>

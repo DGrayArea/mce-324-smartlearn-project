@@ -121,18 +121,14 @@ export default async function handler(
       }
 
       // Get enrolled students for the course
+      // Enrollment has no direct `status` field; rely on isActive and approved course registration if present
       const enrolledStudents = await prisma.enrollment.findMany({
         where: {
           courseId,
-          status: "APPROVED",
+          isActive: true,
+          // Treat any active enrollment for the course as eligible
         },
-        include: {
-          student: {
-            include: {
-              user: true,
-            },
-          },
-        },
+        include: { student: { include: { user: true } } },
       });
 
       // Create virtual class
@@ -151,11 +147,11 @@ export default async function handler(
 
       // Send notifications to all enrolled students
       const notifications = enrolledStudents.map((enrollment) => ({
-        userId: enrollment.student.userId,
+        studentId: enrollment.studentId,
         type: "VIRTUAL_CLASS" as const,
         title: "New Virtual Meeting Scheduled",
         message: `A new virtual meeting "${title}" has been scheduled for ${scheduledDate.toLocaleDateString()} at ${scheduledDate.toLocaleTimeString()}. ${meetingUrl ? `Join here: ${meetingUrl}` : ""}`,
-        data: {
+        metadata: {
           meetingId: meeting.id,
           courseId,
           scheduledAt: scheduledDate.toISOString(),

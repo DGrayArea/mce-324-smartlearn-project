@@ -946,8 +946,8 @@ const ContentLibrary = () => {
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No Courses Assigned</h3>
             <p className="text-muted-foreground">
-              You don't have any courses assigned yet. Contact your department
-              admin to get assigned to courses.
+              You don&apos;t have any courses assigned yet. Contact your
+              department admin to get assigned to courses.
             </p>
           </CardContent>
         </Card>

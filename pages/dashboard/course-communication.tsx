@@ -507,7 +507,7 @@ const CourseCommunication = () => {
             No courses available
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            You don't have access to any courses for communication.
+            You don&apos;t have access to any courses for communication.
           </p>
         </div>
       </div>

@@ -148,6 +148,7 @@ export default async function handler(
         where: { id: resultId },
         include: {
           approvals: true,
+          course: { select: { title: true } },
         },
       });
 
@@ -221,11 +222,11 @@ export default async function handler(
         // Notify student about approval
         await prisma.notification.create({
           data: {
-            userId: result.student.userId,
+            student: { connect: { id: result.studentId } },
             type: "GRADE",
             title: "Result Approved",
             message: `Your result for ${result.course.title} has been approved at ${approvalLevel} level.`,
-            data: {
+            metadata: {
               resultId,
               level: approvalLevel,
               status: newStatus,
@@ -238,11 +239,11 @@ export default async function handler(
         if (user.role === "SENATE_ADMIN") {
           await prisma.notification.create({
             data: {
-              userId: result.student.userId,
+              student: { connect: { id: result.studentId } },
               type: "GRADE",
               title: "Result Finalized",
               message: `Your result for ${result.course.title} has been finalized and is now available.`,
-              data: {
+              metadata: {
                 resultId,
                 status: "SENATE_APPROVED",
               },
@@ -254,11 +255,11 @@ export default async function handler(
         // Notify student about rejection
         await prisma.notification.create({
           data: {
-            userId: result.student.userId,
+            student: { connect: { id: result.studentId } },
             type: "GRADE",
             title: "Result Rejected",
             message: `Your result for ${result.course.title} has been rejected at ${approvalLevel} level. ${comments ? `Reason: ${comments}` : ""}`,
-            data: {
+            metadata: {
               resultId,
               level: approvalLevel,
               status: "REJECTED",

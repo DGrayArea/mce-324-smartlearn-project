@@ -55,6 +55,12 @@ const navigationItems: NavItem[] = [
     roles: ["STUDENT"],
   },
   {
+    title: "Content",
+    href: "/dashboard/content",
+    icon: FileText,
+    roles: ["STUDENT"],
+  },
+  {
     title: "Quizzes",
     href: "/dashboard/student/quizzes",
     icon: ClipboardCheck,

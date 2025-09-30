@@ -57,11 +57,13 @@ export default async function handler(
 
     const student = await prisma.student.create({
       data: {
-        userId: user.id,
-        departmentId: dept.id,
+        name: `${firstName} ${lastName}`.trim(),
+        firstName,
+        lastName,
         level: level as any,
         matricNumber: matric,
-        isActive: true,
+        user: { connect: { id: user.id } },
+        department: { connect: { id: dept.id } },
       },
     });
 
