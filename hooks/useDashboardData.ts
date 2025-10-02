@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface DashboardData {
@@ -16,75 +16,83 @@ export const useDashboardData = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastFetchTime = useRef<number>(0);
+  const cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!user) {
+  const fetchDashboardData = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    // Check if we should use cached data
+    const now = Date.now();
+    if (data && now - lastFetchTime.current < cacheTimeout) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      let endpoint = "";
+      const role = user.role?.toLowerCase();
+
+      // Handle both uppercase and lowercase role formats from database
+      if (role === "student") {
+        endpoint = "/api/dashboard/student";
+      } else if (role === "lecturer") {
+        endpoint = "/api/dashboard/lecturer";
+      } else if (
+        role === "department_admin" ||
+        role === "school_admin" ||
+        role === "senate_admin"
+      ) {
+        endpoint = "/api/dashboard/admin";
+      } else {
+        console.error(`Invalid user role: ${user.role}`);
+        setError(`Invalid user role: ${user.role}`);
         setLoading(false);
         return;
       }
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        let endpoint = "";
-        const role = user.role?.toLowerCase();
-
-        // Handle both uppercase and lowercase role formats from database
-        if (role === "student") {
-          endpoint = "/api/dashboard/student";
-        } else if (role === "lecturer") {
-          endpoint = "/api/dashboard/lecturer";
-        } else if (
-          role === "department_admin" ||
-          role === "school_admin" ||
-          role === "senate_admin"
-        ) {
-          endpoint = "/api/dashboard/admin";
-        } else {
-          console.error(`Invalid user role: ${user.role}`);
-          setError(`Invalid user role: ${user.role}`);
-          setLoading(false);
-          return;
-        }
-
-        const response = await fetch(endpoint);
-        if (!response.ok) {
-          console.warn(
-            `Failed to fetch dashboard data: ${response.statusText}`
-          );
-          // Use fallback data instead of throwing error
-          setData(getFallbackData(user.role));
-          setLoading(false);
-          return;
-        }
-
-        const dashboardData = await response.json();
-        // Ensure data has proper structure with fallbacks
-        console.log("Dashboard data:", dashboardData);
-        setData({
-          stats: dashboardData?.stats || {},
-          recentActivity: dashboardData?.recentActivity || [],
-          notifications: dashboardData?.notifications || [],
-          courses: dashboardData?.courses || [],
-          virtualClasses: dashboardData?.virtualClasses || [],
-          role: dashboardData?.role,
-          profile: dashboardData?.profile,
-        });
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-        // Don't set error state, just use fallback data
-        console.warn("Using fallback dashboard data due to error");
+      const response = await fetch(endpoint);
+      if (!response.ok) {
+        console.warn(`Failed to fetch dashboard data: ${response.statusText}`);
+        // Use fallback data instead of throwing error
         setData(getFallbackData(user.role));
-        setError(null); // Clear any previous errors
-      } finally {
         setLoading(false);
+        return;
       }
-    };
 
+      const dashboardData = await response.json();
+      // Ensure data has proper structure with fallbacks
+      setData({
+        stats: dashboardData?.stats || {},
+        recentActivity: dashboardData?.recentActivity || [],
+        notifications: dashboardData?.notifications || [],
+        courses: dashboardData?.courses || [],
+        virtualClasses: dashboardData?.virtualClasses || [],
+        role: dashboardData?.role,
+        profile: dashboardData?.profile,
+      });
+
+      lastFetchTime.current = now;
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      // Don't set error state, just use fallback data
+      console.warn("Using fallback dashboard data due to error");
+      setData(getFallbackData(user.role));
+      setError(null); // Clear any previous errors
+    } finally {
+      setLoading(false);
+    }
+  }, [user, data, cacheTimeout]);
+
+  useEffect(() => {
     fetchDashboardData();
-  }, [user]);
+  }, [fetchDashboardData]);
 
   return { data, loading, error };
 };

@@ -72,6 +72,7 @@ const GradeHistory = () => {
   const [semesterSummaries, setSemesterSummaries] = useState<SemesterSummary[]>(
     []
   );
+  const [isEntireResultApproved, setIsEntireResultApproved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filterAcademicYear, setFilterAcademicYear] = useState("all");
   const [filterSemester, setFilterSemester] = useState("all");
@@ -95,6 +96,9 @@ const GradeHistory = () => {
       if (res.ok) {
         setGradeHistory(data.gradeHistory || []);
         setSemesterSummaries(data.semesterSummaries || []);
+        setIsEntireResultApproved(
+          data.overallStats?.isEntireResultApproved || false
+        );
       } else {
         throw new Error(data.message || "Failed to fetch grade history");
       }
@@ -178,14 +182,15 @@ const GradeHistory = () => {
   };
 
   const calculateOverallStats = () => {
-    const allCourses = gradeHistory.filter(
+    // For CGPA calculation, only include SENATE_APPROVED courses
+    const approvedCourses = gradeHistory.filter(
       (grade) => grade.status === "SENATE_APPROVED"
     );
-    const totalCredits = allCourses.reduce(
+    const totalCredits = approvedCourses.reduce(
       (sum, grade) => sum + grade.course.creditUnit,
       0
     );
-    const earnedCredits = allCourses.reduce((sum, grade) => {
+    const earnedCredits = approvedCourses.reduce((sum, grade) => {
       const gradePoints =
         grade.grade === "A"
           ? 5
@@ -198,13 +203,53 @@ const GradeHistory = () => {
                 : 0;
       return sum + gradePoints * grade.course.creditUnit;
     }, 0);
-    const cgpa = totalCredits > 0 ? earnedCredits / totalCredits : 0;
+    const totalCgpa = totalCredits > 0 ? earnedCredits / totalCredits : 0;
+
+    // Debug logging (remove in production)
+    console.log("Grade History Debug:", {
+      totalCourses: gradeHistory.length,
+      approvedCourses: approvedCourses.length,
+      totalCredits,
+      earnedCredits,
+      totalCgpa,
+      isEntireResultApproved,
+    });
+
+    // Calculate CGPA per session (academic year)
+    const sessionCgpas: number[] = [];
+    const groupedByYear = semesterSummaries.reduce(
+      (acc, summary) => {
+        if (!acc[summary.academicYear]) {
+          acc[summary.academicYear] = [];
+        }
+        acc[summary.academicYear].push(summary);
+        return acc;
+      },
+      {} as Record<string, SemesterSummary[]>
+    );
+
+    Object.values(groupedByYear).forEach((summaries) => {
+      if (summaries.length >= 2) {
+        // Calculate average GPA for the session (both semesters)
+        const sessionGpa =
+          summaries.reduce((sum, s) => sum + s.gpa, 0) / summaries.length;
+        sessionCgpas.push(sessionGpa);
+      }
+    });
+
+    const averageSessionCgpa =
+      sessionCgpas.length > 0
+        ? sessionCgpas.reduce((sum, cgpa) => sum + cgpa, 0) /
+          sessionCgpas.length
+        : 0;
 
     return {
       totalCredits,
       earnedCredits,
-      cgpa,
-      totalCourses: allCourses.length,
+      totalCgpa,
+      averageSessionCgpa,
+      totalCourses: approvedCourses.length,
+      sessionCgpas,
     };
   };
 
@@ -231,9 +276,22 @@ const GradeHistory = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Grade History</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-3xl font-bold tracking-tight">Grade History</h2>
+            {isEntireResultApproved && (
+              <Badge className="bg-green-100 text-green-800 border-green-200">
+                <Award className="h-3 w-3 mr-1" />
+                Approved by Senate
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">
             View your academic performance across all semesters
+            {!isEntireResultApproved && gradeHistory.length > 0 && (
+              <span className="text-yellow-600 ml-2">
+                (2024/2025 results pending hierarchical approval)
+              </span>
+            )}
           </p>
         </div>
         <Button onClick={fetchGradeHistory} disabled={loading}>
@@ -245,19 +303,46 @@ const GradeHistory = () => {
       </div>
 
       {/* Overall Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
               <Award className="h-8 w-8 text-primary" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">
-                  CGPA
+                  Overall CGPA
                 </p>
                 <p
-                  className={`text-2xl font-bold ${getGPABadge(overallStats.cgpa)} px-2 py-1 rounded`}
+                  className={`text-2xl font-bold ${getGPABadge(overallStats.totalCgpa)} px-2 py-1 rounded`}
                 >
-                  {overallStats.cgpa.toFixed(2)}
+                  {overallStats.totalCgpa.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {overallStats.earnedCredits.toFixed(1)} ÷{" "}
+                  {overallStats.totalCredits}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  All degree courses
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <TrendingUp className="h-8 w-8 text-primary" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Term GPA
+                </p>
+                <p
+                  className={`text-2xl font-bold ${getGPABadge(overallStats.averageSessionCgpa)} px-2 py-1 rounded`}
+                >
+                  {overallStats.averageSessionCgpa.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Avg per term
                 </p>
               </div>
             </div>
@@ -274,20 +359,8 @@ const GradeHistory = () => {
                 <p className="text-2xl font-bold">
                   {overallStats.totalCourses}
                 </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center">
-              <TrendingUp className="h-8 w-8 text-primary" />
-              <div className="ml-4">
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Credits
-                </p>
-                <p className="text-2xl font-bold">
-                  {overallStats.totalCredits}
+                <p className="text-xs text-muted-foreground mt-1">
+                  Completed courses
                 </p>
               </div>
             </div>
@@ -299,16 +372,94 @@ const GradeHistory = () => {
               <GraduationCap className="h-8 w-8 text-primary" />
               <div className="ml-4">
                 <p className="text-sm font-medium text-muted-foreground">
+                  Total Credits
+                </p>
+                <p className="text-2xl font-bold">
+                  {overallStats.totalCredits}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Credit units
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Award className="h-8 w-8 text-primary" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-muted-foreground">
                   Earned Credits
                 </p>
                 <p className="text-2xl font-bold">
-                  {overallStats.earnedCredits}
+                  {overallStats.earnedCredits.toFixed(1)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Grade points
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* CGPA Formula Explanation */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <TrendingUp className="h-5 w-5" />
+            CGPA Calculation Formulas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="text-sm font-medium mb-2">
+                <strong>Overall CGPA:</strong> Sum of (Grade Points × Credit
+                Units) ÷ Total Credit Units
+              </p>
+              <div className="text-sm space-y-1">
+                <p>
+                  <strong>Grade Points:</strong> A = 5.0, B = 4.0, C = 3.0, D =
+                  2.0, F = 0.0
+                </p>
+                <p>
+                  <strong>Your Overall CGPA:</strong>{" "}
+                  {overallStats.earnedCredits.toFixed(1)} ÷{" "}
+                  {overallStats.totalCredits} ={" "}
+                  {overallStats.totalCgpa.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  *Includes all courses counting towards degree requirements
+                </p>
+                {!isEntireResultApproved && (
+                  <p className="text-xs text-yellow-600 mt-1">
+                    ⚠️ CGPA calculated from Senate-approved courses only
+                    (2024/2025 excluded until approved)
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <p className="text-sm font-medium mb-2">
+                <strong>Term GPA:</strong> Average of (First Semester GPA +
+                Second Semester GPA) ÷ 2
+              </p>
+              <div className="text-sm space-y-1">
+                <p>
+                  <strong>Your Term GPA:</strong> Average across all completed
+                  terms = {overallStats.averageSessionCgpa.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  *Includes all courses attempted in one term of study
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card>
@@ -386,70 +537,147 @@ const GradeHistory = () => {
               </CardContent>
             </Card>
           ) : semesterSummaries.length > 0 ? (
-            <div className="space-y-4">
-              {semesterSummaries.map((summary) => (
-                <Card key={`${summary.academicYear}-${summary.semester}`}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          <Calendar className="h-5 w-5" />
-                          {summary.academicYear} - {summary.semester} Semester
-                        </CardTitle>
-                        <CardDescription>
-                          {summary.courses.length} course
-                          {summary.courses.length !== 1 ? "s" : ""} •{" "}
-                          {summary.totalCredits} credit units
-                        </CardDescription>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground">GPA</div>
-                        <div
-                          className={`text-2xl font-bold ${getGPABadge(summary.gpa)} px-2 py-1 rounded`}
-                        >
-                          {summary.gpa.toFixed(2)}
+            <div className="space-y-6">
+              {(() => {
+                // Group semesters by academic year
+                const groupedByYear = semesterSummaries.reduce(
+                  (acc, summary) => {
+                    if (!acc[summary.academicYear]) {
+                      acc[summary.academicYear] = [];
+                    }
+                    acc[summary.academicYear].push(summary);
+                    return acc;
+                  },
+                  {} as Record<string, SemesterSummary[]>
+                );
+
+                return Object.entries(groupedByYear).map(
+                  ([academicYear, summaries]) => {
+                    // Calculate session CGPA for this academic year
+                    const sessionCgpa =
+                      summaries.length >= 2
+                        ? summaries.reduce((sum, s) => sum + s.gpa, 0) /
+                          summaries.length
+                        : summaries[0]?.gpa || 0;
+
+                    return (
+                      <div key={academicYear} className="space-y-4 relative">
+                        {/* Approved by Senate Watermark */}
+                        {summaries.every((s) =>
+                          s.courses.every((c) => c.status === "SENATE_APPROVED")
+                        ) && (
+                          <div className="absolute top-0 right-0 z-10">
+                            <Badge className="bg-green-100 text-green-800 border-green-200 shadow-lg">
+                              <Award className="h-3 w-3 mr-1" />
+                              Approved by Senate
+                            </Badge>
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-5 w-5 text-primary" />
+                            <h3 className="text-xl font-semibold">
+                              {academicYear} Academic Year
+                            </h3>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm text-muted-foreground">
+                              Term GPA
+                            </div>
+                            <div
+                              className={`text-lg font-bold ${getGPABadge(sessionCgpa)} px-2 py-1 rounded`}
+                            >
+                              {sessionCgpa.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {summaries
+                            .sort((a, b) => (a.semester === "FIRST" ? -1 : 1))
+                            .map((summary) => (
+                              <Card
+                                key={`${summary.academicYear}-${summary.semester}`}
+                              >
+                                <CardHeader>
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <CardTitle className="flex items-center gap-2">
+                                        <Calendar className="h-4 w-4" />
+                                        {summary.semester} Semester
+                                      </CardTitle>
+                                      <CardDescription>
+                                        {summary.courses.length} course
+                                        {summary.courses.length !== 1
+                                          ? "s"
+                                          : ""}{" "}
+                                        • {summary.totalCredits} credit units
+                                      </CardDescription>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="text-sm text-muted-foreground">
+                                        GPA
+                                      </div>
+                                      <div
+                                        className={`text-xl font-bold ${getGPABadge(summary.gpa)} px-2 py-1 rounded`}
+                                      >
+                                        {summary.gpa.toFixed(2)}
+                                      </div>
+                                      <div className="text-xs text-muted-foreground mt-1">
+                                        CGPA: {summary.cgpa.toFixed(2)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="overflow-x-auto">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow>
+                                          <TableHead>Course</TableHead>
+                                          <TableHead>Code</TableHead>
+                                          <TableHead>Credits</TableHead>
+                                          <TableHead>Score</TableHead>
+                                          <TableHead>Grade</TableHead>
+                                          <TableHead>Status</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {summary.courses.map((grade) => (
+                                          <TableRow key={grade.id}>
+                                            <TableCell className="font-medium">
+                                              {grade.course.title}
+                                            </TableCell>
+                                            <TableCell>
+                                              {grade.course.code}
+                                            </TableCell>
+                                            <TableCell>
+                                              {grade.course.creditUnit}
+                                            </TableCell>
+                                            <TableCell>
+                                              {grade.totalScore.toFixed(1)}%
+                                            </TableCell>
+                                            <TableCell>
+                                              {getGradeBadge(grade.grade)}
+                                            </TableCell>
+                                            <TableCell>
+                                              {getStatusBadge(grade.status)}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
                         </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Course</TableHead>
-                            <TableHead>Code</TableHead>
-                            <TableHead>Credits</TableHead>
-                            <TableHead>Score</TableHead>
-                            <TableHead>Grade</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {summary.courses.map((grade) => (
-                            <TableRow key={grade.id}>
-                              <TableCell className="font-medium">
-                                {grade.course.title}
-                              </TableCell>
-                              <TableCell>{grade.course.code}</TableCell>
-                              <TableCell>{grade.course.creditUnit}</TableCell>
-                              <TableCell>
-                                {grade.totalScore.toFixed(1)}%
-                              </TableCell>
-                              <TableCell>
-                                {getGradeBadge(grade.grade)}
-                              </TableCell>
-                              <TableCell>
-                                {getStatusBadge(grade.status)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    );
+                  }
+                );
+              })()}
             </div>
           ) : (
             <Card>

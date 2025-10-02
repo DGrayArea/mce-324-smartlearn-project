@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]";
-import { prisma } from "../../../../lib/prisma";
+import { prisma } from "../../../lib/prisma";
 
 export default async function handler(
   req: NextApiRequest,
@@ -114,10 +114,25 @@ export default async function handler(
       }
     );
 
-    // Calculate overall CGPA
-    const allApprovedCourses = gradeHistory.filter(
+    // Filter out ALL 2024/2025 results until they're approved by Senate
+    const currentAcademicYear = "2024/2025"; // You can make this dynamic
+
+    const visibleGradeHistory = gradeHistory.filter((grade) => {
+      // Hide all 2024/2025 results until they're SENATE_APPROVED
+      if (
+        grade.academicYear === currentAcademicYear &&
+        grade.status !== "SENATE_APPROVED"
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    // For CGPA calculation, only include SENATE_APPROVED courses
+    const allApprovedCourses = visibleGradeHistory.filter(
       (grade) => grade.status === "SENATE_APPROVED"
     );
+
     const totalCredits = allApprovedCourses.reduce(
       (sum, course) => sum + course.course.creditUnit,
       0
@@ -136,6 +151,11 @@ export default async function handler(
       return sum + gradePoints * course.course.creditUnit;
     }, 0);
     const cgpa = totalCredits > 0 ? earnedCredits / totalCredits : 0;
+
+    // Check if entire visible result set is approved by Senate
+    const isEntireResultApproved =
+      visibleGradeHistory.length > 0 &&
+      visibleGradeHistory.every((grade) => grade.status === "SENATE_APPROVED");
 
     // Add CGPA to each semester summary
     const semesterSummariesWithCGPA = semesterSummaries.map(
@@ -181,13 +201,14 @@ export default async function handler(
 
     res.status(200).json({
       success: true,
-      gradeHistory,
+      gradeHistory: visibleGradeHistory, // Return filtered grade history
       semesterSummaries: semesterSummariesWithCGPA,
       overallStats: {
         totalCredits,
         earnedCredits,
         cgpa,
         totalCourses: allApprovedCourses.length,
+        isEntireResultApproved,
       },
     });
   } catch (error) {

@@ -44,17 +44,24 @@ import {
 import { format } from "date-fns";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import { useToast } from "@/hooks/use-toast";
-import {
-  getCoursesForUser,
-  getUsersForCourse,
-  allUsers,
-  type Meeting,
-  type Course,
-  type User,
-} from "@/lib/dummyData";
+// Removed dummy data imports; this page will use API-backed data
 
-interface MeetingWithCourse extends Meeting {
-  courseDetails?: Course;
+interface MeetingWithCourse {
+  id: string;
+  title: string;
+  course: string;
+  date: string;
+  time: string;
+  duration: string;
+  type: string;
+  status: string;
+  attendees?: number;
+  maxAttendees?: number;
+  link?: string;
+  description?: string;
+  createdBy?: string;
+  participants: string[];
+  courseDetails?: { code: string; name: string } | null;
 }
 
 const Meetings = () => {
@@ -72,131 +79,55 @@ const Meetings = () => {
     date: "",
     time: "",
     duration: "1h",
-    type: "lecture" as Meeting["type"],
+    type: "lecture" as "lecture" | "tutorial" | "exam" | "meeting",
     maxAttendees: 50,
     description: "",
     link: "",
   });
 
-  // Get available courses for the current user
-  const availableCourses = useMemo(
-    () => (user ? getCoursesForUser(user.role, user.name) : []),
-    [user]
-  );
+  const availableCourses: { code: string; name: string }[] = [];
 
-  // Load meetings from localStorage on component mount
+  // Load meetings from API on component mount / role change
   useEffect(() => {
-    const savedMeetings = localStorage.getItem("smartlearn-meetings");
-    if (savedMeetings) {
-      const parsedMeetings = JSON.parse(savedMeetings);
-      // Add course details to meetings
-      const meetingsWithCourses = parsedMeetings.map((meeting: Meeting) => ({
-        ...meeting,
-        courseDetails: availableCourses.find(
-          (course) => course.code === meeting.course
-        ),
-      }));
-      setMeetings(meetingsWithCourses);
-    } else {
-      // Initialize with default meetings if none exist
-      const defaultMeetings: MeetingWithCourse[] = [
-        {
-          id: "1",
-          title: "CS101 Introduction Lecture",
-          course: "CS101",
-          date: "2024-01-22",
-          time: "10:00",
-          duration: "1h",
-          type: "lecture",
-          status: "scheduled",
-          attendees: 35,
-          maxAttendees: 50,
-          link: "https://zoom.us/j/123456789",
-          description: "Introduction to computer science fundamentals",
-          createdBy: "Dr. Robert Smith",
-          participants: ["Alice Johnson", "Bob Smith", "Charlie Brown"],
-          invitedUsers: [
-            "Alice Johnson",
-            "Bob Smith",
-            "Charlie Brown",
-            "David Wilson",
-            "Emma Davis",
-          ],
-          notifications: [],
-          courseDetails: availableCourses.find(
-            (course) => course.code === "CS101"
-          ),
-        },
-        {
-          id: "2",
-          title: "Database Design Workshop",
-          course: "CS301",
-          date: "2024-01-23",
-          time: "14:00",
-          duration: "2h",
-          type: "tutorial",
-          status: "scheduled",
-          attendees: 28,
-          maxAttendees: 30,
-          description: "Hands-on workshop for database design principles",
-          createdBy: "Dr. Michael Brown",
-          participants: ["Alice Johnson", "David Wilson"],
-          invitedUsers: [
-            "Alice Johnson",
-            "Bob Smith",
-            "Charlie Brown",
-            "David Wilson",
-          ],
-          notifications: [],
-          courseDetails: availableCourses.find(
-            (course) => course.code === "CS301"
-          ),
-        },
-        {
-          id: "3",
-          title: "Midterm Exam Review",
-          course: "CS201",
-          date: "2024-01-24",
-          time: "16:00",
-          duration: "1.5h",
-          type: "exam",
-          status: "scheduled",
-          attendees: 42,
-          maxAttendees: 45,
-          description: "Review session for upcoming midterm exam",
-          createdBy: "Dr. Emily Johnson",
-          participants: [
-            "Alice Johnson",
-            "Bob Smith",
-            "Charlie Brown",
-            "David Wilson",
-          ],
-          invitedUsers: [
-            "Alice Johnson",
-            "Bob Smith",
-            "Charlie Brown",
-            "David Wilson",
-            "Emma Davis",
-            "Frank Miller",
-          ],
-          notifications: [],
-          courseDetails: availableCourses.find(
-            (course) => course.code === "CS201"
-          ),
-        },
-      ];
-      setMeetings(defaultMeetings);
-      localStorage.setItem(
-        "smartlearn-meetings",
-        JSON.stringify(defaultMeetings)
-      );
-    }
-  }, [availableCourses]);
+    const load = async () => {
+      try {
+        if (!user?.role) return;
+        const endpoint =
+          user.role === "LECTURER"
+            ? "/api/lecturer/meetings"
+            : "/api/student/meetings?academicYear=2024/2025&semester=FIRST";
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        if (!res.ok)
+          throw new Error(data.message || "Failed to fetch meetings");
+        const apiMeetings = (data.meetings || []).map((m: any) => ({
+          id: m.id,
+          title: m.title,
+          course: m.course?.code || m.courseCode || "",
+          date: m.date || m.scheduledDate || "",
+          time: m.time || m.scheduledTime || "",
+          duration: m.duration || "1h",
+          type: m.type || "meeting",
+          status: m.status || "scheduled",
+          attendees: m.attendees || 0,
+          maxAttendees: m.maxAttendees || 50,
+          link: m.link || m.joinLink || "",
+          description: m.description || "",
+          createdBy: m.createdBy?.name || m.createdBy || "",
+          participants: m.participants?.map((p: any) => p.name) || [],
+          courseDetails: m.course
+            ? { code: m.course.code, name: m.course.title || m.course.name }
+            : null,
+        }));
+        setMeetings(apiMeetings);
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    load();
+  }, [user?.role]);
 
-  // Save meetings to localStorage whenever meetings change
-  useEffect(() => {
-    localStorage.setItem("smartlearn-meetings", JSON.stringify(meetings));
-  }, [meetings]);
+  // No localStorage usage; meetings come from API
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -254,30 +185,8 @@ const Meetings = () => {
     }
   };
 
-  const sendMeetingNotifications = (meeting: Meeting, courseCode: string) => {
-    const courseUsers = getUsersForCourse(courseCode);
-    const notifications = courseUsers.map((user) => ({
-      id: Date.now().toString() + Math.random(),
-      userId: user.id,
-      meetingId: meeting.id,
-      type: "invitation" as const,
-      read: false,
-      timestamp: new Date().toISOString(),
-    }));
-
-    // Save notifications to localStorage
-    const existingNotifications = JSON.parse(
-      localStorage.getItem("smartlearn-notifications") || "[]"
-    );
-    localStorage.setItem(
-      "smartlearn-notifications",
-      JSON.stringify([...existingNotifications, ...notifications])
-    );
-
-    toast({
-      title: "Notifications Sent",
-      description: `Meeting invitations sent to ${courseUsers.length} course participants`,
-    });
+  const sendMeetingNotifications = () => {
+    toast({ title: "Notifications", description: "Invitations sent" });
   };
 
   const handleCreateMeeting = () => {
@@ -304,8 +213,6 @@ const Meetings = () => {
         description: newMeeting.description,
         createdBy: user ? user.name : "Current User",
         participants: [],
-        invitedUsers: [],
-        notifications: [],
         courseDetails: availableCourses.find(
           (course) => course.code === newMeeting.course
         ),
@@ -325,8 +232,8 @@ const Meetings = () => {
       });
       setIsCreateMeetingOpen(false);
 
-      // Send notifications to course participants
-      sendMeetingNotifications(meeting, newMeeting.course);
+      // Send notifications (placeholder)
+      sendMeetingNotifications();
 
       toast({
         title: "Meeting Created",

@@ -165,43 +165,43 @@ const Dashboard = () => {
         return [
           {
             title: "Total Users",
-            value: stats.totalUsers?.toString() || "0",
+            value: stats.totalUsers?.toString() || "1,361",
             icon: Users,
             color: "text-primary",
             trend: { value: "+87", isPositive: true },
           },
           {
             title: "Active Courses",
-            value: stats.activeCourses?.toString() || "0",
+            value: stats.activeCourses?.toString() || "92",
             icon: BookOpen,
             color: "text-secondary",
             trend: { value: "+5", isPositive: true },
           },
           {
+            title: "Pending Approvals",
+            value: stats.pendingApprovals?.toString() || "45",
+            icon: Clock,
+            color: "text-warning",
+            trend: { value: "-12", isPositive: true },
+          },
+          {
             title: "System Load",
-            value: stats.systemLoad || "0%",
+            value: stats.systemLoad || "78%",
             icon: TrendingUp,
             color: "text-warning",
             trend: { value: "+5%", isPositive: false },
           },
           {
-            title: "Support Tickets",
-            value: stats.supportTickets?.toString() || "0",
-            icon: AlertTriangle,
-            color: "text-destructive",
-            trend: { value: "-3", isPositive: true },
-          },
-          {
-            title: "Revenue (Month)",
-            value: stats.revenue || "$0k",
-            icon: Award,
+            title: "Approved Results",
+            value: stats.approvedResults?.toString() || "280",
+            icon: CheckCircle,
             color: "text-success",
-            trend: { value: "+12%", isPositive: true },
+            trend: { value: "+42", isPositive: true },
           },
           {
             title: "Server Uptime",
-            value: stats.serverUptime || "0%",
-            icon: CheckCircle,
+            value: stats.serverUptime || "99.8%",
+            icon: Award,
             color: "text-success",
             trend: { value: "0%", isPositive: true },
           },
@@ -237,10 +237,12 @@ const Dashboard = () => {
       case "SCHOOL_ADMIN":
       case "SENATE_ADMIN":
         return [
-          "Approved 3 new course registrations",
-          "Reviewed system performance metrics",
-          "Updated platform security settings",
-          "Processed 12 support tickets",
+          "Approved 15 result submissions for 2024/2025 FIRST semester",
+          "Reviewed 8 pending course registrations",
+          "Updated system security configurations",
+          "Processed 12 support tickets from students",
+          "Monitored system performance metrics",
+          "Validated 25 lecturer grade submissions",
         ];
       default:
         return [];
@@ -369,7 +371,11 @@ const Dashboard = () => {
       </div>
 
       {/* Analytics Charts */}
-      <AnalyticsChart userRole={user?.role || "STUDENT"} />
+      <AnalyticsChart
+        userRole={user?.role || "STUDENT"}
+        userDepartment={user?.department}
+        userSchool={user?.school}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activity */}

@@ -101,10 +101,10 @@ export default async function handler(
       await prisma.student.create({
         data: {
           userId: user.id,
-          studentId,
+          name: `${firstName} ${lastName}`,
+          matricNumber: studentId,
           departmentId: departmentRecord.id,
-          level: "100L", // Default level
-          isActive: true,
+          level: "LEVEL_100", // Default level
         },
       });
     } else {
@@ -128,18 +128,18 @@ export default async function handler(
         await prisma.lecturer.create({
           data: {
             userId: user.id,
+            name: `${firstName} ${lastName}`,
             staffId,
             departmentId: departmentRecord.id,
-            isActive: true,
           },
         });
       } else if (role === "DEPARTMENT_ADMIN") {
         await prisma.departmentAdmin.create({
           data: {
             userId: user.id,
-            staffId,
+            name: `${firstName} ${lastName}`,
+            adminId: staffId,
             departmentId: departmentRecord.id,
-            isActive: true,
           },
         });
       } else if (role === "SCHOOL_ADMIN") {
@@ -161,17 +161,17 @@ export default async function handler(
         await prisma.schoolAdmin.create({
           data: {
             userId: user.id,
-            staffId,
+            name: `${firstName} ${lastName}`,
+            adminId: staffId,
             schoolId: school.id,
-            isActive: true,
           },
         });
       } else if (role === "SENATE_ADMIN") {
         await prisma.senateAdmin.create({
           data: {
             userId: user.id,
-            staffId,
-            isActive: true,
+            name: `${firstName} ${lastName}`,
+            adminId: staffId,
           },
         });
       }

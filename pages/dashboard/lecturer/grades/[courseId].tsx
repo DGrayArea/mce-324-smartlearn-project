@@ -170,20 +170,36 @@ const LecturerGrades = () => {
   ) => {
     setGrades((prev) => {
       const updated = { ...prev };
-      updated[studentId] = { ...updated[studentId], [field]: value };
 
-      // Calculate total score
+      // Apply validation guards
+      if (field === "caScore") {
+        // CA Score: 0-40 (40% weight)
+        updated[studentId] = {
+          ...updated[studentId],
+          caScore: Math.min(Math.max(value, 0), 40),
+        };
+      } else if (field === "examScore") {
+        // Exam Score: 0-60 (60% weight)
+        updated[studentId] = {
+          ...updated[studentId],
+          examScore: Math.min(Math.max(value, 0), 60),
+        };
+      } else {
+        updated[studentId] = { ...updated[studentId], [field]: value };
+      }
+
+      // Calculate total score (CA + Exam)
       const caScore = updated[studentId].caScore || 0;
       const examScore = updated[studentId].examScore || 0;
       updated[studentId].totalScore = caScore + examScore;
 
-      // Calculate grade
+      // Calculate grade based on total score
       const totalScore = updated[studentId].totalScore;
       let grade = "F";
-      if (totalScore >= 90) grade = "A";
-      else if (totalScore >= 80) grade = "B";
-      else if (totalScore >= 70) grade = "C";
-      else if (totalScore >= 60) grade = "D";
+      if (totalScore >= 70) grade = "A";
+      else if (totalScore >= 60) grade = "B";
+      else if (totalScore >= 50) grade = "C";
+      else if (totalScore >= 45) grade = "D";
 
       updated[studentId].grade = grade;
 
@@ -480,7 +496,8 @@ const LecturerGrades = () => {
             <div>
               <CardTitle>Student Grades</CardTitle>
               <CardDescription>
-                Enter CA and Exam scores for each student
+                Enter CA (40%) and Exam (60%) scores for each student. Total
+                score is automatically calculated.
               </CardDescription>
             </div>
             <div className="flex space-x-2">
@@ -541,8 +558,8 @@ const LecturerGrades = () => {
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Matric Number</TableHead>
-                  <TableHead>CA Score</TableHead>
-                  <TableHead>Exam Score</TableHead>
+                  <TableHead>CA Score (40%)</TableHead>
+                  <TableHead>Exam Score (60%)</TableHead>
                   <TableHead>Total Score</TableHead>
                   <TableHead>Grade</TableHead>
                   <TableHead>Status</TableHead>
@@ -561,7 +578,7 @@ const LecturerGrades = () => {
                         <Input
                           type="number"
                           min="0"
-                          max="100"
+                          max="40"
                           value={studentGrades.caScore || ""}
                           onChange={(e) =>
                             handleGradeChange(
@@ -571,13 +588,14 @@ const LecturerGrades = () => {
                             )
                           }
                           className="w-20"
+                          placeholder="0-40"
                         />
                       </TableCell>
                       <TableCell>
                         <Input
                           type="number"
                           min="0"
-                          max="100"
+                          max="60"
                           value={studentGrades.examScore || ""}
                           onChange={(e) =>
                             handleGradeChange(
@@ -587,6 +605,7 @@ const LecturerGrades = () => {
                             )
                           }
                           className="w-20"
+                          placeholder="0-60"
                         />
                       </TableCell>
                       <TableCell>

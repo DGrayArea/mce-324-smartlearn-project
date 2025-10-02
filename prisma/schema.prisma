@@ -49,8 +49,6 @@ model VerificationToken {
 model User {
   id                         String                @id @default(cuid())
   name                       String?
-  firstName                  String?
-  lastName                   String?
   email                      String?               @unique
   emailVerified              DateTime?             @map("email_verified")
   image                      String?
@@ -59,11 +57,15 @@ model User {
   isActive                   Boolean               @default(true)
   createdAt                  DateTime              @default(now())
   updatedAt                  DateTime              @updatedAt
+  firstName                  String?
+  lastName                   String?
   accounts                   Account[]
   announcements              Announcement[]
   answerVotes                AnswerVote[]
   answers                    Answer[]
   chatParticipants           ChatParticipant[]
+  communicationVotes         CommunicationVote[]
+  communications             CourseCommunication[]
   departmentAdmin            DepartmentAdmin?
   emailNotificationsReceived EmailNotification[]   @relation("EmailNotificationsReceived")
   emailNotificationsSent     EmailNotification[]   @relation("EmailNotificationsSent")
@@ -90,8 +92,6 @@ model User {
   supportTickets             SupportTicket[]
   systemLogs                 SystemLog[]
   userSessions               UserSession[]
-  communications             CourseCommunication[]
-  communicationVotes         CommunicationVote[]
 
   @@map("users")
 }
@@ -149,17 +149,17 @@ model Student {
   id                      String                   @id @default(cuid())
   userId                  String                   @unique
   name                    String
-  firstName               String?
-  lastName                String?
   matricNumber            String                   @unique
-  phone                   String?
-  address                 String?
-  emergencyContact        String?
   level                   StudentLevel
   departmentId            String
   profileCompleted        Boolean                  @default(false)
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
+  firstName               String?
+  lastName                String?
+  address                 String?
+  emergencyContact        String?
+  phone                   String?
   assessments             Assessment[]
   assignmentSubmissions   AssignmentSubmission[]
   courseEvaluations       CourseEvaluation[]
@@ -181,14 +181,14 @@ model Lecturer {
   id                String             @id @default(cuid())
   userId            String             @unique
   name              String
-  firstName         String?
-  lastName          String?
-  title             String?
-  staffId           String?            @unique
   departmentId      String
   profileCompleted  Boolean            @default(false)
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+  firstName         String?
+  lastName          String?
+  staffId           String?            @unique
+  title             String?
   assessments       Assessment[]
   assignments       Assignment[]
   courseAssignments CourseAssignment[]
@@ -207,13 +207,13 @@ model DepartmentAdmin {
   id                  String               @id @default(cuid())
   userId              String               @unique
   name                String
-  firstName           String?
-  lastName            String?
-  title               String?
-  adminId             String?              @unique
   departmentId        String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  adminId             String?              @unique
+  firstName           String?
+  lastName            String?
+  title               String?
   courseAssignments   CourseAssignment[]
   courseAvailability  CourseAvailability[]
   courseRegistrations CourseRegistration[] @relation("ReviewedRegistrations")
@@ -230,13 +230,13 @@ model SchoolAdmin {
   id                  String               @id @default(cuid())
   userId              String               @unique
   name                String
-  firstName           String?
-  lastName            String?
-  title               String?
-  adminId             String?              @unique
   schoolId            String
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  adminId             String?              @unique
+  firstName           String?
+  lastName            String?
+  title               String?
   courseRegistrations CourseRegistration[]
   resultApprovals     ResultApproval[]
   school              School               @relation(fields: [schoolId], references: [id])
@@ -250,12 +250,12 @@ model SenateAdmin {
   id              String           @id @default(cuid())
   userId          String           @unique
   name            String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  adminId         String?          @unique
   firstName       String?
   lastName        String?
   title           String?
-  adminId         String?          @unique
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
   resultApprovals ResultApproval[]
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   systemStats     SystemStats[]
@@ -284,6 +284,7 @@ model Course {
   contents           Content[]
   courseAssignments  CourseAssignment[]
   courseAvailability CourseAvailability[]
+  communications     CourseCommunication[]
   courseEvaluations  CourseEvaluation[]
   courseSelections   CourseSelection[]
   department         Department?           @relation(fields: [departmentId], references: [id])
@@ -297,7 +298,6 @@ model Course {
   quizzes            Quiz[]
   results            Result[]
   virtualClasses     VirtualClass[]
-  communications     CourseCommunication[]
 
   @@map("courses")
 }
@@ -1269,6 +1269,56 @@ model EmailNotification {
   @@map("email_notifications")
 }
 
+model CourseCommunication {
+  id           String                @id @default(cuid())
+  courseId     String
+  userId       String
+  type         CommunicationType
+  title        String?
+  content      String
+  isPinned     Boolean               @default(false)
+  isResolved   Boolean               @default(false)
+  parentId     String?
+  academicYear String
+  semester     SemesterType
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  files        CommunicationFile[]
+  votes        CommunicationVote[]
+  course       Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  parent       CourseCommunication?  @relation("Replies", fields: [parentId], references: [id])
+  replies      CourseCommunication[] @relation("Replies")
+  user         User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("course_communications")
+}
+
+model CommunicationVote {
+  id              String              @id @default(cuid())
+  communicationId String
+  userId          String
+  type            VoteType
+  createdAt       DateTime            @default(now())
+  communication   CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communicationId, userId])
+  @@map("communication_votes")
+}
+
+model CommunicationFile {
+  id              String              @id @default(cuid())
+  communicationId String
+  fileName        String
+  fileUrl         String
+  fileSize        Int
+  mimeType        String
+  createdAt       DateTime            @default(now())
+  communication   CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+
+  @@map("communication_files")
+}
+
 enum UserRole {
   STUDENT
   LECTURER
@@ -1440,60 +1490,6 @@ enum EmailNotificationStatus {
   FAILED
   DELIVERED
   BOUNCED
-}
-
-// Unified Communication System Models
-model CourseCommunication {
-  id           String            @id @default(cuid())
-  courseId     String
-  userId       String
-  type         CommunicationType
-  title        String?
-  content      String
-  isPinned     Boolean           @default(false)
-  isResolved   Boolean           @default(false) // For Q&A
-  parentId     String? // For replies
-  academicYear String
-  semester     SemesterType
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
-
-  course  Course                @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  user    User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parent  CourseCommunication?  @relation("Replies", fields: [parentId], references: [id])
-  replies CourseCommunication[] @relation("Replies")
-  votes   CommunicationVote[]
-  files   CommunicationFile[]
-
-  @@map("course_communications")
-}
-
-model CommunicationVote {
-  id              String   @id @default(cuid())
-  communicationId String
-  userId          String
-  type            VoteType
-  createdAt       DateTime @default(now())
-
-  communication CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([communicationId, userId])
-  @@map("communication_votes")
-}
-
-model CommunicationFile {
-  id              String   @id @default(cuid())
-  communicationId String
-  fileName        String
-  fileUrl         String
-  fileSize        Int
-  mimeType        String
-  createdAt       DateTime @default(now())
-
-  communication CourseCommunication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
-
-  @@map("communication_files")
 }
 
 enum CommunicationType {

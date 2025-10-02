@@ -66,53 +66,7 @@ interface FAQItem {
   category: string;
 }
 
-const supportTickets: SupportTicket[] = [
-  {
-    id: "T001",
-    title: "Cannot access course materials",
-    description: "I am unable to download the lecture slides for CS101.",
-    status: "open",
-    priority: "medium",
-    category: "Technical",
-    created: "2024-01-20 10:30",
-    updated: "2024-01-20 10:30",
-  },
-  {
-    id: "T002",
-    title: "Grade calculation error",
-    description: "My assignment grade seems to be calculated incorrectly.",
-    status: "in-progress",
-    priority: "high",
-    category: "Academic",
-    created: "2024-01-19 14:15",
-    updated: "2024-01-20 09:00",
-    assignedTo: "Support Team",
-  },
-];
-
-const faqItems: FAQItem[] = [
-  {
-    id: "1",
-    question: "How do I reset my password?",
-    answer:
-      'You can reset your password by clicking on "Forgot Password" on the login page. Enter your email address and follow the instructions sent to your email.',
-    category: "Account",
-  },
-  {
-    id: "2",
-    question: "How do I submit assignments?",
-    answer:
-      'Navigate to the Assignments page, find your assignment, and click "Submit". You can upload files or enter text directly depending on the assignment type.',
-    category: "Academic",
-  },
-  {
-    id: "3",
-    question: "How do I join virtual meetings?",
-    answer:
-      'Go to the Meetings page and click "Join Meeting" next to the scheduled meeting. Make sure you have a stable internet connection and proper audio/video setup.',
-    category: "Technical",
-  },
-];
+// Removed dummy data - will fetch from API
 
 const Support = () => {
   const { user } = useAuth();
@@ -148,6 +102,12 @@ const Support = () => {
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isContactOpen, setIsContactOpen] = useState(false);
+
+  // API data states
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [faqItems, setFaqItems] = useState<FAQItem[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [loadingFAQs, setLoadingFAQs] = useState(false);
   const [contactForm, setContactForm] = useState({
     name: "",
     email: "",
@@ -155,6 +115,58 @@ const Support = () => {
     message: "",
     category: "SUPPORT",
   });
+
+  // Fetch support tickets
+  const fetchSupportTickets = useCallback(async () => {
+    try {
+      setLoadingTickets(true);
+      const response = await fetch("/api/support/tickets");
+      if (response.ok) {
+        const data = await response.json();
+        setSupportTickets(data.tickets || []);
+      } else {
+        throw new Error("Failed to fetch support tickets");
+      }
+    } catch (error: any) {
+      console.error("Error fetching support tickets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load support tickets",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, [toast]);
+
+  // Fetch FAQs
+  const fetchFAQs = useCallback(async () => {
+    try {
+      setLoadingFAQs(true);
+      const response = await fetch("/api/faqs");
+      if (response.ok) {
+        const data = await response.json();
+        setFaqItems(data.faqs || []);
+      } else {
+        throw new Error("Failed to fetch FAQs");
+      }
+    } catch (error: any) {
+      console.error("Error fetching FAQs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load FAQs",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingFAQs(false);
+    }
+  }, [toast]);
+
+  // Load data on component mount
+  React.useEffect(() => {
+    fetchSupportTickets();
+    fetchFAQs();
+  }, [fetchSupportTickets, fetchFAQs]);
 
   const embedChatUrl = process.env.NEXT_PUBLIC_CHAT_IFRAME_URL;
   const libreChatUrl = process.env.NEXT_PUBLIC_LIBRECHAT_URL;
@@ -241,33 +253,66 @@ const Support = () => {
     }
   }, [chatMessage, user, issueType]);
 
-  const handleCreateTicket = useCallback(() => {
-    if (newTicket.title.trim() && newTicket.description.trim()) {
-      setIsCreatingTicket(true);
+  const handleCreateTicket = useCallback(async () => {
+    if (
+      !newTicket.title.trim() ||
+      !newTicket.description.trim() ||
+      !newTicket.category
+    ) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-      // Simulate ticket creation
-      setTimeout(() => {
-        toast({
-          title: "Ticket Created",
-          description: `Support ticket "${newTicket.title}" has been created successfully.`,
-        });
+    setIsCreatingTicket(true);
+    try {
+      const response = await fetch("/api/support/tickets", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: newTicket.title,
+          description: newTicket.description,
+          category: newTicket.category,
+          priority: newTicket.priority.toUpperCase(),
+        }),
+      });
 
+      if (response.ok) {
+        const data = await response.json();
         setNewTicket({
           title: "",
           description: "",
           category: "",
           priority: "medium",
         });
-        setIsCreatingTicket(false);
-      }, 1000);
-    } else {
+
+        // Refresh tickets list
+        fetchSupportTickets();
+
+        toast({
+          title: "Ticket Created",
+          description: `Support ticket "${newTicket.title}" has been created successfully.`,
+        });
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to create ticket");
+      }
+    } catch (error: any) {
+      console.error("Error creating ticket:", error);
       toast({
-        title: "Missing Information",
-        description: "Please fill in both title and description fields.",
+        title: "Error",
+        description: error.message || "Failed to create support ticket.",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingTicket(false);
     }
-  }, [newTicket, toast]);
+  }, [newTicket, toast, fetchSupportTickets]);
 
   const handleFileUpload = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -444,10 +489,8 @@ const Support = () => {
               </CardHeader>
               <CardContent>
                 <a
-                  href={
-                    "/" + encodeURIComponent("User Manual Second draft.pdf")
-                  }
-                  download
+                  href="/User Manual Second draft.pdf"
+                  download="User Manual Second draft.pdf"
                 >
                   <Button className="w-full">Download User Manual</Button>
                 </a>
@@ -490,21 +533,48 @@ const Support = () => {
             />
           </div>
 
-          <div className="space-y-4">
-            {filteredFAQs.map((item) => (
-              <Card key={item.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-base">{item.question}</CardTitle>
-                    <Badge variant="outline">{item.category}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">{item.answer}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {loadingFAQs ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading FAQs...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredFAQs.length > 0 ? (
+                filteredFAQs.map((item) => (
+                  <Card key={item.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-base">
+                          {item.question}
+                        </CardTitle>
+                        <Badge variant="outline">{item.category}</Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground">
+                        {item.answer}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      No FAQs Found
+                    </h3>
+                    <p className="text-muted-foreground">
+                      {searchQuery
+                        ? "No FAQs match your search criteria."
+                        : "No FAQs available at the moment."}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="chatbot" className="space-y-6">
@@ -771,42 +841,65 @@ const Support = () => {
             </Card>
           )}
 
-          <div className="space-y-4">
-            {supportTickets.map((ticket) => (
-              <Card key={ticket.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-base">
-                        {ticket.title}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Ticket #{ticket.id} • Created {ticket.created}
-                      </CardDescription>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {getPriorityBadge(ticket.priority)}
-                      {getStatusBadge(ticket.status)}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {ticket.description}
-                  </p>
-                  <div className="flex items-center text-xs text-muted-foreground space-x-4">
-                    <span className="flex items-center">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Updated {ticket.updated}
-                    </span>
-                    {ticket.assignedTo && (
-                      <span>Assigned to {ticket.assignedTo}</span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {loadingTickets ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">
+                Loading support tickets...
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {supportTickets.length > 0 ? (
+                supportTickets.map((ticket) => (
+                  <Card key={ticket.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base">
+                            {ticket.title}
+                          </CardTitle>
+                          <CardDescription className="mt-1">
+                            Ticket #{ticket.id} • Created {ticket.created}
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {getPriorityBadge(ticket.priority)}
+                          {getStatusBadge(ticket.status)}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        {ticket.description}
+                      </p>
+                      <div className="flex items-center text-xs text-muted-foreground space-x-4">
+                        <span className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          Updated {ticket.updated}
+                        </span>
+                        {ticket.assignedTo && (
+                          <span>Assigned to {ticket.assignedTo}</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center">
+                    <Ticket className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      No Support Tickets
+                    </h3>
+                    <p className="text-muted-foreground">
+                      You haven&apos;t created any support tickets yet.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="calendar" className="space-y-6">

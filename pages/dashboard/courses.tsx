@@ -957,6 +957,16 @@ const StudentCourses = () => {
                                         >
                                           Export List
                                         </Button>
+                                        {user?.role === "LECTURER" && (
+                                          <Button
+                                            size="sm"
+                                            onClick={() =>
+                                              (window.location.href = `/dashboard/lecturer/grades/${course.id}`)
+                                            }
+                                          >
+                                            Manage Grades
+                                          </Button>
+                                        )}
                                       </div>
 
                                       {course.students.length === 0 ? (

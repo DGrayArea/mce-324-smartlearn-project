@@ -14,10 +14,25 @@ export default async function handler(
     return res.status(401).json({ message: "Unauthorized" });
   }
 
-  // Get user role
+  // Get user role and related data
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { role: true },
+    include: {
+      departmentAdmin: {
+        include: {
+          department: true,
+        },
+      },
+      schoolAdmin: {
+        include: {
+          school: {
+            include: {
+              departments: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (
@@ -31,44 +46,37 @@ export default async function handler(
 
   if (req.method === "GET") {
     try {
-      const { level, status, academicYear, semester } = req.query;
+      const { academicYear, semester, level } = req.query;
 
-      // Build where clause based on user role and query parameters
-      let whereClause: any = {};
+      // Build where clause based on user role
+      let whereClause: any = {
+        result: {
+          course: {
+            department: {},
+          },
+        },
+        level: user.role,
+        status: "PENDING",
+      };
 
-      // Filter by approval level based on user role
+      // Role-specific filtering
       if (user.role === "DEPARTMENT_ADMIN") {
-        whereClause = {
-          OR: [
-            { level: "DEPARTMENT_ADMIN", status: "PENDING" },
-            { level: "DEPARTMENT_ADMIN", status: "DEPARTMENT_APPROVED" },
-          ],
-        };
+        whereClause.result.course.departmentId =
+          user.departmentAdmin?.departmentId;
       } else if (user.role === "SCHOOL_ADMIN") {
-        whereClause = {
-          OR: [
-            { level: "SCHOOL_ADMIN", status: "DEPARTMENT_APPROVED" },
-            { level: "SCHOOL_ADMIN", status: "FACULTY_APPROVED" },
-          ],
-        };
-      } else if (user.role === "SENATE_ADMIN") {
-        whereClause = {
-          OR: [
-            { level: "SENATE_ADMIN", status: "FACULTY_APPROVED" },
-            { level: "SENATE_ADMIN", status: "SENATE_APPROVED" },
-          ],
-        };
+        whereClause.result.course.department.schoolId =
+          user.schoolAdmin?.schoolId;
+      }
+      // SENATE_ADMIN sees all departments
+
+      if (academicYear && academicYear !== "all") {
+        whereClause.result.academicYear = academicYear;
+      }
+      if (semester && semester !== "all") {
+        whereClause.result.semester = semester;
       }
 
-      // Add additional filters
-      if (level) {
-        whereClause.level = level;
-      }
-      if (status) {
-        whereClause.status = status;
-      }
-
-      // Get result approvals with related data
+      // Get result approvals
       const approvals = await prisma.resultApproval.findMany({
         where: whereClause,
         include: {
@@ -82,46 +90,106 @@ export default async function handler(
               },
               course: {
                 include: {
-                  department: true,
+                  department: {
+                    include: {
+                      school: true,
+                    },
+                  },
                 },
               },
             },
           },
-          departmentAdmin: {
-            include: {
-              user: true,
-            },
-          },
-          schoolAdmin: {
-            include: {
-              user: true,
-            },
-          },
-          senateAdmin: {
-            include: {
-              user: true,
-            },
-          },
         },
-        orderBy: [{ createdAt: "desc" }],
+        orderBy: [
+          { result: { student: { level: "asc" } } },
+          { result: { student: { user: { firstName: "asc" } } } },
+        ],
       });
 
-      // Filter by academic year and semester if provided
-      let filteredApprovals = approvals;
-      if (academicYear) {
-        filteredApprovals = filteredApprovals.filter(
-          (approval) => approval.result.academicYear === academicYear
+      // Group by level and organize data
+      const resultsByLevel: any = {};
+
+      approvals.forEach((approval) => {
+        const student = approval.result.student;
+        const course = approval.result.course;
+        const studentLevel = student.level;
+
+        if (!resultsByLevel[studentLevel]) {
+          resultsByLevel[studentLevel] = [];
+        }
+
+        // Check if student already exists in this level
+        let existingStudent = resultsByLevel[studentLevel].find(
+          (s: any) => s.student.id === student.id
         );
-      }
-      if (semester) {
-        filteredApprovals = filteredApprovals.filter(
-          (approval) => approval.result.semester === semester
-        );
-      }
+
+        if (!existingStudent) {
+          existingStudent = {
+            student: {
+              id: student.id,
+              firstName: student.user.firstName,
+              lastName: student.user.lastName,
+              name: `${student.user.firstName} ${student.user.lastName}`,
+              matricNumber: student.matricNumber,
+              level: student.level,
+              department: student.department.name,
+            },
+            courses: [],
+            totalCredits: 0,
+            earnedCredits: 0,
+            gpa: 0,
+          };
+          resultsByLevel[studentLevel].push(existingStudent);
+        }
+
+        const gradePoints =
+          approval.result.grade === "A"
+            ? 5
+            : approval.result.grade === "B"
+              ? 4
+              : approval.result.grade === "C"
+                ? 3
+                : approval.result.grade === "D"
+                  ? 2
+                  : 0;
+
+        existingStudent.courses.push({
+          id: approval.result.id,
+          courseId: course.id,
+          courseCode: course.code,
+          courseTitle: course.title,
+          creditUnit: course.creditUnit,
+          caScore: approval.result.caScore,
+          examScore: approval.result.examScore,
+          totalScore: approval.result.totalScore,
+          grade: approval.result.grade,
+          status: approval.result.status,
+          academicYear: approval.result.academicYear,
+          semester: approval.result.semester,
+        });
+
+        existingStudent.totalCredits += course.creditUnit;
+        existingStudent.earnedCredits += gradePoints * course.creditUnit;
+      });
+
+      // Calculate GPA for each student
+      Object.values(resultsByLevel).forEach((levelStudents: any) => {
+        levelStudents.forEach((student: any) => {
+          student.gpa =
+            student.totalCredits > 0
+              ? student.earnedCredits / student.totalCredits
+              : 0;
+        });
+      });
 
       res.status(200).json({
         success: true,
-        approvals: filteredApprovals,
+        resultsByLevel,
+        totalStudents: Object.values(resultsByLevel).reduce(
+          (total: number, students: any) => total + students.length,
+          0
+        ),
+        totalApprovals: approvals.length,
         userRole: user.role,
       });
     } catch (error) {
@@ -133,157 +201,62 @@ export default async function handler(
     }
   }
 
-  if (req.method === "POST") {
+  if (req.method === "PUT") {
     try {
-      const { resultId, action, comments } = req.body;
+      const { updates } = req.body;
 
-      if (!resultId || !action) {
-        return res.status(400).json({
-          message: "Result ID and action are required",
-        });
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Updates must be an array" });
       }
 
-      // Get the result
-      const result = await prisma.result.findUnique({
-        where: { id: resultId },
-        include: {
-          approvals: true,
-          course: { select: { title: true } },
-        },
-      });
+      // Validate and update each result
+      const updatePromises = updates.map(async (update: any) => {
+        const { resultId, caScore, examScore } = update;
 
-      if (!result) {
-        return res.status(404).json({ message: "Result not found" });
-      }
-
-      // Determine the approval level based on user role
-      let approvalLevel: string;
-      let newStatus: string;
-      let nextLevel: string;
-
-      if (user.role === "DEPARTMENT_ADMIN") {
-        approvalLevel = "DEPARTMENT_ADMIN";
-        newStatus = action === "approve" ? "DEPARTMENT_APPROVED" : "REJECTED";
-        nextLevel = "SCHOOL_ADMIN";
-      } else if (user.role === "SCHOOL_ADMIN") {
-        approvalLevel = "SCHOOL_ADMIN";
-        newStatus = action === "approve" ? "FACULTY_APPROVED" : "REJECTED";
-        nextLevel = "SENATE_ADMIN";
-      } else if (user.role === "SENATE_ADMIN") {
-        approvalLevel = "SENATE_ADMIN";
-        newStatus = action === "approve" ? "SENATE_APPROVED" : "REJECTED";
-        nextLevel = null;
-      }
-
-      // Update or create the approval record
-      const approvalData = {
-        resultId,
-        level: approvalLevel as any,
-        status: newStatus as any,
-        comments: comments || null,
-        ...(user.role === "DEPARTMENT_ADMIN" && { departmentAdminId: userId }),
-        ...(user.role === "SCHOOL_ADMIN" && { schoolAdminId: userId }),
-        ...(user.role === "SENATE_ADMIN" && { senateAdminId: userId }),
-      };
-
-      await prisma.resultApproval.upsert({
-        where: {
-          resultId_level: {
-            resultId,
-            level: approvalLevel as any,
-          },
-        },
-        update: {
-          status: newStatus as any,
-          comments: comments || null,
-        },
-        create: approvalData,
-      });
-
-      // Update the main result status
-      await prisma.result.update({
-        where: { id: resultId },
-        data: { status: newStatus as any },
-      });
-
-      // If approved and there's a next level, create the next approval record
-      if (action === "approve" && nextLevel) {
-        await prisma.resultApproval.create({
-          data: {
-            resultId,
-            level: nextLevel as any,
-            status: "PENDING",
-          },
-        });
-      }
-
-      // Send notifications to relevant users
-      if (action === "approve") {
-        // Notify student about approval
-        await prisma.notification.create({
-          data: {
-            student: { connect: { id: result.studentId } },
-            type: "GRADE",
-            title: "Result Approved",
-            message: `Your result for ${result.course.title} has been approved at ${approvalLevel} level.`,
-            metadata: {
-              resultId,
-              level: approvalLevel,
-              status: newStatus,
-            },
-            isRead: false,
-          },
-        });
-
-        // If this is the final approval, notify student
-        if (user.role === "SENATE_ADMIN") {
-          await prisma.notification.create({
-            data: {
-              student: { connect: { id: result.studentId } },
-              type: "GRADE",
-              title: "Result Finalized",
-              message: `Your result for ${result.course.title} has been finalized and is now available.`,
-              metadata: {
-                resultId,
-                status: "SENATE_APPROVED",
-              },
-              isRead: false,
-            },
-          });
+        // Validate scores
+        if (caScore < 0 || caScore > 40) {
+          throw new Error(
+            `CA score must be between 0 and 40 for result ${resultId}`
+          );
         }
-      } else {
-        // Notify student about rejection
-        await prisma.notification.create({
+        if (examScore < 0 || examScore > 60) {
+          throw new Error(
+            `Exam score must be between 0 and 60 for result ${resultId}`
+          );
+        }
+
+        const totalScore = caScore + examScore;
+        let grade = "F";
+        if (totalScore >= 70) grade = "A";
+        else if (totalScore >= 60) grade = "B";
+        else if (totalScore >= 50) grade = "C";
+        else if (totalScore >= 45) grade = "D";
+
+        return prisma.result.update({
+          where: { id: resultId },
           data: {
-            student: { connect: { id: result.studentId } },
-            type: "GRADE",
-            title: "Result Rejected",
-            message: `Your result for ${result.course.title} has been rejected at ${approvalLevel} level. ${comments ? `Reason: ${comments}` : ""}`,
-            metadata: {
-              resultId,
-              level: approvalLevel,
-              status: "REJECTED",
-              comments,
-            },
-            isRead: false,
+            caScore,
+            examScore,
+            totalScore,
+            grade,
+            updatedAt: new Date(),
           },
         });
-      }
+      });
+
+      await Promise.all(updatePromises);
 
       res.status(200).json({
         success: true,
-        message: `Result ${action}d successfully`,
-        newStatus,
-        approvalLevel,
+        message: `${updates.length} results updated successfully`,
+        updatedCount: updates.length,
       });
     } catch (error) {
-      console.error("Error processing result approval:", error);
+      console.error("Error updating results:", error);
       res.status(500).json({
-        message: "Error processing result approval",
+        message: "Error updating results",
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   }
-
-  return res.status(405).json({ message: "Method not allowed" });
 }

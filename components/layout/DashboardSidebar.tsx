@@ -16,6 +16,9 @@ import {
   Bell,
   Star,
   Activity,
+  Bot,
+  Upload,
+  Table,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -123,7 +126,7 @@ const navigationItems: NavItem[] = [
   {
     title: "Result Approvals",
     href: "/dashboard/result-approvals",
-    icon: ClipboardCheck,
+    icon: UserCheck,
     roles: ["DEPARTMENT_ADMIN", "SCHOOL_ADMIN", "SENATE_ADMIN"],
   },
   {
@@ -131,18 +134,6 @@ const navigationItems: NavItem[] = [
     href: "/dashboard/grade-history",
     icon: Award,
     roles: ["STUDENT"],
-  },
-  {
-    title: "Notifications",
-    href: "/dashboard/notifications",
-    icon: Bell,
-    roles: [
-      "STUDENT",
-      "LECTURER",
-      "DEPARTMENT_ADMIN",
-      "SCHOOL_ADMIN",
-      "SENATE_ADMIN",
-    ],
   },
   {
     title: "Student Analytics",
@@ -184,12 +175,6 @@ const navigationItems: NavItem[] = [
     title: "User Management",
     href: "/dashboard/users",
     icon: Users,
-    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
-  },
-  {
-    title: "Result Approval",
-    href: "/dashboard/result-approval",
-    icon: UserCheck,
     roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
   {
@@ -293,6 +278,30 @@ const navigationItems: NavItem[] = [
       "DEPARTMENT_ADMIN",
       "SENATE_ADMIN",
     ],
+  },
+  {
+    title: "AI Assistant",
+    href: "/dashboard/chatbot",
+    icon: Bot,
+    roles: [
+      "STUDENT",
+      "LECTURER",
+      "SCHOOL_ADMIN",
+      "DEPARTMENT_ADMIN",
+      "SENATE_ADMIN",
+    ],
+  },
+  {
+    title: "Upload Scores",
+    href: "/dashboard/upload-scores",
+    icon: Upload,
+    roles: ["LECTURER"],
+  },
+  {
+    title: "All Results Overview",
+    href: "/dashboard/admin-results",
+    icon: Table,
+    roles: ["SCHOOL_ADMIN", "DEPARTMENT_ADMIN", "SENATE_ADMIN"],
   },
 ];
 

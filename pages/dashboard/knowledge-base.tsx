@@ -424,8 +424,8 @@ const KnowledgeBase = () => {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={"/" + encodeURIComponent("User Manual Second draft.pdf")}
-            download
+            href="/User Manual Second draft.pdf"
+            download="User Manual Second draft.pdf"
           >
             <Button variant="outline">
               <Download className="mr-2 h-4 w-4" />

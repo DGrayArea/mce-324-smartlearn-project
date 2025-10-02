@@ -1,6 +1,6 @@
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { studentAssignments, lecturerAssignments } from "@/lib/dummyData";
+// Removed dummy data import; this page will fetch from APIs when available
 import { useToast } from "@/hooks/use-toast";
 import {
   Card,
@@ -27,8 +27,7 @@ const Assignments = () => {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const assignments =
-    user?.role === "LECTURER" ? lecturerAssignments : studentAssignments;
+  const assignments: any[] = [];
 
   const handleCreateAssignment = () => {
     toast({
@@ -89,6 +88,18 @@ const Assignments = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {assignments.length === 0 && (
+          <Card className="col-span-1 md:col-span-2 lg:col-span-3">
+            <CardHeader>
+              <CardTitle>No Assignments</CardTitle>
+              <CardDescription>
+                {user?.role === "LECTURER"
+                  ? "No assignments found. Create assignments from your course tools."
+                  : "No assignments are available at the moment."}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        )}
         {assignments.map((assignment) => (
           <Card key={assignment.id} className="overflow-hidden">
             <CardHeader className="border-b p-4">
@@ -152,49 +163,14 @@ const Assignments = () => {
             </CardContent>
 
             <div className="border-t p-4 flex justify-between">
-              {user?.role === "STUDENT" ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(assignment.title)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download
-                  </Button>
-                  {assignment.status === "pending" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleSubmit(assignment.id)}
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Submit
-                    </Button>
-                  )}
-                </>
-              ) : (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownload(assignment.title)}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() =>
-                      toast({
-                        title: "Grade Submissions",
-                        description: "Grading interface opened (demo mode)",
-                      })
-                    }
-                  >
-                    Grade Submissions
-                  </Button>
-                </>
-              )}
+              <Button variant="outline" size="sm" disabled>
+                <FileText className="h-4 w-4 mr-2" />
+                View Details
+              </Button>
+              <Button size="sm" disabled>
+                <Upload className="h-4 w-4 mr-2" />
+                Submit
+              </Button>
             </div>
           </Card>
         ))}

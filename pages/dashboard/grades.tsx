@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { grades, studentAssignments } from "@/lib/dummyData";
 import {
   Card,
   CardContent,
@@ -10,9 +9,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Award, Calendar, Download, FileText, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { Award, TrendingUp, Calendar, FileText, Download } from "lucide-react";
-import { format } from "date-fns";
 import { withDashboardLayout } from "@/lib/layoutWrappers";
 import {
   Select,
